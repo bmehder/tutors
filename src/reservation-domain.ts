@@ -1,3 +1,4 @@
+import {noticeSatisfied,intervalsOverlap} from './session-time.ts';
 // Pure reference model. A production adapter must execute reserve atomically
 // against shared storage; this in-memory value is NOT a concurrency guarantee.
 export type Interval=Readonly<{start:number;end:number}>; // epoch milliseconds
@@ -20,9 +21,9 @@ export class Ledger {
   for(const session of request.sessions){
    const {start,end}=session.interval;
    if(!session.id||!session.studentId||!session.tutorId||!session.subjectId||!Number.isFinite(start)||end-start!==3600000)return reject({kind:'invalidRequest'});
-   if(start<policy.now+policy.noticeMs)return reject({kind:'tooSoon',sessionId:session.id});
+   if(!noticeSatisfied(start,policy))return reject({kind:'tooSoon',sessionId:session.id});
    if(!policy.availability.some(w=>w.tutorId===session.tutorId&&w.subjectIds.includes(session.subjectId)&&w.interval.start<=start&&end<=w.interval.end))return reject({kind:'unavailable',sessionId:session.id});
-   const clashes=ledger.bookings.flatMap(b=>b.sessions.map(s=>({session:s,customerId:b.customerId}))).concat(accepted.map(s=>({session:s,customerId:request.customerId}))).filter(other=>start<other.session.interval.end&&other.session.interval.start<end);
+   const clashes=ledger.bookings.flatMap(b=>b.sessions.map(s=>({session:s,customerId:b.customerId}))).concat(accepted.map(s=>({session:s,customerId:request.customerId}))).filter(other=>intervalsOverlap(session.interval,other.session.interval));
    if(clashes.some(o=>o.session.tutorId===session.tutorId))return reject({kind:'conflict',sessionId:session.id,resource:'tutor'});
    // Local student IDs are scoped to the customer, never compared globally.
    if(clashes.some(o=>o.customerId===request.customerId&&o.session.studentId===session.studentId))return reject({kind:'conflict',sessionId:session.id,resource:'student'});

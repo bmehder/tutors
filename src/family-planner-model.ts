@@ -1,3 +1,4 @@
+import {calendarDate,calendarAddDays,calendarWeekday,instantParts,sessionInterval,easternInstant,bookingClock,normalizeClock,noticeSatisfied,intervalsOverlap,MINUTE_MS,type BookingClock} from './session-time.ts';
 export type Child = { id: string; name: string; color: number };
 export type Lesson = {
   id: string; childId: string; tutorId: string; subject: string;
@@ -8,26 +9,18 @@ export type Tutor = {
   days: number[]; times: string[];
 };
 export const HOUR = 60;
-export const SUBJECTS = ['Biology', 'Chemistry', 'Algebra 1', 'Geometry', 'American Literature', 'Intermediate Composition', 'United States History', 'World History', 'Physics', 'Precalculus', 'Algebra 2', 'Elementary Math', 'Reading', 'Spanish 1', 'Spanish 2'];
+export const SUBJECTS = ["Biology", "Chemistry", "Algebra 1", "Geometry", "American Literature", "Intermediate Composition", "United States History", "World History", "Physics", "Pre-Algebra", "Algebra 2", "Middle School Math", "Computer Science and Intro to Programming", "Spanish 1", "Spanish 2"];
 export function todayEastern(now = new Date()): string {
-  const parts = new Intl.DateTimeFormat('en-US', {timeZone:'America/New_York',year:'numeric',month:'2-digit',day:'2-digit'}).formatToParts(now);
-  const part = (type: string) => parts.find(p => p.type === type)!.value;
-  return `${part('year')}-${part('month')}-${part('day')}`;
+  return instantParts(now.getTime(),'America/New_York').date;
 }
-export function addDays(date: string, days: number): string {
-  const value = new Date(`${date}T12:00:00Z`);
-  value.setUTCDate(value.getUTCDate() + days);
-  return value.toISOString().slice(0, 10);
-}
+export const addDays=calendarAddDays;
 export function nextSchoolDay(today = todayEastern()): string {
   let date = addDays(today, 1);
-  while ([0,6].includes(new Date(`${date}T12:00:00Z`).getUTCDay())) date = addDays(date, 1);
+  while ([5,6].includes(calendarWeekday(date))) date = addDays(date, 1);
   return date;
 }
 export function formatDate(date: string, long = false): string {
-  return new Intl.DateTimeFormat('en-US', {
-    timeZone: 'UTC', weekday: long ? 'long' : 'short', month: 'short', day: 'numeric', year: 'numeric',
-  }).format(new Date(`${date}T12:00:00Z`));
+  try{return calendarDate(date).toLocaleString('en-US',{weekday:long?'long':'short',month:'short',day:'numeric',year:'numeric'})}catch{return 'Invalid date'}
 }
 export function parseTime(time: string): number {
   const match = /^(\d{1,2}):(\d{2}) (AM|PM)$/.exec(time);
@@ -39,7 +32,8 @@ export function formatTime(minutes: number): string {
   return `${hour % 12 || 12}:${String(minutes % 60).padStart(2, '0')} ${hour >= 12 ? 'PM' : 'AM'}`;
 }
 export function overlaps(a: Pick<Lesson,'date'|'start'|'duration'>, b: Pick<Lesson,'date'|'start'|'duration'>): boolean {
-  return a.date === b.date && a.start < b.start + b.duration && b.start < a.start + a.duration;
+  const first=sessionInterval(a),second=sessionInterval(b);
+  return first.kind==='resolved'&&second.kind==='resolved'&&intervalsOverlap(first,second);
 }
 export function conflictReason(candidate: Lesson, existing: Lesson[], ignoreId?: string): string {
   const overlapping = existing.filter(l => l.id !== ignoreId && overlaps(candidate, l));
@@ -54,21 +48,21 @@ export function isSoldOut(tutorId: string, date: string, start: number): boolean
   const hash = [...`${tutorId}:${date}:${start}`].reduce((value, char) => ((value * 31 + char.charCodeAt(0)) >>> 0), 0);
   return hash % 7 === 0;
 }
-export function availabilityReason(candidate: Lesson, tutor: Tutor | undefined, child: Child | undefined, existing: Lesson[], ignoreId?: string, today = todayEastern()): string {
+export function availabilityReason(candidate: Lesson, tutor: Tutor | undefined, child: Child | undefined, existing: Lesson[], ignoreId?: string, clock:BookingClock|string = bookingClock()): string {
   if (!child) return 'Choose a child first.';
   if (!tutor) return 'Choose a tutor and time.';
-  if (!/^\d{4}-\d{2}-\d{2}$/.test(candidate.date) || !Number.isFinite(new Date(`${candidate.date}T12:00:00Z`).getTime()) || new Date(`${candidate.date}T12:00:00Z`).toISOString().slice(0,10)!==candidate.date) return 'Choose a valid date.';
-  if (candidate.date <= today) return 'Choose a future date.';
-  if(today===todayEastern()){
-    const parts=new Intl.DateTimeFormat('en-US',{timeZone:'America/New_York',hour:'2-digit',minute:'2-digit',hourCycle:'h23'}).formatToParts(new Date());
-    const nowMinutes=Number(parts.find(p=>p.type==='hour')!.value)*60+Number(parts.find(p=>p.type==='minute')!.value);
-    const days=(Date.parse(`${candidate.date}T12:00:00Z`)-Date.parse(`${today}T12:00:00Z`))/86400000;
-    if(days*1440+candidate.start-nowMinutes<1440)return 'This start is inside the demo 24-hour booking notice.';
-  }
+  const interval=sessionInterval(candidate);
+  if(interval.kind==='nonexistentTime')return 'This local time does not exist because the clocks change. Choose another time.';
+  if(interval.kind==='ambiguousTime')return 'This local time occurs twice because the clocks change. Choose another time.';
+  if(interval.kind!=='resolved')return 'Choose a valid date and quarter-hour time.';
+  if(!noticeSatisfied(interval.start,normalizeClock(clock)))return 'Choose a future date and time outside the 24-hour booking notice.';
   if (!supports(tutor, child, candidate.subject)) return 'This tutor does not teach this subject for this subject.';
-  const weekday = (new Date(`${candidate.date}T12:00:00Z`).getUTCDay() + 6) % 7;
+  const weekday = calendarWeekday(candidate.date);
   if (!tutor.days.includes(weekday) || !tutor.times.some(time => parseTime(time) === candidate.start)) return 'This tutor is not available at this time.';
-  if(candidate.start+candidate.duration>Math.max(...tutor.times.map(parseTime))+60)return 'The full session does not fit this tutor’s availability.';
+  const lastEnd=Math.max(...tutor.times.map(parseTime))+60;
+  const endDate=addDays(candidate.date,Math.floor(lastEnd/1440));
+  const availableEnd=easternInstant(endDate,lastEnd%1440);
+  if(availableEnd.kind!=='resolved'||interval.end>availableEnd.instant)return 'The full session does not fit this tutor’s availability.';
   const conflict = conflictReason(candidate, existing, ignoreId);
   if (conflict) return conflict;
   if (isSoldOut(tutor.id, candidate.date, candidate.start)) return 'This time is sold out.';
@@ -77,13 +71,13 @@ export function availabilityReason(candidate: Lesson, tutor: Tutor | undefined, 
 export function plannedHours(sessions: Lesson[]): number {
   return sessions.reduce((hours,l) => hours + l.duration / HOUR, 0);
 }
-export function validatePlan(plan: Lesson[], booked: Lesson[], children: Child[], tutors: Tutor[], capacity: number, today = todayEastern()): string {
+export function validatePlan(plan: Lesson[], booked: Lesson[], children: Child[], tutors: Tutor[], capacity: number, clock:BookingClock|string = bookingClock()): string {
   if (!plan.length) return 'Add at least one session to your family plan.';
   if (plannedHours(plan) > capacity) return 'Your plan has more sessions than your package can cover.';
   for (let i = 0; i < plan.length; i++) {
     const session = plan[i];
     if (![30,45,60,90].includes(session.duration) || !session.id || !session.childId) return 'Check the session details.';
-    const reason = availabilityReason(session, tutors.find(t => t.id === session.tutorId), children.find(c => c.id === session.childId), [...booked,...plan.slice(0,i)], undefined, today);
+    const reason = availabilityReason(session, tutors.find(t => t.id === session.tutorId), children.find(c => c.id === session.childId), [...booked,...plan.slice(0,i)], undefined, clock);
     if (reason) return `${formatDate(session.date)} at ${formatTime(session.start)}: ${reason}`;
   }
   return '';
@@ -116,27 +110,29 @@ export function validateAllocations(allocations:{childId:string;hours:number}[],
 export function weeklySeries(first:Lesson,count:number):Lesson[] {
   return Array.from({length:count},(_,i)=>({...first,id:`${first.id}-${i}`,date:addDays(first.date,i*7)}));
 }
-export function availableWeeklySeries(first:Lesson,count:number,tutor:Tutor,child:Child,existing:Lesson[],today=todayEastern()):Lesson[] {
+export function availableWeeklySeries(first:Lesson,count:number,tutor:Tutor,child:Child,existing:Lesson[],clock:BookingClock|string=bookingClock()):Lesson[] {
+  const today=instantParts(normalizeClock(clock).now,'America/New_York').date;
   const result:Lesson[]=[];
   for(let week=0;week<52&&result.length<count;week++){
     const candidate={...first,id:`${first.id}-${week}`,date:addDays(first.date,week*7)};
     if(candidate.date>addDays(today,365))break;
-    if(!availabilityReason(candidate,tutor,child,[...existing,...result],undefined,today))result.push(candidate);
+    if(!availabilityReason(candidate,tutor,child,[...existing,...result],undefined,clock))result.push(candidate);
   }
   return result;
 }
 
-export function availableAlternatives(original:Lesson,child:Child,tutors:Tutor[],existing:Lesson[],from:string,days=14,filters:{tutorId?:string;weekday?:number;start?:number}={},today=todayEastern()):Lesson[]{
+export function availableAlternatives(original:Lesson,child:Child,tutors:Tutor[],existing:Lesson[],from:string,days=14,filters:{tutorId?:string;weekday?:number;start?:number}={},clock:BookingClock|string=bookingClock()):Lesson[]{
+ const today=instantParts(normalizeClock(clock).now,'America/New_York').date;
  const result:Lesson[]=[];
  for(let i=0;i<days;i++){
   const date=addDays(from,i);
   if(date<=today||date>addDays(today,365))continue;
-  if(filters.weekday!==undefined&&(new Date(`${date}T12:00:00Z`).getUTCDay()+6)%7!==filters.weekday)continue;
+  if(filters.weekday!==undefined&&calendarWeekday(date)!==filters.weekday)continue;
   for(const tutor of tutors){
    if(filters.tutorId&&tutor.id!==filters.tutorId)continue;
    for(const time of tutor.times){const start=parseTime(time);if(filters.start!==undefined&&start!==filters.start)continue;
     const candidate={...original,date,tutorId:tutor.id,start};
-    if(!availabilityReason(candidate,tutor,child,existing,original.id,today))result.push(candidate);
+    if(!availabilityReason(candidate,tutor,child,existing,original.id,clock))result.push(candidate);
    }
   }
  }

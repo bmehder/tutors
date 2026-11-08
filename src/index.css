@@ -23,3 +23,25 @@
 #booking input[required]:placeholder-shown{border-color:#a65332;outline:2px solid #a65332;outline-offset:2px;background:#fffaf5}
 #booking form .planner-label{line-height:1.4}
 #booking form .field{line-height:1.4}
+.planner-action{color:#843c30;font-size:14px;line-height:1.5;font-weight:600;border-left:3px solid #a65332;padding:6px 0 6px 10px}
+
+#booking input[required]:placeholder-shown{border-color:#cfd8d3;outline:none;background:white}
+@media print{
+ @page{margin:16mm}
+ body{background:white;color:#111}
+ body *{visibility:hidden!important}
+ #print-order,#print-order *{visibility:visible!important}
+ #print-order{display:block!important;position:absolute;left:0;top:0;width:100%;font-family:Arial,sans-serif;font-size:11pt;line-height:1.5}
+ #print-order h1{font-size:22pt;margin:0 0 8pt}
+ #print-order h2{font-size:14pt;margin:18pt 0 8pt;break-after:avoid}
+ #print-order p{margin:6pt 0}
+ #print-order table{width:100%;border-collapse:collapse;font-size:10pt}
+ #print-order th,#print-order td{padding:8pt 6pt;border-bottom:1px solid #ccc;text-align:left;vertical-align:top}
+ #print-order thead{display:table-header-group}
+ #print-order tr{break-inside:avoid}
+}
+@media print{
+ body *:not(#print-order):not(#print-order *):not(:has(#print-order)){display:none!important}
+ body *:has(#print-order){margin:0!important;padding:0!important;border:0!important;background:white!important}
+ #print-order{position:static!important}
+}

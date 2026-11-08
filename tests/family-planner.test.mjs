@@ -61,7 +61,7 @@ test('subject eligibility is enforced without a grade gate',()=>{
   assert.match(validatePlan([{...session,date,subject:'History'}],[],[child],[tutor],5,today),/subject/);
 });
 test('tutor hours and working days are enforced',()=>{
-  assert.match(availabilityReason({...session,start:700},tutor,child,[],undefined,today),/available/);
+  assert.match(availabilityReason({...session,start:705},tutor,child,[],undefined,today),/available/);
   assert.match(availabilityReason({...session,date:'2030-01-06'},tutor,child,[],undefined,today),/available/);
 });
 test('sold-out dates are rejected, including in repeating schedules',()=>{

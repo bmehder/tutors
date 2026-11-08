@@ -46,3 +46,10 @@ test('family viewing zone changes date and time, never the reserved instant',()=
  assert.match(viewSession(result.instant,'Asia/Tokyo'),/Jan 5/);
  assert.match(viewSession(result.instant,'America/Los_Angeles'),/8:00 PM/);
 });
+
+test('Amsterdam display uses a familiar city label without GMT or Eastern',()=>{
+ const result=easternInstant('2026-11-10',900);
+ const label=viewSession(result.instant,'Europe/Amsterdam');
+ assert.match(label,/9:00 PM/);assert.match(label,/Amsterdam time/);
+ assert.doesNotMatch(label,/GMT|Eastern/);
+});
