@@ -51,7 +51,7 @@ time day hour minute =
 
 
 first =
-    { student = emma, tutor = sarah, subject = math, start = time 7 15 0, duration = OneHour }
+    { student = emma, tutor = sarah, subject = math, start = time 7 15 0 }
 
 
 brother =
@@ -99,36 +99,40 @@ isErr expected result =
             False
 
 
+ok result =
+    Result.map (always True) result |> Result.withDefault False
+
+
+member id name hours routines =
+    { id = id, name = name, hours = hours, routines = routines }
+
+
 checks =
-    [ check "Emma six + Jack four = 600 minutes, no remaining credit" (family |> Result.map (\s -> usedMinutes s == 600 && remainingMinutes s == 0) |> Result.withDefault False)
-    , check "third occurrence moves without shifting any other defaults" (family |> Result.andThen (customize context 0 2 { first | start = time 22 15 0 }) |> Result.map (\s -> List.head (plans s) |> Maybe.map (\p -> List.map .start (lessons p) == [ time 7 15 0, time 14 15 0, time 22 15 0, time 28 15 0, time 35 15 0, time 42 15 0 ]) |> Maybe.withDefault False) |> Result.withDefault False)
-    , check "changing first occurrence leaves later Mondays unchanged" (family |> Result.andThen (customize context 0 0 { first | start = time 8 15 0 }) |> Result.map (\s -> List.head (plans s) |> Maybe.map (\p -> List.map .start (lessons p) |> List.drop 1 |> (==) [ time 14 15 0, time 21 15 0, time 28 15 0, time 35 15 0, time 42 15 0 ]) |> Maybe.withDefault False) |> Result.withDefault False)
-    , check "restoring a default removes the customization state" (family |> Result.andThen (customize context 0 0 { first | start = time 8 15 0 }) |> Result.andThen (customize context 0 0 first) |> Result.map (\s -> List.head (plans s) |> Maybe.map (sessions >> List.all ((==) DefaultSession)) |> Maybe.withDefault False) |> Result.withDefault False)
-    , check "six 45-minute sessions cost 270 minutes" (routine 6 { first | duration = FortyFiveMinutes } |> Result.andThen (\p -> schedule context FiveHours [ p ]) |> Result.map (usedMinutes >> (==) 270) |> Result.withDefault False)
-    , check "eight scheduled hours may leave two unused" (routine 8 first |> Result.andThen (\p -> schedule context TenHours [ p ]) |> Result.map (remainingMinutes >> (==) 120) |> Result.withDefault False)
-    , check "90-minute replacement rejects a full package; original remains valid" (family |> Result.map (\s -> isErr OverBudget (customize context 0 0 { first | duration = NinetyMinutes } s) && usedMinutes s == 600) |> Result.withDefault False)
-    , check "ten-hour package rejects a fourth distinct student" (schedule context TenHours (List.range 1 4 |> List.map (\n -> oneLesson { first | student = sid n, start = time (n + 1) 15 0 })) |> isErr TooManyStudents)
-    , check "five-hour package rejects sharing" (schedule context FiveHours [ oneLesson first, oneLesson brother ] |> isErr TooManyStudents)
-    , check "twenty-hour package permits five students" (schedule context TwentyHours (List.range 1 5 |> List.map (\n -> oneLesson { first | student = sid n, start = time (n + 1) 15 0 })) |> Result.map (always True) |> Result.withDefault False)
-    , check "twenty-hour package rejects six students" (schedule context TwentyHours (List.range 1 6 |> List.map (\n -> oneLesson { first | student = sid n, start = time (n + 1) 15 0 })) |> isErr TooManyStudents)
-    , check "different students and tutors may meet simultaneously" (schedule context TenHours [ oneLesson first, oneLesson brother ] |> Result.map (always True) |> Result.withDefault False)
-    , check "student partial overlap is rejected" (schedule context TenHours [ oneLesson first, oneLesson { first | tutor = daniel, start = time 7 15 30 } ] |> isErr StudentOverlap)
-    , check "tutor partial overlap is rejected" (schedule context TenHours [ oneLesson first, oneLesson { brother | tutor = sarah, start = time 7 15 30 } ] |> isErr TutorOverlap)
-    , check "back-to-back lessons do not overlap" (schedule context TenHours [ oneLesson first, oneLesson { first | start = time 7 16 0 } ] |> Result.map (always True) |> Result.withDefault False)
-    , check "entire duration must fit availability" (schedule { context | catalog = { students = [ emma ], subjects = [ math ], tutors = [ { id = sarah, subjects = [ math ], availability = [ { start = time 7 13 0, end = time 7 16 0 } ] } ] } } FiveHours [ oneLesson { first | duration = NinetyMinutes } ] |> isErr OutsideAvailability)
-    , check "notice at the exact deadline is allowed" (schedule { context | now = time 6 15 0 } FiveHours [ oneLesson first ] |> Result.map (always True) |> Result.withDefault False)
-    , check "notice after the deadline is rejected" (schedule { context | now = time 6 15 15 } FiveHours [ oneLesson first ] |> isErr TooSoon)
-    , check "external tutor reservations are checked" (schedule { context | reserved = [ { brother | tutor = sarah } ] } FiveHours [ oneLesson first ] |> isErr TutorOverlap)
-    , check "unsupported subject is rejected" (schedule context FiveHours [ oneLesson { first | subject = science } ] |> isErr UnsupportedSubject)
-    , check "unknown student is rejected" (schedule context FiveHours [ oneLesson { first | student = sid 77 } ] |> isErr UnknownStudent)
-    , check "empty schedule is a valid planning state" (schedule context TenHours [] |> Result.map (remainingMinutes >> (==) 600) |> Result.withDefault False)
-    , check "zero-session routine is rejected" (weekly first 0 |> isErr InvalidValue)
-    , check "invalid occurrence is rejected, not appended" (family |> Result.map (\s -> isErr SessionOutOfRange (customize context 0 6 first s)) |> Result.withDefault False)
-    , check "invalid quarter-hour input is rejected" (fixtureTime 0 9 7 == Nothing)
-    , check "new lesson can be added without expiring an already accepted lesson" (schedule context TenHours [ oneLesson first ] |> Result.andThen (addPlan { context | now = time 7 14 0 } (oneLesson { brother | start = time 14 15 0 })) |> Result.map (always True) |> Result.withDefault False)
-    , check "re-saving an unchanged accepted occurrence does not reapply booking notice" (family |> Result.andThen (customize { context | now = time 7 14 0 } 0 0 first) |> Result.map (always True) |> Result.withDefault False)
-    , check "rescheduling an accepted occurrence must satisfy booking notice" (family |> Result.andThen (customize { context | now = time 7 14 0 } 0 0 { first | start = time 7 17 0 }) |> isErr TooSoon)
-    , check "conflicting edit is rejected without changing the original" (family |> Result.map (\s -> isErr TutorOverlap (customize context 1 0 { brother | tutor = sarah } s) && (List.concatMap lessons (plans s) |> List.length) == 10) |> Result.withDefault False)
+    [ check "six plus four weekly hours fit ten" (family |> Result.map (\s -> usedMinutes s == 600 && remainingMinutes s == 0) |> Result.withDefault False)
+    , check "weekly dates derive from one first session" (weekly first 3 |> Result.map (sessions >> List.map .start >> (==) [time 7 15 0,time 14 15 0,time 21 15 0]) |> Result.withDefault False)
+    , check "zero count rejected" (weekly first 0 |> isErr InvalidValue)
+    , check "negative count rejected" (weekly first -1 |> isErr InvalidValue)
+    , check "quarter hour starts enforced" (fixtureTime 0 9 7 == Nothing)
+    , check "package downgrade clears all allocation" (bookingDraft TenHours |> setAllocations [member emma "Emma" 10 []] |> Result.map (changePackage FiveHours >> allocations >> List.isEmpty) |> Result.withDefault False)
+    , check "package upgrade clears allocation" (bookingDraft FiveHours |> setAllocations [member emma "Emma" 5 []] |> Result.map (changePackage TwentyHours >> allocations >> List.isEmpty) |> Result.withDefault False)
+    , check "unchanged package preserves draft" (bookingDraft TenHours |> setAllocations [member emma "Emma" 6 []] |> Result.map (changePackage TenHours >> allocations >> List.length >> (==) 1) |> Result.withDefault False)
+    , check "draft can contain empty name and missing routine" (ok (bookingDraft FiveHours |> setAllocations [member emma "" 5 []]))
+    , check "incomplete draft cannot complete" (bookingDraft FiveHours |> complete context |> isErr IncompleteDraft)
+    , check "allocation over capacity rejected" (bookingDraft FiveHours |> setAllocations [member emma "Emma" 10 []] |> isErr OverBudget)
+    , check "five hours cannot serve two students" (bookingDraft FiveHours |> setAllocations [member emma "Emma" 2 [],member jack "Jack" 3 []] |> isErr TooManyStudents)
+    , check "duplicate student IDs rejected" (bookingDraft TenHours |> setAllocations [member emma "Emma" 2 [],member emma "Emma" 2 []] |> isErr InvalidValue)
+    , check "unused purchased hours allowed" (weekly first 3 |> Result.andThen (\p -> bookingDraft FiveHours |> setAllocations [member emma "Emma" 3 [p]]) |> Result.andThen (complete context) |> Result.map (remainingMinutes >> (==) 120) |> Result.withDefault False)
+    , check "unplanned allocated hours block completion" (weekly first 2 |> Result.andThen (\p -> bookingDraft FiveHours |> setAllocations [member emma "Emma" 3 [p]]) |> Result.andThen (complete context) |> isErr AllocationMismatch)
+    , check "blank student name blocks completion" (weekly first 2 |> Result.andThen (\p -> bookingDraft FiveHours |> setAllocations [member emma " " 2 [p]]) |> Result.andThen (complete context) |> isErr IncompleteDraft)
+    , check "routine cannot belong to another student" (weekly brother 2 |> Result.andThen (\p -> bookingDraft FiveHours |> setAllocations [member emma "Emma" 2 [p]]) |> isErr AllocationMismatch)
+    , check "student overlap rejected" (Result.map2 (\a b -> [a,b]) (weekly first 2) (weekly { first | tutor = daniel, subject = science, start = time 7 15 30 } 2) |> Result.andThen (schedule context TenHours) |> isErr StudentOverlap)
+    , check "tutor overlap rejected" (Result.map2 (\a b -> [a,b]) (weekly first 2) (weekly {brother | tutor = sarah} 2) |> Result.andThen (schedule context TenHours) |> isErr TutorOverlap)
+    , check "notice deadline enforced" (weekly first 1 |> Result.andThen (\p -> schedule {context | now = time 6 15 15} FiveHours [p]) |> isErr TooSoon)
+    , check "unsupported subject rejected" (weekly {first | subject = science} 1 |> Result.andThen (\p -> schedule context FiveHours [p]) |> isErr UnsupportedSubject)
+    , check "duplicate subject routines rejected" (weekly first 1 |> Result.andThen (\p -> bookingDraft FiveHours |> setAllocations [member emma "Emma" 2 [p,p]]) |> isErr DuplicateSubject)
+    , check "direct schedule cannot bypass duplicate subject rule" (weekly first 1 |> Result.andThen (\p -> schedule context FiveHours [p,p]) |> isErr DuplicateSubject)
+    , check "addPlan cannot bypass duplicate subject rule" (weekly first 1 |> Result.andThen (\p -> schedule context FiveHours [p] |> Result.andThen (addPlan context p)) |> isErr DuplicateSubject)
+    , check "empty confirmed plan rejected" (schedule context TenHours [] |> isErr IncompleteDraft)
     ]
 
 

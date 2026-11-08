@@ -1,35 +1,13 @@
-# Executable domain slice — Phase 1
+# Elm domain laboratory
 
-A small, isolated Elm model for testing the scheduling ideas in `docs/domain-model.md`. It is not connected to the React playground or a database and has no UI. It is not the final Lustre implementation.
+Run `node domain-lab/run.mjs` from the repository root. Requires Elm 0.19.1 and Node. No app runtime dependency is added.
 
-## Run
+This isolated laboratory models opaque weekly Plan values, fixed one-hour Session records, validated Schedule values, and incomplete BookingDraft values. Package changes reset dependent allocations. `complete` rejects missing names, missing routines, mismatched hour allocations, invalid references, unsupported subjects, capacity/student-limit violations, availability conflicts, overlaps, and insufficient notice.
 
-Requires Elm 0.19.1 and Node:
+Student IDs, tutor IDs, subject IDs, and fixture times have validated constructors. Student names live in the draft; Catalog owns valid student identities. The production order must retain names and contact alongside a validated schedule. Contact collection and calendar adapters are not implemented here.
 
-```sh
-node domain-lab/run.mjs
-```
+FixtureTime is an Eastern wall-clock minute offset from a fixture Monday. It is not a production instant or DST/calendar implementation. The fixture availability is illustrative. Production persistence, atomic reservations, and authentication are outside the lab.
 
-Run from the repository root. The runner compiles the actual Elm domain and scenarios, reports each scenario, and exits nonzero if any fails. Only `elm/core` and `elm/json` are needed. Build output and `elm-stuff` are ignored.
+Individual-session customization, skipped weeks, and variable durations have been removed from the active model. The React playground still has legacy internal types and is not an implementation of these Elm ADTs.
 
-## Domain boundary
-
-`Schedule`, `Plan`, `Sessions`, IDs, and fixture times have private constructors. Plans are proposals: `weekly` rejects zero sessions, but only `schedule`, `addPlan`, and `customize` validate them as part of a schedule. Each returns a `Result`. No invalid replacement schedule is returned on failure, and the original immutable value remains usable. This is one validation boundary, not repeated UI-level defensive checks.
-
-The public ID and fixture-time constructors return `Maybe` for invalid input. Test fixture creation fails loudly if its data is wrong. Contact information, catalog editing, identity allocation, and storage are deliberately absent from this executable slice.
-
-## Explicit fixture limitations
-
-- `FixtureTime` is an integer minute position on a local Eastern fixture timeline. It is **not** a production timestamp or calendar implementation. Day zero represents Monday, January 4, 2027; test lessons are before the spring clock change. The final calendar/date validation, DST handling, midnight behavior, and named time conversion are not tested by this representation.
-- The 24-hour notice in scenarios is a test input, not an adopted policy.
-- Catalogs and availability are supplied, valid fixture data. The lab does not validate catalog construction, solve concurrency, reserve real tutors, process payments, or send messages.
-- External reservations are supplied as input. There is no automatic global booking lookup.
-- Initial/new reservations check notice. An unchanged already accepted start does not expire when adding another plan or re-saving an occurrence. A changed start or tutor checks notice anew. Other rescheduling/cancellation policies remain outside this slice.
-- Group tutoring is excluded by the singular `student` field. Contacting the company is a product boundary, not an implemented request workflow.
-- This is scenario testing, not fuzz testing or proof of all invariants. It does not yet discover and rank available alternatives.
-
-## Results
-
-29/29 scenarios passed on November 8, 2026. See `tests/Scenarios.elm` for actual inputs and assertions. The port runner uses Elm itself for all domain calculations, not a second JavaScript implementation.
-
-The domain document remains the design reference. Only the concepts needed for this executable slice have been translated; differences and unresolved behavior are documented instead of silently treated as final design choices.
+Build output and elm-stuff are ignored by Git. The scenario report exits unsuccessfully if any check fails.

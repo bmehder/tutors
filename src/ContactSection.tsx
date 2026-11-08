@@ -1,7 +1,9 @@
+import {formatPhone} from './phone';
 import { useState } from 'react';
 import { ArrowRight, CheckCircle2, GraduationCap, MessageCircle } from 'lucide-react';
 
 export default function ContactSection() {
+  const [phone,setPhone]=useState('');
   const [kind, setKind] = useState('family');
   const [submitted, setSubmitted] = useState(false);
   const isTutor = kind === 'tutor';
@@ -25,7 +27,7 @@ export default function ContactSection() {
             <div className="grid sm:grid-cols-2 gap-3">
               {[['family', 'I have a question'], ['tutor', 'I’d like to tutor']].map(([value, label]) => (
                 <label key={value} className={`flex items-center gap-3 cursor-pointer rounded-lg border p-4 text-sm font-semibold ${kind === value ? 'border-ink bg-[#eaf0e9]' : 'border-ink/20 bg-white'}`}>
-                  <input type="radio" name="contact-type" value={value} checked={kind === value} onChange={() => { setKind(value); setSubmitted(false); }} className="accent-[#143f3c]"/>{label}
+                  <input type="radio" name="contact-type" value={value} checked={kind === value} onChange={() => { setKind(value); setPhone(''); setSubmitted(false); }} className="accent-[#143f3c]"/>{label}
                 </label>
               ))}
             </div>
@@ -35,14 +37,15 @@ export default function ContactSection() {
               <CheckCircle2 size={36} className="text-[#517253] mb-4"/>
               <h3 className="text-2xl font-semibold">{isTutor ? 'A thoughtful first step.' : 'Thanks for reaching out.'}</h3>
               <p className="text-sm leading-7 text-ink/70 mt-3">{isTutor ? 'This is how a tutor application confirmation would appear.' : 'This is how a family inquiry confirmation would appear.'} This was a demo only. Your information was not sent or saved, and no one will contact you.</p>
-              <button type="button" className="btn mt-6" onClick={() => setSubmitted(false)}>Try the form again <ArrowRight size={16}/></button>
+              <button type="button" className="btn mt-6" onClick={() => setSubmitted(false)}>Try the form again </button>
             </div>
           ) : (
-            <form key={kind} onSubmit={event => { event.preventDefault(); event.currentTarget.reset(); setSubmitted(true); }} className="space-y-5">
+            <form key={kind} onSubmit={event => { event.preventDefault(); event.currentTarget.reset(); setPhone(''); setSubmitted(true); }} className="space-y-5">
               <div className="grid sm:grid-cols-2 gap-4">
                 <label className="block text-xs font-semibold">Your name <span className="font-normal">(required)</span><input required name="name" autoComplete="name" className="field mt-2" placeholder="Alex Taylor" maxLength={120}/></label>
                 <label className="block text-xs font-semibold">Email address <span className="font-normal">(required)</span><input required type="email" name="email" autoComplete="email" className="field mt-2" placeholder="alex@example.com" maxLength={254}/></label>
               </div>
+              <label className="block text-xs font-semibold">Phone number (required)<input required type="tel" inputMode="tel" autoComplete="tel-national" name="phone" className="field mt-2" placeholder="(555) 123-4567" value={phone} onChange={e=>setPhone(formatPhone(e.target.value))} pattern={'\\([0-9]{3}\\) [0-9]{3}-[0-9]{4}'} title="Enter a 10-digit US or Canadian phone number." aria-describedby="phone-format"/><span id="phone-format" className="block font-normal text-ink/60 mt-2">US / Canada · 10 digits</span></label>
               {isTutor ? <>
                 <div className="grid sm:grid-cols-2 gap-4">
                   <label className="block text-xs font-semibold">Subjects you could teach (required)<input required name="subjects" className="field mt-2" placeholder="e.g. Algebra, Biology" maxLength={300}/></label>
@@ -52,14 +55,10 @@ export default function ContactSection() {
                 <label className="block text-xs font-semibold">Days, times & time zone (required)<textarea required name="availability" rows={2} className="field mt-2 resize-y" placeholder="e.g. Mondays and Wednesdays, 3–6 PM Eastern" maxLength={1000}/></label>
                 <label className="block text-xs font-semibold">Your approach to a Biblical worldview (required)<textarea required name="approach" rows={3} className="field mt-2 resize-y" placeholder="How would your faith shape the way you teach and encourage students?" maxLength={3000}/></label>
               </> : <>
-                <div className="grid sm:grid-cols-2 gap-4">
-                  <label className="block text-xs font-semibold">What’s your question about?<select name="topic" className="field mt-2"><option>Finding the right tutor</option><option>Subjects & grade levels</option><option>Packages & pricing</option><option>Scheduling & availability</option><option>Something else</option></select></label>
-                  <label className="block text-xs font-semibold">Student’s grade (optional)<select name="grade" className="field mt-2"><option value="">Select a grade</option>{Array.from({length:9},(_,i)=><option key={i}>Grade {i+4}</option>)}<option>Other / not sure</option></select></label>
-                </div>
                 <label className="block text-xs font-semibold">Your question (required)<textarea required name="message" rows={5} className="field mt-2 resize-y" placeholder="Tell us a little about what your family needs." maxLength={3000}/></label>
               </>}
               <p className="text-xs text-ink/60">Demo only · Nothing will be submitted or saved.</p>
-              <button type="submit" className="btn w-full sm:w-auto">{isTutor ? 'Preview application confirmation' : 'Preview inquiry confirmation'}<ArrowRight size={16}/></button>
+              <button type="submit" className="btn w-full sm:w-auto">{isTutor ? 'Preview application confirmation' : 'Preview inquiry confirmation'}</button>
             </form>
           )}
         </div>

@@ -1,34 +1,9 @@
 module Domain exposing
-    ( Catalog
-    , Context
-    , Duration(..)
-    , Error(..)
-    , FixtureTime
-    , Lesson
-    , Package(..)
-    , Plan
-    , Schedule
-    , Session(..)
-    , StudentId
-    , SubjectId
-    , Tutor
-    , TutorId
-    , Window
-    , addPlan
-    , customize
-    , durationMinutes
-    , fixtureTime
-    , lessons
-    , oneLesson
-    , plans
-    , remainingMinutes
-    , schedule
-    , sessions
-    , studentId
-    , subjectId
-    , tutorId
-    , usedMinutes
-    , weekly
+    ( ConfirmedOrder, Contact, confirmOrder, orderSchedule, orderContact, orderStudents, BookingDraft, StudentDraft, Catalog, Context, Error(..), FixtureTime, Session
+    , Package(..), Plan, Schedule, StudentId, SubjectId, Tutor, TutorId, Window
+    , addPlan, fixtureTime, sessions, plans, remainingMinutes, schedule
+    , studentId, subjectId, tutorId, usedMinutes, weekly
+    , bookingDraft, changePackage, draftPackage, allocations, setAllocations, complete
     )
 
 -- This laboratory tests the domain, not the application's calendar adapter.
@@ -40,13 +15,6 @@ type Package
     = FiveHours
     | TenHours
     | TwentyHours
-
-
-type Duration
-    = ThirtyMinutes
-    | FortyFiveMinutes
-    | OneHour
-    | NinetyMinutes
 
 
 type StudentId
@@ -65,12 +33,11 @@ type FixtureTime
     = FixtureTime Int
 
 
-type alias Lesson =
+type alias Session =
     { student : StudentId
     , tutor : TutorId
     , subject : SubjectId
     , start : FixtureTime
-    , duration : Duration
     }
 
 
@@ -87,21 +54,20 @@ type alias Catalog =
 
 
 type alias Context =
-    { catalog : Catalog, reserved : List Lesson, now : FixtureTime, noticeMinutes : Int }
+    { catalog : Catalog, reserved : List Session, now : FixtureTime, noticeMinutes : Int }
 
 
-type Session
-    = DefaultSession
-    | CustomizedSession Lesson
-
-
-type Sessions
-    = Sessions Session (List Session)
-
-
+-- Opaque: only weekly can construct a positive, fixed-hour routine.
 type Plan
-    = OneLesson Lesson
-    | WeeklyLessons { first : Lesson, sessions : Sessions }
+    = WeeklyRoutine Session Int
+
+
+type BookingDraft
+    = BookingDraft Package (List StudentDraft)
+
+
+type alias StudentDraft =
+    { id : StudentId, name : String, hours : Int, routines : List Plan }
 
 
 type Schedule
@@ -120,8 +86,9 @@ type Error
     | TooSoon
     | StudentOverlap
     | TutorOverlap
-    | SessionOutOfRange
-    | UnknownPlan
+    | IncompleteDraft
+    | AllocationMismatch
+    | DuplicateSubject
 
 
 studentId n =
@@ -160,21 +127,6 @@ minutes (FixtureTime n) =
     n
 
 
-durationMinutes duration =
-    case duration of
-        ThirtyMinutes ->
-            30
-
-        FortyFiveMinutes ->
-            45
-
-        OneHour ->
-            60
-
-        NinetyMinutes ->
-            90
-
-
 capacity package =
     case package of
         FiveHours ->
@@ -199,51 +151,16 @@ studentLimit package =
             5
 
 
-oneLesson =
-    OneLesson
-
-
 weekly first count =
     if count < 1 then
         Err InvalidValue
-
     else
-        Ok (WeeklyLessons { first = first, sessions = Sessions DefaultSession (List.repeat (count - 1) DefaultSession) })
+        Ok (WeeklyRoutine first count)
 
 
-sessionList (Sessions first rest) =
-    first :: rest
-
-
-sessions plan =
-    case plan of
-        OneLesson _ ->
-            []
-
-        WeeklyLessons routine ->
-            sessionList routine.sessions
-
-
-defaultOccurrence first index =
-    { first | start = FixtureTime (minutes first.start + index * 7 * 1440) }
-
-
-lessons plan =
-    case plan of
-        OneLesson lesson ->
-            [ lesson ]
-
-        WeeklyLessons routine ->
-            sessionList routine.sessions
-                |> List.indexedMap
-                    (\index session ->
-                        case session of
-                            DefaultSession ->
-                                defaultOccurrence routine.first index
-
-                            CustomizedSession replacement ->
-                                replacement
-                    )
+sessions (WeeklyRoutine first count) =
+    List.range 0 (count - 1)
+        |> List.map (\index -> { first | start = FixtureTime (minutes first.start + index * 7 * 1440) })
 
 
 plans (Schedule _ values) =
@@ -251,7 +168,7 @@ plans (Schedule _ values) =
 
 
 usedMinutes (Schedule _ values) =
-    values |> List.concatMap lessons |> List.map (.duration >> durationMinutes) |> List.sum
+    values |> List.concatMap sessions |> List.map (always 60) |> List.sum
 
 
 remainingMinutes ((Schedule package _) as value) =
@@ -274,10 +191,10 @@ unique values =
 overlap a b =
     minutes a.start
         < minutes b.start
-        + durationMinutes b.duration
+        + 60
         && minutes b.start
         < minutes a.start
-        + durationMinutes a.duration
+        + 60
 
 
 conflicts lesson existing =
@@ -311,7 +228,7 @@ validateLesson context existing lesson =
                 if not (List.member lesson.subject tutor.subjects) then
                     Err UnsupportedSubject
 
-                else if not (List.any (\window -> minutes window.start <= minutes lesson.start && minutes lesson.start + durationMinutes lesson.duration <= minutes window.end) tutor.availability) then
+                else if not (List.any (\window -> minutes window.start <= minutes lesson.start && minutes lesson.start + 60 <= minutes window.end) tutor.availability) then
                     Err OutsideAvailability
 
                 else
@@ -321,9 +238,13 @@ validateLesson context existing lesson =
 validateExisting context ((Schedule package values) as value) =
     let
         actual =
-            List.concatMap lessons values
+            List.concatMap sessions values
     in
-    if usedMinutes value > capacity package then
+    if List.length (unique (List.map .id context.catalog.tutors)) /= List.length context.catalog.tutors || List.length (unique context.catalog.students) /= List.length context.catalog.students || List.length (unique context.catalog.subjects) /= List.length context.catalog.subjects || List.any (\t -> List.any (\w -> minutes w.start >= minutes w.end) t.availability) context.catalog.tutors then
+        Err InvalidValue
+    else if List.length (unique (List.map (\(WeeklyRoutine first _) -> (first.student, first.subject)) values)) /= List.length values then
+        Err DuplicateSubject
+    else if usedMinutes value > capacity package then
         Err OverBudget
 
     else if List.length (unique (List.map .student actual)) > studentLimit package then
@@ -349,99 +270,78 @@ schedule context package values =
         value =
             Schedule package values
     in
-    validateExisting context value |> Result.andThen (\valid -> checkNotice context (List.concatMap lessons values) |> Result.map (\_ -> valid))
+    (if List.isEmpty values then Err IncompleteDraft else validateExisting context value) |> Result.andThen (\valid -> checkNotice context (List.concatMap sessions values) |> Result.map (\_ -> valid))
 
 
 addPlan context plan ((Schedule package values) as original) =
     validateExisting context (Schedule package (values ++ [ plan ]))
-        |> Result.andThen (\valid -> checkNotice context (lessons plan) |> Result.map (\_ -> valid))
+        |> Result.andThen (\valid -> checkNotice context (sessions plan) |> Result.map (\_ -> valid))
 
 
 
--- Indexes are original occurrence positions, never chronological display order.
--- Revalidate changed starts for notice, without expiring accepted unchanged lessons.
+bookingDraft package =
+    BookingDraft package []
 
 
-customize context planIndex occurrence replacement (Schedule package values) =
-    if planIndex < 0 || occurrence < 0 then
-        Err SessionOutOfRange
+changePackage package ((BookingDraft previous _) as original) =
+    if package == previous then original else bookingDraft package
 
+
+draftPackage (BookingDraft package _) =
+    package
+
+
+allocations (BookingDraft _ students) =
+    students
+
+
+setAllocations students (BookingDraft package _) =
+    if List.length students > studentLimit package then
+        Err TooManyStudents
+    else if List.any (\s -> s.hours < 1) students || List.length (unique (List.map .id students)) /= List.length students then
+        Err InvalidValue
+    else if List.sum (List.map .hours students) * 60 > capacity package then
+        Err OverBudget
+    else if List.any (\s -> List.length (unique (List.map (\(WeeklyRoutine first _) -> first.subject) s.routines)) /= List.length s.routines) students then
+        Err DuplicateSubject
+    else if List.any (\s -> List.any (\p -> List.any (\session -> session.student /= s.id) (sessions p)) s.routines || List.length (List.concatMap sessions s.routines) > s.hours) students then
+        Err AllocationMismatch
     else
-        case List.drop planIndex values |> List.head of
-            Nothing ->
-                Err UnknownPlan
+        Ok (BookingDraft package students)
 
-            Just plan ->
-                let
-                    finish updated =
-                        validateExisting context
-                            (Schedule package
-                                (List.indexedMap
-                                    (\i previous ->
-                                        if i == planIndex then
-                                            updated
 
-                                        else
-                                            previous
-                                    )
-                                    values
-                                )
-                            )
-                            |> Result.andThen
-                                (\valid ->
-                                    (case List.drop occurrence (lessons plan) |> List.head of
-                                        Just previous ->
-                                            if previous.start == replacement.start && previous.tutor == replacement.tutor then
-                                                Ok ()
+complete context (BookingDraft package students) =
+    if List.isEmpty students || List.any (\s -> String.isEmpty (String.trim s.name) || List.isEmpty s.routines) students then
+        Err IncompleteDraft
+    else if List.any (\s -> List.length (List.concatMap sessions s.routines) /= s.hours) students then
+        Err AllocationMismatch
+    else
+        schedule context package (List.concatMap .routines students)
 
-                                            else
-                                                checkNotice context [ replacement ]
 
-                                        Nothing ->
-                                            Err SessionOutOfRange
-                                    )
-                                        |> Result.map (\_ -> valid)
-                                )
-                in
-                case plan of
-                    OneLesson _ ->
-                        if occurrence /= 0 then
-                            Err SessionOutOfRange
+-- A schedule is not an order: retain the named roster and contact at checkout.
+type ConfirmedOrder
+    = ConfirmedOrder Contact (List { id : StudentId, name : String }) Schedule
 
-                        else
-                            finish (OneLesson replacement)
 
-                    WeeklyLessons routine ->
-                        let
-                            originalSessions =
-                                sessionList routine.sessions
-                        in
-                        if occurrence >= List.length originalSessions then
-                            Err SessionOutOfRange
+type alias Contact =
+    { name : String, email : String }
 
-                        else
-                            let
-                                state =
-                                    if replacement == defaultOccurrence routine.first occurrence then
-                                        DefaultSession
 
-                                    else
-                                        CustomizedSession replacement
+confirmOrder context contact ((BookingDraft _ students) as draft) =
+    if String.isEmpty (String.trim contact.name) || not (String.contains "@" contact.email) || String.contains " " contact.email then
+        Err InvalidValue
+    else
+        complete context draft |> Result.map (ConfirmedOrder contact (List.map (\s -> { id = s.id, name = String.trim s.name }) students))
 
-                                updated =
-                                    List.indexedMap
-                                        (\i previous ->
-                                            if i == occurrence then
-                                                state
 
-                                            else
-                                                previous
-                                        )
-                                        originalSessions
-                            in
-                            case updated of
-                                first :: rest ->
-                                    finish (WeeklyLessons { routine | sessions = Sessions first rest })
+orderSchedule (ConfirmedOrder _ _ value) =
+    value
 
-                                [] ->
-                                    Err InvalidValue
+
+orderContact (ConfirmedOrder contact _ _) =
+    contact
+
+
+orderStudents (ConfirmedOrder _ students _) =
+    students

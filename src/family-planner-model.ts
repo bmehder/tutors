@@ -8,7 +8,7 @@ export type Tutor = {
   days: number[]; times: string[];
 };
 export const HOUR = 60;
-export const SUBJECTS = ['Biology', 'Chemistry', 'Algebra 1', 'Geometry', 'American Literature', 'Intermediate Composition', 'United States History', 'World History'];
+export const SUBJECTS = ['Biology', 'Chemistry', 'Algebra 1', 'Geometry', 'American Literature', 'Intermediate Composition', 'United States History', 'World History', 'Physics', 'Precalculus', 'Algebra 2', 'Elementary Math', 'Reading', 'Spanish 1', 'Spanish 2'];
 export function todayEastern(now = new Date()): string {
   const parts = new Intl.DateTimeFormat('en-US', {timeZone:'America/New_York',year:'numeric',month:'2-digit',day:'2-digit'}).formatToParts(now);
   const part = (type: string) => parts.find(p => p.type === type)!.value;
