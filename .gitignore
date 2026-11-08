@@ -1,45 +1,44 @@
 # Dependencies
 /node_modules/
-/.pnp
-.pnp.*
-# Keep authored Yarn tooling if the project adopts Yarn.
-/.yarn/*
-!/.yarn/patches/
-!/.yarn/plugins/
-!/.yarn/releases/
-!/.yarn/versions/
 
-# Generated builds and framework state
+# Build output and caches
 /dist/
-/.next/
-/.vinext/
-/out/
-next-env.d.ts
+/coverage/
+.vite/
 *.tsbuildinfo
 
-# Test output
-/coverage/
+# Logs
+*.log
 
-# Package-manager logs
-npm-debug.log*
-yarn-debug.log*
-yarn-error.log*
-.pnpm-debug.log*
-
-# Local environment and keys
+# Local environment and private keys
 .env*
+!.env.example
 .dev.vars*
 *.pem
+*.key
 
-# Checkout-local tool state
-/.wrangler/
-/.sites-runtime/
-
-# Workspace scaffolding and publication archives
+# Local tooling
 /.agents/
 /.codex/
+/.openai/
+/.sites-runtime/
+/.wrangler/
+/.next/
+/.vinext/
 /outputs/
 /work/
 
-# OS metadata
+# Archives
+*.tar
+*.tar.gz
+*.tgz
+*.zip
+
+# Editor and OS metadata
 .DS_Store
+Thumbs.db
+.idea/
+.vscode/
+
+# Vercel local project state
+.vercel/
