@@ -12,14 +12,10 @@
     "esModuleInterop": true,
     "module": "ESNext",
     "moduleResolution": "Bundler",
-    "jsx": "react-jsx",
-    "types": [
-      "vite/client"
-    ],
     "allowImportingTsExtensions": true
   },
   "include": [
-    "src",
-    "vite.config.ts"
+    "src/**/*.ts",
+    "temp-reference/typescript/*.ts"
   ]
 }

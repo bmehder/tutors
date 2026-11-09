@@ -42,3 +42,7 @@ Thumbs.db
 
 # Vercel local project state
 .vercel/
+
+# Astro and Gleam build output
+/.astro/
+/planner/build/

@@ -1,0 +1,42 @@
+---
+import Icon from './Icon.astro';
+---
+<section id="offer" class="max-w-7xl mx-auto px-6 md:px-12 py-20">
+  <div class="bg-[#f3dcd3] rounded-2xl p-8 md:p-12 grid md:grid-cols-2 items-center gap-10 relative overflow-hidden">
+    <div>
+      <p class="eyebrow mb-4">A warm welcome for your family</p>
+      <h2 class="text-4xl font-semibold">A fresh start.<br /><span class="serif">And 20% off.</span></h2>
+      <p class="text-sm mt-5 leading-6 max-w-sm text-ink/70">Join our mailing list for encouragement, tutoring news, and 20% off your first tutoring package.</p>
+    </div>
+    <div>
+      <div hidden data-signup-confirmation role="status" class="bg-white/70 rounded-xl p-7">
+        <Icon name="CheckCircle2" class="mb-4" />
+        <h3 class="text-xl font-semibold">You’re on the list!</h3>
+        <p class="text-sm mt-3 leading-6">Your welcome offer would be applied during checkout in the full service. This is a demo signup. Nothing is saved or sent.</p>
+        <a href="#booking" class="btn mt-5">Choose your first session</a>
+      </div>
+      <form data-demo-signup>
+        <label for="mail" class="text-xs font-semibold">Your email address</label>
+        <div class="flex flex-col sm:flex-row gap-2 mt-2">
+          <input id="mail" type="email" required class="field" placeholder="you@example.com" />
+          <button class="btn whitespace-nowrap">Get my 20% off</button>
+        </div>
+        <label class="flex gap-2 mt-4 text-xs leading-5">
+          <input type="checkbox" required class="mt-1 accent-[#143f3c]" />
+          I’d like to receive Christian Tutors news and offers. I can unsubscribe anytime.
+        </label>
+        <p class="text-[10px] text-ink/55 mt-3">Prototype signup · Nothing saved or sent</p>
+      </form>
+    </div>
+  </div>
+</section>
+<script>
+  const form = document.querySelector<HTMLFormElement>('[data-demo-signup]');
+  const confirmation = document.querySelector<HTMLElement>('[data-signup-confirmation]');
+  form?.addEventListener('submit', event => {
+    event.preventDefault();
+    form.reset();
+    form.hidden = true;
+    if (confirmation) confirmation.hidden = false;
+  });
+</script>

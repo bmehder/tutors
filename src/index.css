@@ -1,6 +1,7 @@
 @import "tailwindcss" source(".");
+@source "../planner/src";
 @theme { --color-ink:#143f3c; --color-coral:#ed806d; --color-cream:#faf8f3; --font-sans: 'Arial', sans-serif; }
-*{box-sizing:border-box} html{scroll-behavior:smooth;scroll-padding-top:100px}body{margin:0;background:#faf8f3;color:#143f3c;font-family:Arial,sans-serif}button,a,input,select{touch-action:manipulation}button,a{cursor:pointer}button:disabled{cursor:not-allowed}button,a,input,select{outline-offset:5px}h1,h2,h3{letter-spacing:-.045em} .serif{font-family:Georgia,serif;font-style:italic;font-weight:400} .btn{display:inline-flex;align-items:center;justify-content:center;gap:12px;border-radius:7px;padding:14px 22px;background:#143f3c;color:white;font-weight:700;font-size:14px;transition:.2s}.btn:hover{background:#245a54;transform:translateY(-1px)}.eyebrow{text-transform:uppercase;font-size:11px;font-weight:700;letter-spacing:.18em}.field{display:block;width:100%;background:white;border:1px solid #cfd8d3;border-radius:7px;padding:12px;font-size:14px;color:#143f3c}.paper{box-shadow:0 18px 65px #153e3b0c}summary{cursor:pointer;padding:20px 0;font-weight:600}dialog::backdrop{background:#143f3ca6;backdrop-filter:blur(4px)}
+*{box-sizing:border-box} html{scroll-behavior:smooth;scroll-padding-top:100px}body{margin:0;background:#faf8f3;color:#143f3c;font-family:Arial,sans-serif}button,a,input,select{touch-action:manipulation}button,a{cursor:pointer}button:disabled{cursor:not-allowed}button,a,input,select{outline-offset:5px}h1,h2,h3{letter-spacing:-.045em} .serif{font-family:Georgia,serif;font-style:italic;font-weight:400} .btn{display:inline-flex;align-items:center;justify-content:center;gap:12px;border-radius:7px;padding:14px 22px;background:#143f3c;color:white;font-weight:700;font-size:14px;transition:.2s}.btn:hover{background:#245a54;transform:translateY(-1px)}.eyebrow{text-transform:uppercase;font-size:11px;font-weight:700;letter-spacing:.18em}.field{display:block;width:100%;background:white;border:1px solid #cfd8d3;border-radius:7px;padding:12px;font-size:14px;color:#143f3c}summary{cursor:pointer;padding:20px 0;font-weight:600}
 
 .planner-step{display:inline-flex;align-items:center;justify-content:center;width:26px;height:26px;flex-shrink:0;border-radius:50%;background:#edf1e8;font-size:12px;font-weight:600}
 .planner-label{font-size:12px;font-weight:600;letter-spacing:0}
@@ -8,19 +9,13 @@
 .planner-outline:hover{background:#f0f3ee}
 .planner-small{display:inline-flex;align-items:center;justify-content:center;gap:6px;padding:8px;min-height:40px;font-size:11px;color:#143f3cb3;border-radius:5px}
 .planner-small:hover{background:#143f3c08;color:#143f3c}
-.planner-empty{display:flex;flex-direction:column;align-items:center;text-align:center;gap:12px;padding:25px 16px;background:#fafaf6;border-radius:8px;color:#143f3c99;font-size:12px;line-height:1.8}
-.planner-dialog{position:fixed;inset:0;margin:auto;width:calc(100% - 24px);max-height:90dvh;overflow:auto;padding:30px;border:0;border-radius:14px;background:#faf8f3;color:#143f3c;box-shadow:0 25px 80px #143f3c33}
-.planner-close{position:absolute;top:12px;right:12px;display:flex;align-items:center;justify-content:center;min-width:44px;min-height:44px;border-radius:50%}
-.planner-close:hover{background:#143f3c08}
 #booking .field{min-height:44px;min-width:0;font-size:16px}
 #booking button:disabled{transform:none}
-@media (max-width:480px){.planner-dialog{padding:26px 20px}.planner-small{font-size:10px;padding:7px}.planner-label{font-size:12px}header{gap:10px!important;padding-left:16px!important;padding-right:16px!important}header>.btn{font-size:11px;padding:12px}}
+@media (max-width:480px){.planner-small{font-size:10px;padding:7px}.planner-label{font-size:12px}header{gap:10px!important;padding-left:16px!important;padding-right:16px!important}header>.btn{font-size:11px;padding:12px}}
 @media (max-width:480px){header>a[aria-label="Christian Tutors home"]>div:last-child{font-size:16px}header>a[aria-label="Christian Tutors home"]>div:last-child>div{font-size:8px;letter-spacing:.12em}}
 
 #booking .field[aria-invalid="true"]{border-color:#a65332;outline:2px solid #a65332;outline-offset:2px;background:#fffaf5}
 #booking .field[aria-invalid="true"]:focus{outline-color:#143f3c}
-.planner-needs-selection{outline:2px solid #a65332;outline-offset:4px;border-radius:6px;padding:12px;background:#fffaf5}
-#booking input[required]:placeholder-shown{border-color:#a65332;outline:2px solid #a65332;outline-offset:2px;background:#fffaf5}
 #booking form .planner-label{line-height:1.4}
 #booking form .field{line-height:1.4}
 .planner-action{color:#843c30;font-size:14px;line-height:1.5;font-weight:600;border-left:3px solid #a65332;padding:6px 0 6px 10px}
@@ -33,12 +28,7 @@
  #print-order,#print-order *{visibility:visible!important}
  #print-order{display:block!important;position:absolute;left:0;top:0;width:100%;font-family:Arial,sans-serif;font-size:11pt;line-height:1.5}
  #print-order h1{font-size:22pt;margin:0 0 8pt}
- #print-order h2{font-size:14pt;margin:18pt 0 8pt;break-after:avoid}
  #print-order p{margin:6pt 0}
- #print-order table{width:100%;border-collapse:collapse;font-size:10pt}
- #print-order th,#print-order td{padding:8pt 6pt;border-bottom:1px solid #ccc;text-align:left;vertical-align:top}
- #print-order thead{display:table-header-group}
- #print-order tr{break-inside:avoid}
 }
 @media print{
  body *:not(#print-order):not(#print-order *):not(:has(#print-order)){display:none!important}

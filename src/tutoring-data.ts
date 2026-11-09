@@ -11,8 +11,6 @@ export const tutors=[
       "Geometry",
       "Biology"
     ],
-    "min": 4,
-    "max": 10,
     "degree": "Algebra 1 · Algebra 2 · Geometry · Biology",
     "bio": "MyFunScience teacher · Tutoring availability shown is fictional.",
     "color": "#e5d8ca",
@@ -41,8 +39,6 @@ export const tutors=[
       "Biology",
       "Chemistry"
     ],
-    "min": 8,
-    "max": 12,
     "degree": "Biology · Chemistry",
     "bio": "MyFunScience teacher · Tutoring availability shown is fictional.",
     "color": "#d4e1dc",
@@ -65,8 +61,6 @@ export const tutors=[
       "American Literature",
       "Intermediate Composition"
     ],
-    "min": 4,
-    "max": 12,
     "degree": "American Literature · Intermediate Composition",
     "bio": "MyFunScience teacher · Tutoring availability shown is fictional.",
     "color": "#f2d9d2",
@@ -89,8 +83,6 @@ export const tutors=[
       "United States History",
       "World History"
     ],
-    "min": 6,
-    "max": 12,
     "degree": "United States History · World History",
     "bio": "MyFunScience teacher · Tutoring availability shown is fictional.",
     "color": "#e4e2ca",
@@ -113,8 +105,6 @@ export const tutors=[
       "Physics",
       "Chemistry"
     ],
-    "min": 4,
-    "max": 12,
     "days": [
       0,
       2,
@@ -137,8 +127,6 @@ export const tutors=[
       "Pre-Algebra",
       "Middle School Math"
     ],
-    "min": 4,
-    "max": 12,
     "days": [
       1,
       4,
@@ -161,8 +149,6 @@ export const tutors=[
       "Spanish 1",
       "Spanish 2"
     ],
-    "min": 4,
-    "max": 12,
     "days": [
       2,
       5,
@@ -184,8 +170,6 @@ export const tutors=[
     "subjects": [
       "Computer Science and Intro to Programming"
     ],
-    "min": 4,
-    "max": 12,
     "days": [
       3,
       5,
@@ -201,5 +185,22 @@ export const tutors=[
     "color": "#ece7cf"
   }
 ];
-export const packages=[{hours:5,rate:80,name:'A little direction',desc:'Work through a tricky topic or prepare for a test.'},{hours:10,rate:75,name:'Room to grow',desc:'Build momentum with steady, personal support.'},{hours:20,rate:70,name:'A strong foundation',desc:'Invest in lasting understanding and confidence.'}];
 export const money=(n:number)=>new Intl.NumberFormat('en-US',{style:'currency',currency:'USD',minimumFractionDigits:0,maximumFractionDigits:2}).format(n);
+
+export const SUBJECTS = [
+	'Biology',
+	'Chemistry',
+	'Algebra 1',
+	'Geometry',
+	'American Literature',
+	'Intermediate Composition',
+	'United States History',
+	'World History',
+	'Physics',
+	'Pre-Algebra',
+	'Algebra 2',
+	'Middle School Math',
+	'Computer Science and Intro to Programming',
+	'Spanish 1',
+	'Spanish 2',
+]

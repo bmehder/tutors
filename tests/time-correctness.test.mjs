@@ -1,8 +1,8 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {calendarAddDays,calendarWeekday,easternInstant,localInstant,weeklyInstants,sessionInterval,instantParts,viewSession} from '../src/session-time.ts';
-import {availabilityReason,validatePlan,isSoldOut,overlaps,weeklySeries} from '../src/family-planner-model.ts';
-import {confirmOrder,revalidateOrder} from '../src/booking-domain.ts';
+import {availabilityReason,validatePlan,isSoldOut,overlaps,weeklySeries} from '../temp-reference/typescript/family-planner-model.ts';
+import {confirmOrder,revalidateOrder} from '../temp-reference/typescript/booking-domain.ts';
 const hour=3600000;
 const child={id:'emma',name:'Emma',color:0};
 const tutor={id:'sarah',name:'Sarah',subjects:['Biology'],min:1,max:12,days:[0,1,2,3,4,5,6],times:['12:00 AM','1:00 AM','1:30 AM','2:00 AM','2:30 AM','3:00 AM','3:30 AM','4:00 AM','3:00 PM','4:00 PM','11:00 PM','11:30 PM']};

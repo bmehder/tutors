@@ -1,0 +1,86 @@
+---
+import Icon from "./Icon.astro";
+---
+<section id="contact" class="border-t border-ink/10 bg-white py-20">
+  <div class="max-w-7xl mx-auto px-6 md:px-12 grid lg:grid-cols-[.8fr_1.2fr] gap-10 lg:gap-20">
+    <div>
+      <p class="eyebrow text-ink/55 mb-3">There’s a place for you here</p>
+      <h2 class="text-4xl font-semibold">Let’s start a <span class="serif">conversation.</span></h2>
+      <p class="text-sm leading-7 text-ink/65 mt-5 max-w-sm">Finding the right support is personal. Ask us about your student’s needs, or tell us how you’d love to help students grow.</p>
+      <div class="mt-8 space-y-6">
+        <div class="flex gap-4"><Icon name="MessageCircle" size={23} class="shrink-0 mt-1"/><div><h3 class="font-semibold">For families</h3><p class="text-sm leading-6 text-ink/65 mt-1">Questions about subjects, scheduling, packages, or finding the right tutor? Start here.</p></div></div>
+        <div class="flex gap-4"><Icon name="GraduationCap" size={25} class="shrink-0 mt-1"/><div><h3 class="font-semibold">For potential tutors</h3><p class="text-sm leading-6 text-ink/65 mt-1">Bring your subject knowledge and a Biblical worldview. Share your experience and the times you could teach.</p></div></div>
+      </div>
+      <p class="text-xs leading-5 text-ink/55 mt-8 border-t border-ink/10 pt-5">This is a mock form. Use sample information. Nothing entered here is sent or saved.</p>
+    </div>
+    <div class="border border-ink/15 bg-cream rounded-xl p-6 md:p-8">
+      <fieldset class="mb-7">
+        <legend class="text-xs font-semibold mb-3">How can we help?</legend>
+        <div class="grid sm:grid-cols-2 gap-3">
+          {[['family', 'I have a question'], ['tutor', 'I’d like to tutor']].map(([value, label]) => (
+            <label class={`flex items-center gap-3 cursor-pointer rounded-lg border p-4 text-sm font-semibold border-ink/20 bg-white has-checked:border-ink has-checked:bg-[#eaf0e9]`}>
+              <input type="radio" name="contact-type" value={value} checked={value === 'family'} class="accent-[#143f3c]"/>{label}
+            </label>
+          ))}
+        </div>
+      </fieldset>
+      <div data-contact-confirmation hidden role="status" class="py-5">
+        <Icon name="CheckCircle2" size={36} class="text-[#517253] mb-4" />
+        <h3 data-contact-heading class="text-2xl font-semibold"></h3>
+        <p class="text-sm leading-7 text-ink/70 mt-3">This was a demo only. Your information was not sent or saved.</p>
+        <button type="button" class="btn mt-6" data-contact-retry>Try the form again</button>
+      </div>
+      <form class="space-y-5" data-contact-form>
+          <div class="grid sm:grid-cols-2 gap-4">
+            <label class="block text-xs font-semibold">Your name <span class="font-normal">(required)</span><input required name="name" autoComplete="name" class="field mt-2" placeholder="Alex Taylor" maxLength={120}/></label>
+            <label class="block text-xs font-semibold">Email address <span class="font-normal">(required)</span><input required type="email" name="email" autoComplete="email" class="field mt-2" placeholder="alex@example.com" maxLength={254}/></label>
+          </div>
+          <label class="block text-xs font-semibold">Phone number (required)<input required type="tel" inputMode="tel" autoComplete="tel-national" name="phone" class="field mt-2" placeholder="(555) 123-4567" pattern={'\\([0-9]{3}\\) [0-9]{3}-[0-9]{4}'} title="Enter a 10-digit US or Canadian phone number." aria-describedby="phone-format"/><span id="phone-format" class="block font-normal text-ink/60 mt-2">US / Canada · 10 digits</span></label>
+          <fieldset data-tutor-fields hidden disabled class="space-y-5">
+            <div class="grid sm:grid-cols-2 gap-4">
+              <label class="block text-xs font-semibold">Subjects you could teach (required)<input required name="subjects" class="field mt-2" placeholder="e.g. Algebra, Biology" maxLength={300}/></label>
+              <label class="block text-xs font-semibold">Grade levels (required)<input required name="grades" class="field mt-2" placeholder="e.g. Grades 6–12" maxLength={120}/></label>
+            </div>
+            <label class="block text-xs font-semibold">Teaching experience & qualifications (required)<textarea required name="experience" rows={3} class="field mt-2 resize-y" placeholder="Tell us about your teaching background and relevant qualifications." maxLength={3000}/></label>
+            <label class="block text-xs font-semibold">Days, times & time zone (required)<textarea required name="availability" rows={2} class="field mt-2 resize-y" placeholder="e.g. Mondays and Wednesdays, 3–6 PM Eastern" maxLength={1000}/></label>
+            <label class="block text-xs font-semibold">Your approach to a Biblical worldview (required)<textarea required name="approach" rows={3} class="field mt-2 resize-y" placeholder="How would your faith shape the way you teach and encourage students?" maxLength={3000}/></label>
+          </fieldset><fieldset data-family-fields>
+            <label class="block text-xs font-semibold">Your question (required)<textarea required name="message" rows={5} class="field mt-2 resize-y" placeholder="Tell us a little about what your family needs." maxLength={3000}/></label>
+          </fieldset>
+          <p class="text-xs text-ink/60">Demo only · Nothing will be submitted or saved.</p>
+          <button type="submit" data-contact-submit class="btn w-full sm:w-auto">Preview inquiry confirmation</button>
+        </form>
+    </div>
+  </div>
+</section>
+<script>
+  import { formatPhone } from '../phone';
+  const section = document.getElementById('contact');
+  if (section) {
+    const form = section.querySelector<HTMLFormElement>('[data-contact-form]')!;
+    const confirmation = section.querySelector<HTMLElement>('[data-contact-confirmation]')!;
+    const tutorFields = section.querySelector<HTMLFieldSetElement>('[data-tutor-fields]')!;
+    const familyFields = section.querySelector<HTMLFieldSetElement>('[data-family-fields]')!;
+    const submit = section.querySelector<HTMLButtonElement>('[data-contact-submit]')!;
+    const phone = form.querySelector<HTMLInputElement>('[name="phone"]')!;
+    let isTutor = false;
+    function showForm() { confirmation.hidden = true; form.hidden = false; }
+    section.querySelectorAll<HTMLInputElement>('[name="contact-type"]').forEach(input => input.addEventListener('change', () => {
+      isTutor = input.value === 'tutor';
+      tutorFields.hidden = tutorFields.disabled = !isTutor;
+      familyFields.hidden = familyFields.disabled = isTutor;
+      submit.textContent = isTutor ? 'Preview application confirmation' : 'Preview inquiry confirmation';
+      form.reset();
+      showForm();
+    }));
+    phone.addEventListener('input', () => { phone.value = formatPhone(phone.value); });
+    form.addEventListener('submit', event => {
+      event.preventDefault();
+      section.querySelector('[data-contact-heading]')!.textContent = isTutor ? 'A thoughtful first step.' : 'Thanks for reaching out.';
+      form.reset();
+      form.hidden = true;
+      confirmation.hidden = false;
+    });
+    section.querySelector('[data-contact-retry]')?.addEventListener('click', showForm);
+  }
+</script>

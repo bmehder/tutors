@@ -1,0 +1,85 @@
+---
+import Icon from "./Icon.astro";
+---
+<div class='bg-ink text-white text-center px-4 py-2.5 text-xs tracking-wide'>
+				A little encouragement goes a long way.
+				<a href='#offer' class='font-bold underline underline-offset-4 ml-1'>
+					Get 20% off your first package
+				</a>
+			</div>
+			<header
+				class='relative max-w-7xl mx-auto flex items-center justify-between px-6 md:px-12 py-6 gap-6'
+			>
+				<a
+					href='/'
+					aria-label='Christian Tutors home'
+					class='flex gap-2.5 items-center'
+				>
+					<div class='bg-coral/15 p-2 rounded-lg'>
+						<Icon name="BookOpen" size={29} strokeWidth={1.7} />
+					</div>
+					<div class='text-xl font-bold tracking-tight leading-5'>
+						christian<span class='text-coral'>tutors</span>
+						<div class='text-[9px] leading-tight tracking-[.12em] uppercase font-normal mt-1 whitespace-nowrap'>
+							By MyFunScience
+						</div>
+					</div>
+				</a>
+				<nav class='hidden md:flex items-center gap-8 text-sm'>
+					<a href='#how'>How it works</a>
+					<a href='#tutors'>Our tutors</a>
+					<a href='#booking'>Book tutoring</a>
+					<a href='#contact'>Contact</a>
+				</nav>
+				<a class='btn !py-3 hidden md:inline-flex' href='#booking'>
+					Find your tutor
+				</a>
+				<button
+					type='button'
+					aria-label="Open navigation menu"
+					aria-expanded="false" data-menu-button
+					aria-controls='mobile-navigation'
+
+					class='md:hidden min-w-11 min-h-11 flex items-center justify-center border border-ink/20 rounded-lg'
+				>
+					<Icon name="Menu" size={23} />
+				</button>
+
+					<nav
+						id='mobile-navigation' hidden
+						aria-label='Mobile navigation'
+						class='absolute top-full inset-x-4 z-40 bg-white border border-ink/15 rounded-xl shadow-lg p-3 md:hidden'
+					>
+						{[
+							['#how', 'How it works'],
+							['#tutors', 'Our tutors'],
+							['#booking', 'Book tutoring'],
+							['#contact', 'Contact'],
+							['#offer', 'Get 20% off'],
+						].map(([href, label]) => (
+							<a
+								href={href}
+
+								class='block rounded-lg px-4 py-4 text-sm font-semibold hover:bg-[#edf3ed] focus:bg-[#edf3ed]'
+							>
+								{label}
+							</a>
+						))}
+					</nav>
+</header>
+<script>
+  const button = document.querySelector<HTMLButtonElement>('[data-menu-button]');
+  const nav = document.getElementById('mobile-navigation');
+  if (button && nav) {
+    const setOpen = (open: boolean) => {
+      nav.hidden = !open;
+      button.setAttribute('aria-expanded', String(open));
+      button.setAttribute('aria-label', open ? 'Close navigation menu' : 'Open navigation menu');
+    };
+    button.addEventListener('click', () => setOpen(nav.hidden));
+    nav.querySelectorAll('a').forEach(link => link.addEventListener('click', () => setOpen(false)));
+    button.closest('header')?.addEventListener('keydown', event => {
+      if (event.key === 'Escape' && !nav.hidden) { setOpen(false); button.focus(); }
+    });
+  }
+</script>

@@ -58,3 +58,27 @@ export function normalizeClock(input:BookingClock|string):BookingClock{
  if(instant.kind!=='resolved')return {now:NaN,noticeMs:NaN};
  return {now:instant.instant,noticeMs:24*60*MINUTE_MS};
 }
+
+export function formatDate(date: string, long = false): string {
+	try {
+		return calendarDate(date).toLocaleString('en-US', {
+			weekday: long ? 'long' : 'short',
+			month: 'short',
+			day: 'numeric',
+			year: 'numeric',
+		})
+	} catch {
+		return 'Invalid date'
+	}
+}
+export function parseTime(time: string): number {
+	const match = /^(\d{1,2}):(\d{2}) (AM|PM)$/.exec(time)
+	if (!match) throw new Error('Invalid session time')
+	return (
+		(Number(match[1]) % 12) * 60 + Number(match[2]) + (match[3] === 'PM' ? 720 : 0)
+	)
+}
+export function formatTime(minutes: number): string {
+	const hour = Math.floor(minutes / 60)
+	return `${hour % 12 || 12}:${String(minutes % 60).padStart(2, '0')} ${hour >= 12 ? 'PM' : 'AM'}`
+}
