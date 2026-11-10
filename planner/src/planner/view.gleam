@@ -9,10 +9,13 @@ import lustre/element.{type Element}
 import lustre/element/html as h
 import lustre/element/keyed
 import lustre/event as e
-import planner/allocation.{allocation_issue, student_limit}
+import planner/allocation.{
+  allocation_issue, remaining_subject_hours, student_limit, subject_hour_limit,
+  total_allocated_hours,
+}
 import planner/browser.{
-  booking_calendar, choices, format_money, instant_label, matching_zones, now,
-  session_label, subjects, tomorrow, tutors, week_dates,
+  all_tutors, booking_calendar, choices, format_money, instant_label,
+  matching_zones, now, session_label, subjects, tomorrow, week_dates,
 }
 import planner/checkout.{
   discount_amount, hourly_rate, order_total, package_total,
@@ -20,92 +23,72 @@ import planner/checkout.{
 import planner/model.{
   type Discount, type Hours, type Model, type Msg, type Order, type PaymentState,
   type RoutineDraft, type Session, type Student, type SubjectAllocation,
-  type TimeZone, AllocateHours, Available, BuildWeeklyRoutine, ChoosePackage,
-  ChooseStudentCount, ContactInfo, DemoPaymentDetails, EnterContactInfo,
-  NotProcessing, OrderComplete, PayForOrder, Processing, ReviewFamilyPlan,
-  Unavailable, UserChangedFirstDate, UserChangedStudentCount,
-  UserChangedStudentHours, UserChangedSubjectHours, UserClickedAddSubject,
-  UserClickedChangeTimeZone, UserClickedEditSchedule, UserClickedNext,
-  UserClickedPrint, UserClickedRemoveSubject, UserClickedSaveSchedule,
-  UserClickedSkipWeekInDraft, UserClickedSkipWeekInReview, UserClickedStep,
-  UserComparedDate, UserEnteredStudentName, UserSearchedTimeZones,
-  UserSelectedPackage, UserSelectedSubject, UserSelectedTimeZone,
-  UserSelectedTutor, UserSelectedWeeklyTime, UserSubmittedContact,
-  UserSubmittedPayment, UserToggledDemoDiscount,
+  type TimeZone, type Tutor, type WeeklyRoutine, AllocateHours, Available,
+  BuildWeeklyRoutine, ChoosePackage, ChooseStudentCount, ContactInfo,
+  DemoPaymentDetails, EnterContactInfo, NotProcessing, OrderComplete,
+  PayForOrder, Processing, ReviewFamilyPlan, Unavailable, UserChangedFirstDate,
+  UserChangedStudentCount, UserChangedStudentHours, UserChangedSubjectHours,
+  UserClickedAddSubject, UserClickedChangeTimeZone, UserClickedEditSchedule,
+  UserClickedNext, UserClickedPrint, UserClickedRemoveSubject,
+  UserClickedSaveSchedule, UserClickedSkipWeekInDraft,
+  UserClickedSkipWeekInReview, UserClickedStep, UserComparedDate,
+  UserEnteredStudentName, UserSearchedTimeZones, UserSelectedPackage,
+  UserSelectedSubject, UserSelectedTimeZone, UserSelectedTutor,
+  UserSelectedWeeklyTime, UserSubmittedContact, UserSubmittedPayment,
+  UserToggledDemoDiscount,
 }
 import planner/scheduling
 
-fn total(hours: Hours) -> String {
-  format_money(package_total(hours))
+// Derived display data
+
+type DayCard {
+  DayCard(
+    date: model.Date,
+    label: String,
+    availability_label: String,
+    selected: Bool,
+  )
 }
 
-fn text(value: Int) -> String {
-  int.to_string(value)
+type TimeCard {
+  TimeCard(
+    label: String,
+    sessions: List(Session),
+    selected: Bool,
+    unavailable_reason: Option(String),
+  )
 }
 
-fn bool_text(value: Bool) -> String {
-  case value {
-    True -> "true"
-    False -> "false"
-  }
+type RoutinePreview {
+  NoTimeSelected
+  PreviewSessions(rows: List(SessionRow), issue: Option(model.ErrorMessage))
 }
 
-fn button(label: String, msg: Msg, class: String) -> Element(Msg) {
-  h.button([a.type_("button"), a.class(class), e.on_click(msg)], [h.text(label)])
+type SessionRow {
+  SessionRow(label: String, skip: Option(Msg))
 }
 
-fn heading(label: String) -> Element(Msg) {
-  h.h3([a.class("text-2xl font-semibold")], [h.text(label)])
+type StudentScheduleGroup {
+  StudentScheduleGroup(student_name: String, subjects: List(SubjectSchedule))
 }
 
-fn paragraph(label: String) -> Element(Msg) {
-  h.p([a.class("text-sm leading-6 text-ink/65")], [h.text(label)])
+type SubjectSchedule {
+  ScheduleNotChosen(subject: model.Subject)
+  ScheduledSubject(
+    subject: model.Subject,
+    session_summary: String,
+    routine_label: Option(String),
+    rows: List(SessionRow),
+    edit: Option(Msg),
+  )
 }
 
-fn select(
-  label: String,
-  value: String,
-  options: List(#(String, String)),
-  on_change: a.Attribute(Msg),
-) -> Element(Msg) {
-  select_field(label, value, options, on_change, [])
+type ScheduleDisplay {
+  ScreenSchedule
+  PrintSchedule
 }
 
-fn select_field(
-  label: String,
-  value: String,
-  options: List(#(String, String)),
-  on_change: a.Attribute(Msg),
-  attributes: List(a.Attribute(Msg)),
-) -> Element(Msg) {
-  h.label([a.class("planner-label block")], [
-    h.text(label),
-    h.select(
-      [a.class("field mt-2"), on_change, ..attributes],
-      list.map(options, fn(option) {
-        h.option([a.value(option.0), a.selected(option.0 == value)], option.1)
-      }),
-    ),
-  ])
-}
-
-fn on_integer_change(
-  current: Int,
-  message: fn(Int) -> Msg,
-) -> a.Attribute(Msg) {
-  e.on("change", {
-    use value <- decode.subfield(["target", "value"], decode.string)
-    case int.parse(value) {
-      Ok(number) -> decode.success(message(number))
-      Error(_) -> decode.failure(message(current), "integer")
-    }
-  })
-}
-
-fn numbers(max: Int) -> List(#(String, String)) {
-  int.range(1, max + 1, [], fn(values, n) { [#(text(n), text(n)), ..values] })
-  |> list.reverse
-}
+// Planner and booking steps
 
 pub fn render(model: Model) -> Element(Msg) {
   let progress = case model.step {
@@ -127,7 +110,13 @@ pub fn render(model: Model) -> Element(Msg) {
   }
   let notice = case model.notice {
     None -> element.none()
-    Some(message) ->
+    Some(model.WeekSkipped(original, replacement)) -> {
+      let message =
+        "Skipped "
+        <> session_label(original, model.time_zone)
+        <> ". Replacement added at the end: "
+        <> session_label(replacement, model.time_zone)
+        <> ". Your total hours are unchanged."
       h.p(
         [
           a.class("rounded-lg bg-[#edf3ed] p-4 text-sm text-[#35573d]"),
@@ -135,6 +124,7 @@ pub fn render(model: Model) -> Element(Msg) {
         ],
         [h.text(message)],
       )
+    }
   }
   h.div([a.class("space-y-4")], [
     case model.step {
@@ -162,7 +152,7 @@ fn booking_progress(model: Model, progress: String) -> Element(Msg) {
   }
   let status = case model.step {
     AllocateHours ->
-      text(allocated_hours(model.students))
+      text(total_allocated_hours(model.students))
       <> " of "
       <> text(model.package_hours)
       <> " hours allocated"
@@ -293,10 +283,6 @@ fn booking_progress(model: Model, progress: String) -> Element(Msg) {
   ])
 }
 
-fn allocated_hours(students: List(Student)) -> Hours {
-  list.fold(students, 0, fn(sum, student) { sum + student.allocated_hours })
-}
-
 fn scheduled_hours(model: Model) -> Hours {
   list.fold(model.weekly_routines, 0, fn(sum, routine) {
     sum + list.length(routine.sessions)
@@ -409,7 +395,11 @@ fn step_view(model: Model) -> Element(Msg) {
         student_count_guidance(model.package_hours),
         button("Next: allocate hours", UserClickedNext, "btn w-full"),
       ])
-    AllocateHours ->
+    AllocateHours -> {
+      let over_capacity =
+        total_allocated_hours(model.students) > model.package_hours
+      let show_errors = model.error != None
+      let ready = allocation_issue(model.students, model.package_hours) == None
       h.div(
         [a.class("space-y-5")],
         list.append(
@@ -430,13 +420,13 @@ fn step_view(model: Model) -> Element(Msg) {
                 student,
                 index,
                 model.package_hours,
-                model.error != None,
-                allocated_hours(model.students) > model.package_hours,
+                show_errors,
+                over_capacity,
               )
             }),
             [
-              case allocation_issue(model.students, model.package_hours) {
-                None ->
+              case ready {
+                True ->
                   h.p(
                     [
                       a.class(
@@ -446,13 +436,14 @@ fn step_view(model: Model) -> Element(Msg) {
                     ],
                     [h.text("All student and subject hours are ready.")],
                   )
-                _ -> element.none()
+                False -> element.none()
               },
               button("Next: choose schedules", UserClickedNext, "btn w-full"),
             ],
           ),
         ),
       )
+    }
     BuildWeeklyRoutine(student, allocation, input) ->
       schedule_view(model, student, allocation, input)
     ReviewFamilyPlan ->
@@ -471,9 +462,9 @@ fn step_view(model: Model) -> Element(Msg) {
         ),
       ])
     EnterContactInfo -> {
-      let #(name, email) = case model.contact {
-        Some(contact) -> #(contact.name, contact.email)
-        None -> #("", "")
+      let #(name, email, phone) = case model.contact {
+        Some(contact) -> #(contact.name, contact.email, contact.phone)
+        None -> #("", "", "")
       }
       h.div([a.class("space-y-5")], [
         button(
@@ -486,12 +477,14 @@ fn step_view(model: Model) -> Element(Msg) {
         h.form([a.class("space-y-5"), e.on_submit(contact_submission)], [
           form_field("Contact name", "name", "text", name, ""),
           form_field("Email", "email", "email", email, ""),
+          form_field("Phone number", "phone", "tel", phone, ""),
           h.button([a.class("btn w-full")], [h.text("Next: payment")]),
         ]),
       ])
     }
     PayForOrder(order, state) -> payment_view(order, state)
-    OrderComplete(order) ->
+    OrderComplete(order) -> {
+      let confirmed_groups = confirmed_schedule_groups(order, model.time_zone)
       h.div([a.class("space-y-5")], [
         h.div([a.class("rounded-lg bg-[#edf3ed] p-5 space-y-3")], [
           heading("Payment Complete"),
@@ -517,17 +510,26 @@ fn step_view(model: Model) -> Element(Msg) {
           list.length(order.sessions),
           order.discount,
         ),
-        confirmed_schedule(order, model.time_zone, False),
+        confirmed_schedule(confirmed_groups, ScreenSchedule),
         h.section([a.id("print-order"), a.class("hidden")], [
           h.h1([], [h.text("Christian Tutors · Family plan")]),
-          paragraph(order.contact.name <> " · " <> order.contact.email),
+          paragraph(
+            order.contact.name
+            <> " · "
+            <> order.contact.email
+            <> " · "
+            <> order.contact.phone,
+          ),
           paragraph("Demo order · " <> text(order.package_hours) <> " hours"),
           price_breakdown(order.package_hours, order.discount),
-          confirmed_schedule(order, model.time_zone, True),
+          confirmed_schedule(confirmed_groups, PrintSchedule),
         ]),
       ])
+    }
   }
 }
+
+// Student allocation
 
 fn student_view(
   student: Student,
@@ -536,130 +538,140 @@ fn student_view(
   show_errors: Bool,
   over_capacity: Bool,
 ) -> Element(Msg) {
-  let remaining =
-    student.allocated_hours
-    - list.fold(student.subject_allocations, 0, fn(sum, allocation) {
-      sum + allocation.hours
+  let remaining_hours = remaining_subject_hours(student)
+  let name_invalid = show_errors && string.trim(student.name) == ""
+  let subject_catalog = subjects()
+  let subject_count = list.length(student.subject_allocations)
+  let can_add_subject =
+    subject_count
+    < int.min(student.allocated_hours, list.length(subject_catalog))
+  let add_subject_label = case subject_count {
+    0 -> "Add a subject"
+    _ -> "Add another subject"
+  }
+  let hour_options = numbers(int.max(1, subject_hour_limit(student)))
+  let subject_rows =
+    list.map(student.subject_allocations, fn(allocation) {
+      let options = subject_options(subject_catalog, student, allocation)
+      let invalid = show_errors && allocation.subject == ""
+      subject_allocation_row(
+        student,
+        allocation,
+        options,
+        hour_options,
+        invalid,
+      )
     })
-  h.fieldset(
-    [a.class("border border-ink/15 rounded-lg p-4 space-y-4")],
-    list.append(
-      [
-        h.legend([a.class("text-sm font-semibold px-2")], [
-          h.text("Student " <> text(index + 1)),
+  let remaining_notice = case remaining_hours > 0 {
+    True ->
+      h.p([a.class("planner-action")], [
+        h.text(
+          text(remaining_hours) <> " remaining hours — add a subject below.",
+        ),
+      ])
+    False -> element.none()
+  }
+
+  h.fieldset([a.class("border border-ink/15 rounded-lg p-4 space-y-4")], [
+    h.legend([a.class("text-sm font-semibold px-2")], [
+      h.text("Student " <> text(index + 1)),
+    ]),
+    h.div([a.class("grid gap-4 sm:grid-cols-2")], [
+      h.label([a.class("planner-label block")], [
+        h.text("Name"),
+        h.input([
+          a.class("field mt-2"),
+          a.value(student.name),
+          a.attribute("aria-invalid", bool_text(name_invalid)),
+          e.on_input(UserEnteredStudentName(student.id, _)),
         ]),
-        h.div([a.class("grid gap-4 sm:grid-cols-2")], [
-          h.label([a.class("planner-label block")], [
-            h.text("Name"),
-            h.input([
-              a.class("field mt-2"),
-              a.value(student.name),
-              a.attribute(
-                "aria-invalid",
-                bool_text(show_errors && string.trim(student.name) == ""),
-              ),
-              e.on_input(UserEnteredStudentName(student.id, _)),
-            ]),
-          ]),
-          select_field(
-            "Student’s total hours",
-            text(student.allocated_hours),
-            numbers(capacity),
-            on_integer_change(student.allocated_hours, UserChangedStudentHours(
-              student.id,
-              _,
-            )),
-            [a.attribute("aria-invalid", bool_text(over_capacity))],
-          ),
-        ]),
-      ],
-      list.append(
-        list.map(student.subject_allocations, fn(allocation) {
-          let available =
-            subjects()
-            |> list.filter(fn(subject) {
-              subject == allocation.subject
-              || !list.any(student.subject_allocations, fn(other) {
-                other.subject == subject
-              })
-            })
-            |> list.map(fn(subject) { #(subject, subject) })
-          h.div(
-            [
-              a.class(
-                "grid gap-3 border-t border-ink/10 pt-3 sm:grid-cols-[minmax(0,1fr)_auto] sm:items-end",
-              ),
-            ],
-            [
-              select_field(
-                "Subject",
-                allocation.subject,
-                [#("", "Choose a subject"), ..available],
-                e.on_change(UserSelectedSubject(student.id, allocation.id, _)),
-                [
-                  a.attribute(
-                    "aria-invalid",
-                    bool_text(show_errors && allocation.subject == ""),
-                  ),
-                ],
-              ),
-              h.div([a.class("flex items-end justify-between gap-4")], [
-                select(
-                  "Subject hours",
-                  text(allocation.hours),
-                  numbers(int.max(
-                    1,
-                    student.allocated_hours
-                      - list.length(student.subject_allocations)
-                      + 1,
-                  )),
-                  on_integer_change(allocation.hours, UserChangedSubjectHours(
-                    student.id,
-                    allocation.id,
-                    _,
-                  )),
-                ),
-                button(
-                  "Remove subject",
-                  UserClickedRemoveSubject(student.id, allocation.id),
-                  "planner-small",
-                ),
-              ]),
-            ],
-          )
-        }),
-        [
-          case remaining > 0 {
-            True ->
-              h.p([a.class("planner-action")], [
-                h.text(
-                  text(remaining) <> " remaining hours — add a subject below.",
-                ),
-              ])
-            False -> element.none()
-          },
-          h.button(
-            [
-              a.type_("button"),
-              a.class("planner-outline disabled:opacity-40"),
-              a.disabled(
-                list.length(student.subject_allocations)
-                >= int.min(student.allocated_hours, list.length(subjects())),
-              ),
-              e.on_click(UserClickedAddSubject(student.id)),
-            ],
-            [
-              h.text(case student.subject_allocations {
-                [] -> "Add a subject"
-                _ -> "Add another subject"
-              }),
-            ],
-          ),
-        ],
+      ]),
+      select_field(
+        "Student’s total hours",
+        text(student.allocated_hours),
+        numbers(capacity),
+        on_integer_change(student.allocated_hours, UserChangedStudentHours(
+          student.id,
+          _,
+        )),
+        [a.attribute("aria-invalid", bool_text(over_capacity))],
       ),
-    ),
+    ]),
+    ..list.append(subject_rows, [
+      remaining_notice,
+      h.button(
+        [
+          a.type_("button"),
+          a.class("planner-outline disabled:opacity-40"),
+          a.disabled(!can_add_subject),
+          e.on_click(UserClickedAddSubject(student.id)),
+        ],
+        [h.text(add_subject_label)],
+      ),
+    ])
+  ])
+}
+
+fn subject_options(
+  subject_catalog: List(String),
+  student: Student,
+  allocation: SubjectAllocation,
+) -> List(#(String, String)) {
+  let available =
+    subject_catalog
+    |> list.filter(fn(subject) {
+      subject == allocation.subject
+      || !list.any(student.subject_allocations, fn(other) {
+        other.subject == subject
+      })
+    })
+    |> list.map(fn(subject) { #(subject, subject) })
+  [#("", "Choose a subject"), ..available]
+}
+
+fn subject_allocation_row(
+  student: Student,
+  allocation: SubjectAllocation,
+  subject_options: List(#(String, String)),
+  hour_options: List(#(String, String)),
+  invalid: Bool,
+) -> Element(Msg) {
+  h.div(
+    [
+      a.class(
+        "grid gap-3 border-t border-ink/10 pt-3 sm:grid-cols-[minmax(0,1fr)_auto] sm:items-end",
+      ),
+    ],
+    [
+      select_field(
+        "Subject",
+        allocation.subject,
+        subject_options,
+        e.on_change(UserSelectedSubject(student.id, allocation.id, _)),
+        [a.attribute("aria-invalid", bool_text(invalid))],
+      ),
+      h.div([a.class("flex items-end justify-between gap-4")], [
+        select(
+          "Subject hours",
+          text(allocation.hours),
+          hour_options,
+          on_integer_change(allocation.hours, UserChangedSubjectHours(
+            student.id,
+            allocation.id,
+            _,
+          )),
+        ),
+        button(
+          "Remove subject",
+          UserClickedRemoveSubject(student.id, allocation.id),
+          "planner-small",
+        ),
+      ]),
+    ],
   )
 }
+
+// Weekly scheduling
 
 fn zone_view(model: Model) -> Element(Msg) {
   h.div([a.class("space-y-2")], [
@@ -708,77 +720,75 @@ fn schedule_view(
   allocation: SubjectAllocation,
   input: RoutineDraft,
 ) -> Element(Msg) {
-  let selected = case input.tutor {
+  let selected_tutor_id = case input.tutor {
     Some(tutor) -> tutor.id
     None -> ""
   }
-  let options =
-    tutors()
-    |> list.filter(fn(tutor) {
-      list.contains(tutor.subjects, allocation.subject)
+  let tutor_catalog = all_tutors()
+  let tutor_options = tutor_options(tutor_catalog, allocation.subject)
+  let other_routines =
+    list.filter(model.weekly_routines, fn(routine) {
+      routine.subject_allocation.id != allocation.id
     })
-    |> list.map(fn(tutor) { #(tutor.id, tutor.name) })
-  let others =
-    list.filter(model.weekly_routines, fn(schedule) {
-      schedule.subject_allocation.id != allocation.id
-    })
-  let times = case input.tutor {
-    None -> paragraph("Choose a tutor to see available times.")
+  let #(day_cards, time_cards) = case input.tutor {
+    None -> #([], None)
     Some(tutor) -> {
+      let choices_for_date = fn(date) {
+        choices(
+          tutor,
+          student,
+          allocation,
+          date,
+          model.time_zone,
+          other_routines,
+        )
+      }
+      let selected_choices = choices_for_date(input.date)
+      let days =
+        week_dates(input.anchor)
+        |> list.map(fn(day) {
+          let #(date, label) = day
+          let selected = date == input.date
+          let times = case selected {
+            True -> selected_choices
+            False -> choices_for_date(date)
+          }
+          let available_count =
+            list.count(times, fn(choice) { choice.availability == Available })
+          DayCard(
+            date:,
+            label:,
+            availability_label: available_times_label(available_count),
+            selected:,
+          )
+        })
       let times =
-        choices(tutor, student, allocation, input.date, model.time_zone, others)
-      h.div([a.class("space-y-3")], [
-        h.p([a.class("planner-label")], [h.text("Choose a time for this date")]),
-        h.div(
-          [a.class("flex flex-wrap gap-2")],
-          list.map(times, fn(choice) {
-            let chosen = case input.first_planned_session, choice.sessions {
-              Some(first), [session, ..] -> first == session
-              _, _ -> False
-            }
-            let class = case chosen {
-              True -> "bg-ink text-white"
-              False -> "bg-white"
-            }
-            let reason = case choice.availability {
-              Available -> []
-              Unavailable(reason) -> [a.title(reason)]
-            }
-            h.button(
-              [
-                a.type_("button"),
-                a.class(
-                  "min-h-11 rounded-lg border border-ink/20 px-4 py-3 text-left text-xs disabled:opacity-40 "
-                  <> class,
-                ),
-                a.disabled(choice.availability != Available),
-                a.attribute("aria-pressed", bool_text(chosen)),
-                e.on_click(UserSelectedWeeklyTime(choice.sessions)),
-                ..reason
-              ],
-              [
-                h.text(choice.label),
-                case choice.availability {
-                  Available -> element.none()
-                  Unavailable(_) ->
-                    h.span([a.class("block text-xs")], [h.text("Unavailable")])
-                },
-              ],
-            )
-          }),
-        ),
-        case list.any(times, fn(choice) { choice.availability == Available }) {
-          True -> element.none()
-          False ->
-            h.p([a.class("planner-action"), a.attribute("role", "status")], [
-              h.text(
-                "No complete weekly routine starts on this date. Choose another date or tutor.",
-              ),
-            ])
-        },
-      ])
+        list.map(selected_choices, fn(choice) {
+          let selected = case input.first_planned_session, choice.sessions {
+            Some(first), [session, ..] -> first == session
+            _, _ -> False
+          }
+          let unavailable_reason = case choice.availability {
+            Available -> None
+            Unavailable(reason) -> Some(reason)
+          }
+          TimeCard(choice.label, choice.sessions, selected, unavailable_reason)
+        })
+      #(days, Some(times))
     }
   }
+  let preview =
+    routine_preview(model, input.sessions, other_routines, tutor_catalog)
+  let earliest_date = tomorrow(model.time_zone)
+  let routine_description =
+    "Choose the weekly routine. The same tutor, day, and time repeat for "
+    <> text(allocation.hours)
+    <> " one-hour "
+    <> case allocation.hours {
+      1 -> "session."
+      _ -> "sessions."
+    }
+
   h.div([a.class("space-y-5")], [
     button(
       "Back to allocation",
@@ -792,20 +802,12 @@ fn schedule_view(
       h.h3([a.class("text-3xl font-bold leading-snug")], [
         h.text(allocation.subject),
       ]),
-      paragraph(
-        "Choose the weekly routine. The same tutor, day, and time repeat for "
-        <> text(allocation.hours)
-        <> " one-hour "
-        <> case allocation.hours {
-          1 -> "session."
-          _ -> "sessions."
-        },
-      ),
+      paragraph(routine_description),
     ]),
     select(
       "Tutor",
-      selected,
-      [#("", "Choose your tutor"), ..options],
+      selected_tutor_id,
+      tutor_options,
       e.on_change(UserSelectedTutor),
     ),
     h.p([a.class("text-xs leading-6 text-ink/65")], [
@@ -825,232 +827,369 @@ fn schedule_view(
         a.type_("date"),
         a.class("field mt-2"),
         a.value(input.date),
-        a.attribute("min", tomorrow(model.time_zone)),
+        a.attribute("min", earliest_date),
         e.on_change(UserChangedFirstDate),
       ]),
     ]),
-    case input.tutor {
-      None -> element.none()
-      Some(tutor) ->
-        h.div(
-          [a.class("grid grid-cols-2 sm:grid-cols-4 gap-2")],
-          list.map(week_dates(input.anchor), fn(day) {
-            let count =
-              choices(
-                tutor,
-                student,
-                allocation,
-                day.0,
-                model.time_zone,
-                others,
-              )
-              |> list.filter(fn(choice) { choice.availability == Available })
-              |> list.length
-            let available = case count {
-              0 -> "No weekly times"
-              1 -> "1 available time"
-              _ -> text(count) <> " available times"
-            }
-            h.button(
-              [
-                a.type_("button"),
-                a.class("border border-ink/20 rounded-lg p-3 text-left"),
-                a.classes([#("bg-[#edf3ed]", day.0 == input.date)]),
-                a.attribute("aria-pressed", bool_text(day.0 == input.date)),
-                e.on_click(UserComparedDate(day.0)),
-              ],
-              [
-                h.strong([a.class("block text-sm")], [h.text(day.1)]),
-                h.span([a.class("block text-xs mt-1")], [h.text(available)]),
-              ],
-            )
-          }),
-        )
-    },
-    times,
-    case input.sessions {
-      [] ->
-        h.p([a.class("planner-action")], [
-          h.text("Next: choose a tutor, date, and available time."),
-        ])
-      sessions -> {
-        let issue =
-          scheduling.schedule_issue(
-            sessions,
-            others,
-            model.students,
-            tutors(),
-            model.package_hours,
-            now(),
-            booking_calendar(),
-          )
-        h.div([a.class("space-y-3")], [
-          case issue {
-            "" ->
-              h.p(
-                [
-                  a.class("text-sm font-semibold text-[#35573d]"),
-                  a.attribute("role", "status"),
-                ],
-                [h.text("Your weekly routine is ready to save.")],
-              )
-            _ ->
-              h.p([a.class("planner-action"), a.attribute("role", "status")], [
-                h.text(issue),
-              ])
-          },
-          h.div(
-            [a.class("space-y-3 rounded-lg border border-ink/15 bg-cream p-4")],
-            [
-              h.h4([a.class("text-base font-semibold")], [
-                h.text("Weekly session dates"),
-              ]),
-              paragraph(
-                "Skip a week to add a replacement at the end. Contact support for other adjustments.",
-              ),
-              session_rows(
-                sessions,
-                model.time_zone,
-                Some(UserClickedSkipWeekInDraft),
-              ),
-            ],
-          ),
-          h.button(
-            [
-              a.type_("button"),
-              a.class("btn w-full disabled:opacity-40"),
-              a.disabled(issue != ""),
-              e.on_click(UserClickedSaveSchedule),
-            ],
-            [h.text("Save schedule & continue")],
-          ),
-        ])
-      }
-    },
+    day_cards_view(day_cards),
+    time_cards_view(time_cards),
+    routine_preview_view(preview),
   ])
 }
 
-fn session_rows(
-  sessions: List(Session),
-  zone: String,
-  skip: Option(fn(Session) -> Msg),
-) -> Element(Msg) {
-  h.ul(
-    [a.class("space-y-2")],
-    list.map(sessions, fn(session) {
-      h.li(
-        [
-          a.class(
-            "border-t border-ink/10 py-2 flex flex-wrap justify-between items-center gap-2 text-sm",
-          ),
-        ],
-        [
-          h.text(session_label(session, zone)),
-          case skip {
-            Some(action) ->
-              button(
-                "Skip this week",
-                action(session),
-                "planner-small underline",
-              )
-            None -> element.none()
-          },
-        ],
+fn tutor_options(
+  tutors: List(Tutor),
+  subject: model.Subject,
+) -> List(#(String, String)) {
+  let options =
+    tutors
+    |> list.filter(fn(tutor) { list.contains(tutor.subjects, subject) })
+    |> list.map(fn(tutor) { #(tutor.id, tutor.name) })
+  [#("", "Choose your tutor"), ..options]
+}
+
+fn available_times_label(count: Int) -> String {
+  case count {
+    0 -> "No weekly times"
+    1 -> "1 available time"
+    _ -> text(count) <> " available times"
+  }
+}
+
+fn day_cards_view(cards: List(DayCard)) -> Element(Msg) {
+  case cards {
+    [] -> element.none()
+    _ ->
+      h.div(
+        [a.class("grid grid-cols-2 sm:grid-cols-4 gap-2")],
+        list.map(cards, day_card_view),
       )
-    }),
+  }
+}
+
+fn day_card_view(card: DayCard) -> Element(Msg) {
+  h.button(
+    [
+      a.type_("button"),
+      a.class("border border-ink/20 rounded-lg p-3 text-left"),
+      a.classes([#("bg-[#edf3ed]", card.selected)]),
+      a.attribute("aria-pressed", bool_text(card.selected)),
+      e.on_click(UserComparedDate(card.date)),
+    ],
+    [
+      h.strong([a.class("block text-sm")], [h.text(card.label)]),
+      h.span([a.class("block text-xs mt-1")], [h.text(card.availability_label)]),
+    ],
+  )
+}
+
+fn time_cards_view(cards: Option(List(TimeCard))) -> Element(Msg) {
+  case cards {
+    None -> paragraph("Choose a tutor to see available times.")
+    Some(cards) -> {
+      let empty_notice = case
+        list.any(cards, fn(card) { card.unavailable_reason == None })
+      {
+        True -> element.none()
+        False ->
+          h.p([a.class("planner-action"), a.attribute("role", "status")], [
+            h.text(
+              "No complete weekly routine starts on this date. Choose another date or tutor.",
+            ),
+          ])
+      }
+      h.div([a.class("space-y-3")], [
+        h.p([a.class("planner-label")], [h.text("Choose a time for this date")]),
+        h.div(
+          [a.class("flex flex-wrap gap-2")],
+          list.map(cards, time_card_view),
+        ),
+        empty_notice,
+      ])
+    }
+  }
+}
+
+fn time_card_view(card: TimeCard) -> Element(Msg) {
+  let background = case card.selected {
+    True -> "bg-ink text-white"
+    False -> "bg-white"
+  }
+  let #(reason, availability_label) = case card.unavailable_reason {
+    None -> #([], element.none())
+    Some(reason) -> #(
+      [a.title(reason)],
+      h.span([a.class("block text-xs")], [h.text("Unavailable")]),
+    )
+  }
+  h.button(
+    [
+      a.type_("button"),
+      a.class(
+        "min-h-11 rounded-lg border border-ink/20 px-4 py-3 text-left text-xs disabled:opacity-40 "
+        <> background,
+      ),
+      a.disabled(card.unavailable_reason != None),
+      a.attribute("aria-pressed", bool_text(card.selected)),
+      e.on_click(UserSelectedWeeklyTime(card.sessions)),
+      ..reason
+    ],
+    [h.text(card.label), availability_label],
+  )
+}
+
+fn routine_preview(
+  model: Model,
+  sessions: List(Session),
+  other_routines: List(WeeklyRoutine),
+  tutors: List(Tutor),
+) -> RoutinePreview {
+  case sessions {
+    [] -> NoTimeSelected
+    _ -> {
+      let issue =
+        scheduling.schedule_issue(
+          sessions,
+          other_routines,
+          model.students,
+          tutors,
+          model.package_hours,
+          now(),
+          booking_calendar(),
+        )
+      let issue = case issue {
+        "" -> None
+        message -> Some(message)
+      }
+      let rows =
+        draft_session_rows(
+          sessions,
+          model.time_zone,
+          Some(UserClickedSkipWeekInDraft),
+        )
+      PreviewSessions(rows, issue)
+    }
+  }
+}
+
+fn routine_preview_view(preview: RoutinePreview) -> Element(Msg) {
+  case preview {
+    NoTimeSelected ->
+      h.p([a.class("planner-action")], [
+        h.text("Next: choose a tutor, date, and available time."),
+      ])
+    PreviewSessions(rows, issue) -> {
+      let #(status, status_class) = case issue {
+        None -> #(
+          "Your weekly routine is ready to save.",
+          "text-sm font-semibold text-[#35573d]",
+        )
+        Some(issue) -> #(issue, "planner-action")
+      }
+      h.div([a.class("space-y-3")], [
+        h.p([a.class(status_class), a.attribute("role", "status")], [
+          h.text(status),
+        ]),
+        h.div(
+          [a.class("space-y-3 rounded-lg border border-ink/15 bg-cream p-4")],
+          [
+            h.h4([a.class("text-base font-semibold")], [
+              h.text("Weekly session dates"),
+            ]),
+            paragraph(
+              "Skip a week to add a replacement at the end. Contact support for other adjustments.",
+            ),
+            session_rows(rows),
+          ],
+        ),
+        h.button(
+          [
+            a.type_("button"),
+            a.class("btn w-full disabled:opacity-40"),
+            a.disabled(issue != None),
+            e.on_click(UserClickedSaveSchedule),
+          ],
+          [h.text("Save schedule & continue")],
+        ),
+      ])
+    }
+  }
+}
+
+// Draft review and confirmed schedules
+
+fn draft_session_rows(
+  sessions: List(Session),
+  zone: TimeZone,
+  skip: Option(fn(Session) -> Msg),
+) -> List(SessionRow) {
+  list.map(sessions, fn(session) {
+    SessionRow(
+      session_label(session, zone),
+      option.map(skip, fn(action) { action(session) }),
+    )
+  })
+}
+
+fn session_rows(rows: List(SessionRow)) -> Element(Msg) {
+  h.ul([a.class("space-y-2")], list.map(rows, session_row))
+}
+
+fn session_row(row: SessionRow) -> Element(Msg) {
+  let skip_button = case row.skip {
+    Some(message) ->
+      button("Skip this week", message, "planner-small underline")
+    None -> element.none()
+  }
+  h.li(
+    [
+      a.class(
+        "border-t border-ink/10 py-2 flex flex-wrap justify-between items-center gap-2 text-sm",
+      ),
+    ],
+    [h.text(row.label), skip_button],
   )
 }
 
 fn schedule_summary(model: Model, editable: Bool) -> Element(Msg) {
-  h.div(
-    [a.class("space-y-4")],
-    list.append(
-      [
-        plan_totals(model.package_hours, scheduled_hours(model), None),
-        h.p([a.class("text-xs leading-6 text-ink/65")], [
-          h.text("Need a different day or time without skipping a week? "),
-          h.a([a.href("#contact"), a.class("underline underline-offset-4")], [
-            h.text("Contact support"),
-          ]),
-          h.text(" and we’ll help."),
-        ]),
-        case model.students {
-          [] ->
-            paragraph(
-              "Your family’s students, weekly routines, and session dates will appear here as you plan.",
+  let groups = draft_schedule_groups(model, editable)
+  let empty_message = case groups {
+    [] ->
+      paragraph(
+        "Your family’s students, weekly routines, and session dates will appear here as you plan.",
+      )
+    _ -> element.none()
+  }
+  let student_cards = list.map(groups, student_schedule_view(_, ScreenSchedule))
+
+  h.div([a.class("space-y-4")], [
+    plan_totals(model.package_hours, scheduled_hours(model), None),
+    h.p([a.class("text-xs leading-6 text-ink/65")], [
+      h.text("Need a different day or time without skipping a week? "),
+      h.a([a.href("#contact"), a.class("underline underline-offset-4")], [
+        h.text("Contact support"),
+      ]),
+      h.text(" and we’ll help."),
+    ]),
+    empty_message,
+    ..student_cards
+  ])
+}
+
+fn draft_schedule_groups(
+  model: Model,
+  editable: Bool,
+) -> List(StudentScheduleGroup) {
+  list.map(model.students, fn(student) {
+    let student_name = case string.trim(student.name) {
+      "" -> "Student"
+      name -> name
+    }
+    let subjects =
+      list.map(student.subject_allocations, fn(allocation) {
+        let routine =
+          list.find(model.weekly_routines, fn(routine) {
+            routine.subject_allocation.id == allocation.id
+          })
+        case routine {
+          Error(_) -> ScheduleNotChosen(allocation.subject)
+          Ok(routine) ->
+            draft_subject_schedule(
+              routine,
+              allocation,
+              model.time_zone,
+              editable,
             )
-          _ -> element.none()
-        },
-      ],
-      list.map(model.students, fn(student) {
-        h.div([a.class("space-y-3 border border-ink/15 rounded-lg p-4")], [
-          h.h4([a.class("text-sm font-semibold text-ink/65")], [
-            h.text(case string.trim(student.name) {
-              "" -> "Student"
-              name -> name
-            }),
-          ]),
-          h.div(
-            [a.class("space-y-3")],
-            list.map(student.subject_allocations, fn(allocation) {
-              case
-                list.find(model.weekly_routines, fn(schedule) {
-                  schedule.subject_allocation.id == allocation.id
-                })
-              {
-                Error(_) ->
-                  paragraph(allocation.subject <> " · Schedule not chosen")
-                Ok(schedule) ->
-                  h.div([a.class("space-y-2 border-t border-ink/10 pt-3")], [
-                    h.h5([a.class("text-xl font-bold leading-snug")], [
-                      h.text(allocation.subject),
-                    ]),
-                    paragraph(
-                      schedule.tutor.name
-                      <> " · "
-                      <> text(allocation.hours)
-                      <> case allocation.hours {
-                        1 -> " session"
-                        _ -> " sessions"
-                      },
-                    ),
-                    paragraph(
-                      "Weekly routine · "
-                      <> session_label(
-                        schedule.first_planned_session,
-                        model.time_zone,
-                      ),
-                    ),
-                    h.details([], [
-                      h.summary([a.class("text-sm !py-2")], [
-                        h.text("View session dates"),
-                      ]),
-                      session_rows(
-                        schedule.sessions,
-                        model.time_zone,
-                        case editable {
-                          True -> Some(UserClickedSkipWeekInReview(schedule, _))
-                          False -> None
-                        },
-                      ),
-                    ]),
-                    case editable {
-                      True ->
-                        button(
-                          "Edit weekly schedule",
-                          UserClickedEditSchedule(schedule),
-                          "planner-small",
-                        )
-                      False -> element.none()
-                    },
-                  ])
-              }
-            }),
-          ),
-        ])
-      }),
+        }
+      })
+    StudentScheduleGroup(student_name, subjects)
+  })
+}
+
+fn draft_subject_schedule(
+  routine: WeeklyRoutine,
+  allocation: SubjectAllocation,
+  zone: TimeZone,
+  editable: Bool,
+) -> SubjectSchedule {
+  let #(skip, edit) = case editable {
+    True -> #(
+      Some(UserClickedSkipWeekInReview(routine, _)),
+      Some(UserClickedEditSchedule(routine)),
+    )
+    False -> #(None, None)
+  }
+  ScheduledSubject(
+    subject: allocation.subject,
+    session_summary: session_summary(routine.tutor.name, allocation.hours),
+    routine_label: Some(
+      "Weekly routine · " <> session_label(routine.first_planned_session, zone),
     ),
+    rows: draft_session_rows(routine.sessions, zone, skip),
+    edit:,
   )
+}
+
+fn session_summary(tutor_name: String, count: Int) -> String {
+  tutor_name
+  <> " · "
+  <> text(count)
+  <> case count {
+    1 -> " session"
+    _ -> " sessions"
+  }
+}
+
+fn student_schedule_view(
+  group: StudentScheduleGroup,
+  display: ScheduleDisplay,
+) -> Element(Msg) {
+  h.div([a.class("space-y-3 border border-ink/15 rounded-lg p-4")], [
+    h.h4([a.class("text-sm font-semibold text-ink/65")], [
+      h.text(group.student_name),
+    ]),
+    h.div(
+      [a.class("space-y-3")],
+      list.map(group.subjects, subject_schedule_view(_, display)),
+    ),
+  ])
+}
+
+fn subject_schedule_view(
+  schedule: SubjectSchedule,
+  display: ScheduleDisplay,
+) -> Element(Msg) {
+  case schedule {
+    ScheduleNotChosen(subject) -> paragraph(subject <> " · Schedule not chosen")
+    ScheduledSubject(subject, summary, routine_label, rows, edit) -> {
+      let routine = case routine_label {
+        Some(label) -> paragraph(label)
+        None -> element.none()
+      }
+      let edit_button = case edit {
+        Some(message) ->
+          button("Edit weekly schedule", message, "planner-small")
+        None -> element.none()
+      }
+      let dates = session_rows(rows)
+      h.div([a.class("space-y-2 border-t border-ink/10 pt-3")], [
+        h.h5([a.class("text-xl font-bold leading-snug")], [h.text(subject)]),
+        paragraph(summary),
+        routine,
+        case display {
+          PrintSchedule -> dates
+          ScreenSchedule ->
+            h.details([], [
+              h.summary([a.class("text-sm !py-2")], [
+                h.text("View session dates"),
+              ]),
+              dates,
+            ])
+        },
+        edit_button,
+      ])
+    }
+  }
 }
 
 fn plan_totals(
@@ -1096,79 +1235,60 @@ fn price_row(label: String, amount: String) -> Element(Msg) {
   h.div([a.class("flex justify-between gap-3")], [h.text(label), h.text(amount)])
 }
 
-fn confirmed_schedule(
+fn confirmed_schedule_groups(
   order: Order,
   zone: TimeZone,
-  print: Bool,
+) -> List(StudentScheduleGroup) {
+  list.map(order.students, fn(student) {
+    let subjects =
+      list.map(student.subject_allocations, fn(allocation) {
+        let sessions =
+          list.filter(order.sessions, fn(confirmed) {
+            confirmed.session.student_id == student.id
+            && confirmed.session.subject == allocation.subject
+          })
+        let tutor_name = case sessions {
+          [first, ..] ->
+            list.find(order.tutors, fn(tutor) {
+              tutor.id == first.session.tutor_id
+            })
+            |> result.map(fn(tutor) { tutor.name })
+            |> result.unwrap("")
+          [] -> ""
+        }
+        let rows =
+          list.map(sessions, fn(session) {
+            SessionRow(instant_label(session.start_instant, zone), None)
+          })
+        ScheduledSubject(
+          subject: allocation.subject,
+          session_summary: session_summary(tutor_name, list.length(sessions)),
+          routine_label: None,
+          rows:,
+          edit: None,
+        )
+      })
+    StudentScheduleGroup(string.trim(student.name), subjects)
+  })
+}
+
+fn confirmed_schedule(
+  groups: List(StudentScheduleGroup),
+  display: ScheduleDisplay,
 ) -> Element(Msg) {
   h.div(
     [a.class("space-y-4")],
-    list.map(order.students, fn(student) {
-      h.div([a.class("space-y-3 border border-ink/15 rounded-lg p-4")], [
-        h.h4([a.class("text-sm font-semibold text-ink/65")], [
-          h.text(string.trim(student.name)),
-        ]),
-        h.div(
-          [a.class("space-y-3")],
-          list.map(student.subject_allocations, fn(allocation) {
-            let sessions =
-              list.filter(order.sessions, fn(confirmed) {
-                confirmed.session.student_id == student.id
-                && confirmed.session.subject == allocation.subject
-              })
-            let tutor_name = case sessions {
-              [first, ..] ->
-                list.find(order.tutors, fn(tutor) {
-                  tutor.id == first.session.tutor_id
-                })
-                |> result.map(fn(tutor) { tutor.name })
-                |> result.unwrap("")
-              [] -> ""
-            }
-            let dates =
-              h.ul(
-                [a.class("space-y-2")],
-                list.map(sessions, fn(session) {
-                  h.li([a.class("border-t border-ink/10 py-2 text-sm")], [
-                    h.text(instant_label(session.start_instant, zone)),
-                  ])
-                }),
-              )
-            h.div([a.class("space-y-2 border-t border-ink/10 pt-3")], [
-              h.h5([a.class("text-xl font-bold leading-snug")], [
-                h.text(allocation.subject),
-              ]),
-              paragraph(
-                tutor_name
-                <> " · "
-                <> text(list.length(sessions))
-                <> case sessions {
-                  [_] -> " session"
-                  _ -> " sessions"
-                },
-              ),
-              case print {
-                True -> dates
-                False ->
-                  h.details([], [
-                    h.summary([a.class("text-sm !py-2")], [
-                      h.text("View session dates"),
-                    ]),
-                    dates,
-                  ])
-              },
-            ])
-          }),
-        ),
-      ])
-    }),
+    list.map(groups, student_schedule_view(_, display)),
   )
 }
+
+// Checkout forms
 
 fn contact_submission(fields: List(#(String, String))) -> Msg {
   UserSubmittedContact(ContactInfo(
     name: field(fields, "name"),
     email: field(fields, "email"),
+    phone: field(fields, "phone"),
   ))
 }
 
@@ -1283,4 +1403,78 @@ fn payment_view(order: Order, state: PaymentState) -> Element(Msg) {
       [h.text("Back to contact details")],
     ),
   ])
+}
+
+// Shared controls and formatting
+
+fn total(hours: Hours) -> String {
+  format_money(package_total(hours))
+}
+
+fn text(value: Int) -> String {
+  int.to_string(value)
+}
+
+fn bool_text(value: Bool) -> String {
+  case value {
+    True -> "true"
+    False -> "false"
+  }
+}
+
+fn button(label: String, msg: Msg, class: String) -> Element(Msg) {
+  h.button([a.type_("button"), a.class(class), e.on_click(msg)], [h.text(label)])
+}
+
+fn heading(label: String) -> Element(Msg) {
+  h.h3([a.class("text-2xl font-semibold")], [h.text(label)])
+}
+
+fn paragraph(label: String) -> Element(Msg) {
+  h.p([a.class("text-sm leading-6 text-ink/65")], [h.text(label)])
+}
+
+fn select(
+  label: String,
+  value: String,
+  options: List(#(String, String)),
+  on_change: a.Attribute(Msg),
+) -> Element(Msg) {
+  select_field(label, value, options, on_change, [])
+}
+
+fn select_field(
+  label: String,
+  value: String,
+  options: List(#(String, String)),
+  on_change: a.Attribute(Msg),
+  attributes: List(a.Attribute(Msg)),
+) -> Element(Msg) {
+  h.label([a.class("planner-label block")], [
+    h.text(label),
+    h.select(
+      [a.class("field mt-2"), on_change, ..attributes],
+      list.map(options, fn(option) {
+        h.option([a.value(option.0), a.selected(option.0 == value)], option.1)
+      }),
+    ),
+  ])
+}
+
+fn on_integer_change(
+  current: Int,
+  message: fn(Int) -> Msg,
+) -> a.Attribute(Msg) {
+  e.on("change", {
+    use value <- decode.subfield(["target", "value"], decode.string)
+    case int.parse(value) {
+      Ok(number) -> decode.success(message(number))
+      Error(_) -> decode.failure(message(current), "integer")
+    }
+  })
+}
+
+fn numbers(max: Int) -> List(#(String, String)) {
+  int.range(1, max + 1, [], fn(values, n) { [#(text(n), text(n)), ..values] })
+  |> list.reverse
 }

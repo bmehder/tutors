@@ -25,7 +25,11 @@ pub fn confirm(
   valid_date: fn(Date) -> Bool,
 ) -> Result(Order, String) {
   let contact =
-    ContactInfo(string.trim(contact.name), string.trim(contact.email))
+    ContactInfo(
+      string.trim(contact.name),
+      string.trim(contact.email),
+      string.trim(contact.phone),
+    )
   use _ <- result.try(check_draft(hours, students, routines, contact, tutors))
   let allocations =
     list.flat_map(students, fn(student) {
@@ -94,6 +98,10 @@ fn check_draft(
   use _ <- result.try(require(
     contact.name != "" && valid_email(contact.email),
     "Enter a contact name and valid email.",
+  ))
+  use _ <- result.try(require(
+    contact.phone != "",
+    "Enter a contact phone number.",
   ))
   use _ <- result.try(require(
     unique(list.map(students, fn(student) { student.id })),

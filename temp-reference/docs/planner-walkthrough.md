@@ -35,7 +35,7 @@ Read [model.gleam](../../planner/src/planner/model.gleam) alongside this section
 | `package_hours`, `student_count` | Selected package hours and student count. The count is a choice before the roster is created. |
 | `students`, `weekly_routines` | The allocations and the saved weekly schedules. A student can have allocated hours while some schedules are still missing. |
 | `time_zone`, `time_zone_query`, `preferred_tutor_id` | The viewing time zone, the time-zone search if open, and an optional tutor from a tutor card. The browser tracks whether the family plan disclosure is open. |
-| `error`, `notice` | Optional feedback such as an unbalanced allocation or a successful skip. |
+| `error`, `notice` | An optional validation message and an optional booking event. The view formats a skipped week from its original and replacement sessions. |
 | `contact` | Optional contact details, kept after validation so the parent can return from payment to a prefilled form. |
 
 The aliases `StudentId`, `AllocationId`, `TutorId`, `Date`, and `TimeZone` tell you what a string means at a call site. The variants in `BookingStep` and `PaymentState` describe different states the compiler can distinguish.
@@ -50,7 +50,7 @@ Trace three messages before reading the rest of the file.
 2. **`UserClickedSaveSchedule`** checks the selected dates against the rest of the family’s schedules, saves the result for that allocation, and opens the next subject or review. **`UserClickedSkipWeekInDraft`** moves one appointment to the next available matching week after the end. The other appointments and the hour total stay in place.
 3. **`UserSubmittedContact`** builds and validates the order for payment. **`UserSubmittedPayment`** validates the demo fields and starts a short timer. **`DemoPaymentFinished`** rechecks the booking before moving to `OrderComplete`.
 
-Each handler returns a model and an effect. `stay` returns the supplied model with no effect. `move` changes the step, clears transient feedback, and requests a scroll. `failure` records an error. Other effects include the mock payment timer and printing.
+Each handler returns a model and an effect. A branch with no additional work returns `effect.none()`. `go_to_booking_step` changes the step, clears transient feedback, and requests a scroll. `failure` records an error. Other effects include the mock payment timer and printing.
 
 ## The business rules to keep in mind
 

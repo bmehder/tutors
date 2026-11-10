@@ -15,14 +15,14 @@ pub fn matching_zones(query: TimeZoneQuery, current: TimeZone) -> List(TimeZone)
 @external(javascript, "../planner_ffi.mjs", "tomorrow")
 pub fn tomorrow(time_zone: TimeZone) -> String
 
-@external(javascript, "../planner_ffi.mjs", "id")
-pub fn id() -> String
+@external(javascript, "../planner_ffi.mjs", "randomUuid")
+pub fn random_uuid() -> String
 
 @external(javascript, "../planner_ffi.mjs", "subjects")
 pub fn subjects() -> List(String)
 
-@external(javascript, "../planner_ffi.mjs", "tutors")
-pub fn tutors() -> List(Tutor)
+@external(javascript, "../planner_ffi.mjs", "allTutors")
+pub fn all_tutors() -> List(Tutor)
 
 @external(javascript, "../planner_ffi.mjs", "choices")
 pub fn choices(

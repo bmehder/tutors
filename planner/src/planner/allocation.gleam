@@ -1,6 +1,6 @@
 import gleam/int
 import gleam/list
-import gleam/option.{type Option, None, Some}
+import gleam/option.{type Option, Some}
 import gleam/string
 import planner/model.{
   type AllocationId, type ErrorMessage, type Hours, type Student,
@@ -28,8 +28,26 @@ pub fn initialize_allocations(
       False -> 0
     }
     let hours = package_hours / student_count + extra
-    Student(make_id(), "", hours, [SubjectAllocation(make_id(), "", hours)])
+    Student(make_id(), "", hours, [
+      SubjectAllocation(id: make_id(), subject: "", hours:),
+    ])
   })
+}
+
+pub fn total_allocated_hours(students: List(Student)) -> Hours {
+  list.fold(students, 0, fn(sum, student) { sum + student.allocated_hours })
+}
+
+pub fn remaining_subject_hours(student: Student) -> Hours {
+  student.allocated_hours
+  - list.fold(student.subject_allocations, 0, fn(sum, allocation) {
+    sum + allocation.hours
+  })
+}
+
+pub fn subject_hour_limit(student: Student) -> Hours {
+  let other_subjects = int.max(0, list.length(student.subject_allocations) - 1)
+  student.allocated_hours - other_subjects
 }
 
 pub fn allocation_issue(
@@ -69,24 +87,33 @@ fn check_student_allocations(
       })
     })
   let unbalanced =
-    list.any(students, fn(student) {
-      list.fold(student.subject_allocations, 0, fn(sum, allocation) {
-        sum + allocation.hours
-      })
-      != student.allocated_hours
-    })
-  let total =
-    list.fold(students, 0, fn(sum, student) { sum + student.allocated_hours })
-  case duplicate, unnamed, incomplete, unbalanced, total > capacity {
-    True, _, _, _, _ -> Some("Choose each subject only once per student.")
-    _, True, _, _, _ -> Some("Give each student a name.")
-    _, _, True, _, _ ->
-      Some("Choose whole-hour amounts and a subject for every allocation.")
-    _, _, _, True, _ ->
-      Some("Each student’s subject hours must add up to their allocated hours.")
-    _, _, _, _, True -> Some("The allocations exceed your package hours.")
-    _, _, _, _, _ -> None
-  }
+    list.any(students, fn(student) { remaining_subject_hours(student) != 0 })
+  let checks = [
+    #(duplicate, "Choose each subject only once per student."),
+    #(unnamed, "Give each student a name."),
+    #(
+      incomplete,
+      "Choose whole-hour amounts and a subject for every allocation.",
+    ),
+    #(
+      unbalanced,
+      "Each student’s subject hours must add up to their allocated hours.",
+    ),
+    #(
+      total_allocated_hours(students) > capacity,
+      "The allocations exceed your package hours.",
+    ),
+  ]
+
+  checks
+  |> list.find_map(fn(check) {
+    let #(failed, message) = check
+    case failed {
+      True -> Ok(message)
+      False -> Error(Nil)
+    }
+  })
+  |> option.from_result
 }
 
 pub fn set_subject_hours(
@@ -99,7 +126,7 @@ pub fn set_subject_hours(
   // reserve at least one hour for each of the other subjects.
   let selected = case other_count {
     0 -> hours
-    _ -> int.min(hours, student.allocated_hours - other_count)
+    _ -> int.min(hours, subject_hour_limit(student))
   }
   let #(_, subjects) =
     list.map_fold(

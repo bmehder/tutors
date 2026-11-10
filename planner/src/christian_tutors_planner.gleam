@@ -5,23 +5,22 @@ import gleam/result
 import lustre
 import lustre/effect
 import planner/allocation.{
-  allocation_issue, initialize_allocations, remove_subject_allocation,
-  set_subject_hours,
+  allocation_issue, initialize_allocations, remaining_subject_hours,
+  remove_subject_allocation, set_subject_hours,
 }
 import planner/browser.{
-  add_days, after_payment, billing_month, booking_calendar, browser_time_zone,
-  id, install_payment_masks, listen_for_tutor_card_clicks, now, print_page,
-  scroll, session_date, session_label, tomorrow, tutors, valid_date,
+  add_days, after_payment, all_tutors, billing_month, booking_calendar,
+  browser_time_zone, install_payment_masks, listen_for_tutor_card_clicks, now,
+  print_page, random_uuid, scroll, session_date, tomorrow, valid_date,
 }
 import planner/checkout
 import planner/model.{
-  type BookingStep, type ContactInfo, type DemoPaymentDetails, type ErrorMessage,
-  type Model, type Msg, type NoticeMessage, type Order, type Session,
-  type Student, type SubjectAllocation, type TutorId, type WeeklyRoutine,
-  AllocateHours, BuildWeeklyRoutine, ChoosePackage, ChooseStudentCount,
-  EnterContactInfo, Model, NotProcessing, Order, OrderComplete, PayForOrder,
-  Processing, ReviewFamilyPlan, RoutineDraft, Student, SubjectAllocation,
-  WeeklyRoutine,
+  type BookingStep, type ContactInfo, type DemoPaymentDetails, type Model,
+  type Msg, type Order, type Session, type Student, type SubjectAllocation,
+  type WeeklyRoutine, AllocateHours, BuildWeeklyRoutine, ChoosePackage,
+  ChooseStudentCount, EnterContactInfo, Model, NotProcessing, Order,
+  OrderComplete, PayForOrder, Processing, ReviewFamilyPlan, RoutineDraft,
+  Student, SubjectAllocation, WeeklyRoutine,
 }
 import planner/scheduling
 import planner/view
@@ -72,10 +71,12 @@ fn update(model: Model, msg: Msg) -> #(Model, effect.Effect(Msg)) {
 
     _ if order_complete -> #(model, effect.none())
 
-    model.UserSelectedPackage(hours) if hours != model.package_hours -> #(
+    model.UserSelectedPackage(package_hours)
+      if package_hours != model.package_hours
+    -> #(
       Model(
         ..model,
-        package_hours: hours,
+        package_hours:,
         student_count: 1,
         students: [],
         weekly_routines: [],
@@ -90,41 +91,42 @@ fn update(model: Model, msg: Msg) -> #(Model, effect.Effect(Msg)) {
 
     model.UserClickedNext ->
       case model.step {
-        ChoosePackage -> move(model, ChooseStudentCount)
+        ChoosePackage -> go_to_booking_step(model, ChooseStudentCount)
         ChooseStudentCount -> prepare_allocation(model)
         AllocateHours -> begin_scheduling(model)
         _ -> #(model, effect.none())
       }
 
-    model.UserEnteredStudentName(id, name) -> #(
-      update_student(model, id, fn(student) { Student(..student, name:) }),
-      effect.none(),
-    )
-
-    model.UserChangedStudentHours(id, hours) -> #(
-      update_student(model, id, fn(student) {
-        let subjects = case student.subject_allocations {
-          [allocation] -> [SubjectAllocation(..allocation, hours:)]
-          _ -> student.subject_allocations
-        }
-        Student(
-          ..student,
-          allocated_hours: hours,
-          subject_allocations: subjects,
-        )
+    model.UserEnteredStudentName(student_id, student_name) -> #(
+      update_student(model, student_id, fn(student) {
+        Student(..student, name: student_name)
       }),
       effect.none(),
     )
 
-    model.UserSelectedSubject(id, allocation_id, subject) -> #(
-      update_student(model, id, fn(student) {
+    model.UserChangedStudentHours(student_id, student_hours) -> #(
+      update_student(model, student_id, fn(student) {
+        let subject_allocations = case student.subject_allocations {
+          [allocation] -> [
+            SubjectAllocation(..allocation, hours: student_hours),
+          ]
+          _ -> student.subject_allocations
+        }
+        Student(..student, allocated_hours: student_hours, subject_allocations:)
+      }),
+      effect.none(),
+    )
+
+    model.UserSelectedSubject(student_id, allocation_id, selected_subject) -> #(
+      update_student(model, student_id, fn(student) {
         Student(
           ..student,
           subject_allocations: list.map(
             student.subject_allocations,
             fn(allocation) {
               case allocation.id == allocation_id {
-                True -> SubjectAllocation(..allocation, subject:)
+                True ->
+                  SubjectAllocation(..allocation, subject: selected_subject)
                 False -> allocation
               }
             },
@@ -134,31 +136,31 @@ fn update(model: Model, msg: Msg) -> #(Model, effect.Effect(Msg)) {
       effect.none(),
     )
 
-    model.UserChangedSubjectHours(id, allocation, hours) -> #(
-      update_student(model, id, fn(student) {
-        set_subject_hours(student, allocation, hours)
+    model.UserChangedSubjectHours(student_id, allocation_id, subject_hours) -> #(
+      update_student(model, student_id, fn(student) {
+        set_subject_hours(student, allocation_id, subject_hours)
       }),
       effect.none(),
     )
 
     model.UserClickedAddSubject(student_id) -> #(
       update_student(model, student_id, fn(student) {
-        let remaining =
-          student.allocated_hours
-          - list.fold(student.subject_allocations, 0, fn(sum, allocation) {
-            sum + allocation.hours
-          })
-        let allocation_id = id()
-        let allocation =
-          SubjectAllocation(allocation_id, "", int.max(1, remaining))
+        let remaining_hours = remaining_subject_hours(student)
+        let allocation_id = random_uuid()
+        let new_allocation =
+          SubjectAllocation(
+            id: allocation_id,
+            subject: "",
+            hours: int.max(1, remaining_hours),
+          )
         let student =
           Student(
             ..student,
             subject_allocations: list.append(student.subject_allocations, [
-              allocation,
+              new_allocation,
             ]),
           )
-        case remaining > 0 {
+        case remaining_hours > 0 {
           True -> student
           False -> set_subject_hours(student, allocation_id, 1)
         }
@@ -166,18 +168,18 @@ fn update(model: Model, msg: Msg) -> #(Model, effect.Effect(Msg)) {
       effect.none(),
     )
 
-    model.UserClickedRemoveSubject(id, allocation) -> #(
-      update_student(model, id, fn(student) {
-        remove_subject_allocation(student, allocation)
+    model.UserClickedRemoveSubject(student_id, allocation_id) -> #(
+      update_student(model, student_id, fn(student) {
+        remove_subject_allocation(student, allocation_id)
       }),
       effect.none(),
     )
 
-    model.UserSelectedTutor(id) ->
+    model.UserSelectedTutor(tutor_id) ->
       case model.step {
-        BuildWeeklyRoutine(student, allocation, input) -> {
+        BuildWeeklyRoutine(student, allocation, routine_draft) -> {
           let tutor =
-            list.find(tutors(), fn(tutor) { tutor.id == id })
+            list.find(all_tutors(), fn(tutor) { tutor.id == tutor_id })
             |> option.from_result
           #(
             Model(
@@ -186,7 +188,7 @@ fn update(model: Model, msg: Msg) -> #(Model, effect.Effect(Msg)) {
                 student,
                 allocation,
                 RoutineDraft(
-                  ..input,
+                  ..routine_draft,
                   tutor:,
                   sessions: [],
                   first_planned_session: None,
@@ -200,18 +202,20 @@ fn update(model: Model, msg: Msg) -> #(Model, effect.Effect(Msg)) {
         _ -> #(model, effect.none())
       }
 
-    model.UserChangedFirstDate(date) ->
+    model.UserChangedFirstDate(first_date) ->
       case model.step {
-        BuildWeeklyRoutine(student, allocation, input) if date != "" -> #(
+        BuildWeeklyRoutine(student, allocation, routine_draft)
+          if first_date != ""
+        -> #(
           Model(
             ..model,
             step: BuildWeeklyRoutine(
               student,
               allocation,
               RoutineDraft(
-                ..input,
-                date:,
-                anchor: date,
+                ..routine_draft,
+                date: first_date,
+                anchor: first_date,
                 sessions: [],
                 first_planned_session: None,
               ),
@@ -223,17 +227,17 @@ fn update(model: Model, msg: Msg) -> #(Model, effect.Effect(Msg)) {
         _ -> #(model, effect.none())
       }
 
-    model.UserComparedDate(date) ->
+    model.UserComparedDate(comparison_date) ->
       case model.step {
-        BuildWeeklyRoutine(student, allocation, input) -> #(
+        BuildWeeklyRoutine(student, allocation, routine_draft) -> #(
           Model(
             ..model,
             step: BuildWeeklyRoutine(
               student,
               allocation,
               RoutineDraft(
-                ..input,
-                date:,
+                ..routine_draft,
+                date: comparison_date,
                 sessions: [],
                 first_planned_session: None,
               ),
@@ -245,18 +249,18 @@ fn update(model: Model, msg: Msg) -> #(Model, effect.Effect(Msg)) {
         _ -> #(model, effect.none())
       }
 
-    model.UserSelectedWeeklyTime([first, ..] as sessions) ->
+    model.UserSelectedWeeklyTime([first_planned_session, ..] as weekly_sessions) ->
       case model.step {
-        BuildWeeklyRoutine(student, allocation, input) -> #(
+        BuildWeeklyRoutine(student, allocation, routine_draft) -> #(
           Model(
             ..model,
             step: BuildWeeklyRoutine(
               student,
               allocation,
               RoutineDraft(
-                ..input,
-                sessions:,
-                first_planned_session: Some(first),
+                ..routine_draft,
+                sessions: weekly_sessions,
+                first_planned_session: Some(first_planned_session),
               ),
             ),
             notice: None,
@@ -271,22 +275,23 @@ fn update(model: Model, msg: Msg) -> #(Model, effect.Effect(Msg)) {
 
     model.UserClickedSkipWeekInDraft(session) -> skip_draft_week(model, session)
 
-    model.UserClickedSkipWeekInReview(schedule, session) ->
-      skip_saved_week(model, schedule, session)
+    model.UserClickedSkipWeekInReview(weekly_routine, session) ->
+      skip_saved_week(model, weekly_routine, session)
 
-    model.UserClickedEditSchedule(schedule) -> {
-      let date = session_date(schedule.first_planned_session, model.time_zone)
-      move(
+    model.UserClickedEditSchedule(weekly_routine) -> {
+      let first_date =
+        session_date(weekly_routine.first_planned_session, model.time_zone)
+      go_to_booking_step(
         model,
         BuildWeeklyRoutine(
-          schedule.student,
-          schedule.subject_allocation,
+          weekly_routine.student,
+          weekly_routine.subject_allocation,
           RoutineDraft(
-            Some(schedule.tutor),
-            date,
-            date,
-            schedule.sessions,
-            Some(schedule.first_planned_session),
+            Some(weekly_routine.tutor),
+            first_date,
+            first_date,
+            weekly_routine.sessions,
+            Some(weekly_routine.first_planned_session),
           ),
         ),
       )
@@ -294,10 +299,11 @@ fn update(model: Model, msg: Msg) -> #(Model, effect.Effect(Msg)) {
 
     model.UserSelectedTimeZone(time_zone) ->
       case model.step {
-        BuildWeeklyRoutine(student, allocation, input) -> {
-          let date = case input.first_planned_session {
-            Some(first) -> session_date(first, time_zone)
-            None -> input.date
+        BuildWeeklyRoutine(student, allocation, routine_draft) -> {
+          let date = case routine_draft.first_planned_session {
+            Some(first_planned_session) ->
+              session_date(first_planned_session, time_zone)
+            None -> routine_draft.date
           }
           #(
             Model(
@@ -307,7 +313,7 @@ fn update(model: Model, msg: Msg) -> #(Model, effect.Effect(Msg)) {
               step: BuildWeeklyRoutine(
                 student,
                 allocation,
-                RoutineDraft(..input, date:, anchor: date),
+                RoutineDraft(..routine_draft, date:, anchor: date),
               ),
               notice: None,
             ),
@@ -328,14 +334,16 @@ fn update(model: Model, msg: Msg) -> #(Model, effect.Effect(Msg)) {
       effect.none(),
     )
 
-    model.UserSearchedTimeZones(query) -> #(
-      Model(..model, time_zone_query: Some(query)),
+    model.UserSearchedTimeZones(time_zone_query) -> #(
+      Model(..model, time_zone_query: Some(time_zone_query)),
       effect.none(),
     )
 
-    model.UserClickedTutorAvailability(id) -> prefer_tutor(model, id)
+    model.UserClickedTutorAvailability(tutor_id) ->
+      prefer_tutor(model, tutor_id)
 
-    model.UserSubmittedContact(contact) -> submit_contact(model, contact)
+    model.UserSubmittedContact(contact_info) ->
+      submit_contact(model, contact_info)
 
     model.UserToggledDemoDiscount ->
       case model.step {
@@ -355,14 +363,15 @@ fn update(model: Model, msg: Msg) -> #(Model, effect.Effect(Msg)) {
         _ -> #(model, effect.none())
       }
 
-    model.UserSubmittedPayment(details) -> submit_payment(model, details)
+    model.UserSubmittedPayment(payment_details) ->
+      submit_payment(model, payment_details)
 
     model.DemoPaymentFinished(order) -> finish_payment(model, order)
 
     model.UserClickedStep(booking_step) ->
       case model.step {
         PayForOrder(_, Processing) -> #(model, effect.none())
-        _ -> move(model, booking_step)
+        _ -> go_to_booking_step(model, booking_step)
       }
 
     model.UserSelectedPackage(_)
@@ -378,7 +387,11 @@ fn prepare_allocation(model: Model) {
     let students = case list.length(model.students) == model.student_count {
       True -> model.students
       False ->
-        initialize_allocations(model.package_hours, model.student_count, id)
+        initialize_allocations(
+          model.package_hours,
+          model.student_count,
+          random_uuid,
+        )
         |> list.index_map(fn(student, index) {
           case list.drop(model.students, index) {
             [old, ..] -> Student(..student, name: old.name)
@@ -386,7 +399,7 @@ fn prepare_allocation(model: Model) {
           }
         })
     }
-    move(Model(..model, students:), AllocateHours)
+    go_to_booking_step(Model(..model, students:), AllocateHours)
   }
 }
 
@@ -426,16 +439,16 @@ fn next_schedule(model: Model) {
       })
     })
   case next_unscheduled {
-    Error(_) -> move(model, ReviewFamilyPlan)
+    Error(_) -> go_to_booking_step(model, ReviewFamilyPlan)
     Ok(#(student, allocation)) -> {
       let preferred =
-        tutors()
+        all_tutors()
         |> list.find(fn(tutor) {
           Some(tutor.id) == model.preferred_tutor_id
           && list.contains(tutor.subjects, allocation.subject)
         })
         |> option.from_result
-      move(
+      go_to_booking_step(
         model,
         BuildWeeklyRoutine(
           student,
@@ -479,7 +492,7 @@ fn save_schedule(model: Model) {
           sessions,
           schedules,
           model.students,
-          tutors(),
+          all_tutors(),
           model.package_hours,
           now(),
           booking_calendar(),
@@ -532,7 +545,7 @@ fn skip_draft_week(model: Model, session: Session) {
               allocation,
               RoutineDraft(..input, sessions: updated),
             ),
-            notice: Some(skip_notice(model, session, updated)),
+            notice: skipped_week_notice(session, updated),
             error: None,
           ),
           effect.none(),
@@ -576,7 +589,7 @@ fn skip_saved_week(model: Model, schedule: WeeklyRoutine, session: Session) {
             Model(
               ..model,
               weekly_routines: schedules,
-              notice: Some(skip_notice(model, session, updated)),
+              notice: skipped_week_notice(session, updated),
               error: None,
             ),
             effect.none(),
@@ -588,11 +601,11 @@ fn skip_saved_week(model: Model, schedule: WeeklyRoutine, session: Session) {
   }
 }
 
-fn prefer_tutor(model: Model, id: TutorId) {
+fn prefer_tutor(model: Model, id: model.TutorId) {
   case model.step {
     BuildWeeklyRoutine(student, allocation, input) -> {
       case
-        list.find(tutors(), fn(tutor) {
+        list.find(all_tutors(), fn(tutor) {
           tutor.id == id && list.contains(tutor.subjects, allocation.subject)
         })
       {
@@ -634,7 +647,7 @@ fn submit_contact(model: Model, contact: ContactInfo) {
           model.students,
           model.weekly_routines,
           contact,
-          tutors(),
+          all_tutors(),
           now(),
           booking_calendar(),
           add_days,
@@ -643,7 +656,7 @@ fn submit_contact(model: Model, contact: ContactInfo) {
       {
         Error(issue) -> failure(model, issue)
         Ok(order) ->
-          move(
+          go_to_booking_step(
             Model(..model, contact: Some(contact)),
             PayForOrder(order, NotProcessing),
           )
@@ -674,8 +687,8 @@ fn submit_payment(model: Model, details: DemoPaymentDetails) {
 fn finish_payment(model: Model, order: Order) {
   case model.step {
     PayForOrder(_, Processing) -> {
-      case checkout.revalidate(order, tutors(), now(), booking_calendar()) {
-        "" -> move(model, OrderComplete(order))
+      case checkout.revalidate(order, all_tutors(), now(), booking_calendar()) {
+        "" -> go_to_booking_step(model, OrderComplete(order))
         issue -> #(
           Model(..model, step: ReviewFamilyPlan, error: Some(issue)),
           effect.from(fn(_) { scroll() }),
@@ -688,25 +701,25 @@ fn finish_payment(model: Model, order: Order) {
 
 // Shared helpers
 
-fn move(model: Model, booking_step: BookingStep) {
+fn go_to_booking_step(model: Model, booking_step: BookingStep) {
   #(
     Model(..model, step: booking_step, error: None, notice: None),
     effect.from(fn(_) { scroll() }),
   )
 }
 
-fn failure(model: Model, message: ErrorMessage) {
+fn failure(model: Model, message: model.ErrorMessage) {
   #(Model(..model, error: Some(message)), effect.none())
 }
 
 fn update_student(
   model: Model,
-  id: String,
+  student_id: model.StudentId,
   change: fn(Student) -> Student,
 ) -> Model {
   let students =
     list.map(model.students, fn(student) {
-      case student.id == id {
+      case student.id == student_id {
         True -> change(student)
         False -> student
       }
@@ -714,15 +727,8 @@ fn update_student(
   Model(..model, students:, error: None)
 }
 
-fn skip_notice(
-  model: Model,
-  original: Session,
-  sessions: List(Session),
-) -> NoticeMessage {
-  let replacement = list.last(sessions) |> result.unwrap(original)
-  "Skipped "
-  <> session_label(original, model.time_zone)
-  <> ". Replacement added at the end: "
-  <> session_label(replacement, model.time_zone)
-  <> ". Your total hours are unchanged."
+fn skipped_week_notice(original: Session, sessions: List(Session)) {
+  list.last(sessions)
+  |> result.map(fn(replacement) { model.WeekSkipped(original:, replacement:) })
+  |> option.from_result
 }

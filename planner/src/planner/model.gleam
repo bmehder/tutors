@@ -13,7 +13,7 @@ pub type Model {
     time_zone_query: Option(TimeZoneQuery),
     preferred_tutor_id: Option(TutorId),
     error: Option(ErrorMessage),
-    notice: Option(NoticeMessage),
+    notice: Option(BookingNotice),
     contact: Option(ContactInfo),
   )
 }
@@ -27,6 +27,10 @@ pub type BookingStep {
   EnterContactInfo
   PayForOrder(Order, PaymentState)
   OrderComplete(Order)
+}
+
+pub type BookingNotice {
+  WeekSkipped(original: Session, replacement: Session)
 }
 
 // Messages
@@ -136,7 +140,7 @@ pub type Session {
 // Checkout
 
 pub type ContactInfo {
-  ContactInfo(name: Name, email: Email)
+  ContactInfo(name: Name, email: Email, phone: PhoneNumber)
 }
 
 pub type DemoPaymentDetails {
@@ -214,5 +218,5 @@ pub type TimeZoneQuery =
 pub type ErrorMessage =
   String
 
-pub type NoticeMessage =
+pub type PhoneNumber =
   String

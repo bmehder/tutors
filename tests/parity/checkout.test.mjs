@@ -8,7 +8,7 @@ import {
   ConfirmedSession$ConfirmedSession$session, ConfirmedSession$ConfirmedSession$start_instant,
   ConfirmedSession$ConfirmedSession$end_instant, Order$Order$contact, Order$Order$sessions,
   Session$Session$date, Session$Session$start, Session$Session$duration,
-  ContactInfo$ContactInfo$name, ContactInfo$ContactInfo$email,
+  ContactInfo$ContactInfo$name, ContactInfo$ContactInfo$email, ContactInfo$ContactInfo$phone,
   ContactInfo$ContactInfo,
   DemoPaymentDetails$DemoPaymentDetails,
   Session$Session,
@@ -56,7 +56,7 @@ test('Gleam checkout matches TypeScript for skipped weeks, validation, and expir
   const now = easternInstant(calendarAddDays(first, -7), 900).instant
   const clock = { now, noticeMs: 86_400_000 }
   const subject = { id: 'bio', subject: 'Biology', hours: 3 }
-  const parent = { name: ' Sample Parent ', email: ' parent@example.com ' }
+  const parent = { name: ' Sample Parent ', email: ' parent@example.com ', phone: ' +44 20 7946 0958 ' }
   const sourceStudent = { id: 'emma', name: 'Emma', hours: 3, subjects: [subject] }
   const sourceTutor = { id: 'tutor', name: 'Tutor', days: [0], times: ['3:00 PM'], subjects: ['Biology'] }
   const allocation = SubjectAllocation$SubjectAllocation(subject.id, subject.subject, subject.hours)
@@ -67,7 +67,7 @@ test('Gleam checkout matches TypeScript for skipped weeks, validation, and expir
     toList([7, 14, 21].map(days => session(calendarAddDays(first, days)))), session(first))])
   const draft = { kind: 'draft', package: { kind: 'fiveHours' }, students: [sourceStudent],
     routines: [{ id: 'bio', studentId: 'emma', subject: 'Biology', tutorId: 'tutor', firstDate: first, start: 900, count: 3, skippedDates: [first] }] }
-  const run = contact => confirm(5, toList([student]), routines, ContactInfo$ContactInfo(contact.name, contact.email),
+  const run = contact => confirm(5, toList([student]), routines, ContactInfo$ContactInfo(contact.name, contact.email, contact.phone),
     toList([tutor]), now, calendar, calendarAddDays, () => true)
 
   const actual = run(parent)
@@ -78,6 +78,8 @@ test('Gleam checkout matches TypeScript for skipped weeks, validation, and expir
   const contact = Order$Order$contact(order)
   const sessions = toArray(Order$Order$sessions(order))
   assert.deepEqual({ name: ContactInfo$ContactInfo$name(contact), email: ContactInfo$ContactInfo$email(contact) }, expected.value.contact)
+  assert.equal(ContactInfo$ContactInfo$phone(contact), '+44 20 7946 0958')
+  assert.equal(Result$Error$0(run({ ...parent, phone: ' ' })), 'Enter a contact phone number.')
   assert.deepEqual(sessions.map(entry => [Session$Session$date(ConfirmedSession$ConfirmedSession$session(entry)), ConfirmedSession$ConfirmedSession$start_instant(entry), ConfirmedSession$ConfirmedSession$end_instant(entry)]),
     expected.value.sessions.map(entry => [entry.date, entry.startInstant, entry.endInstant]))
 
@@ -106,7 +108,7 @@ test('Gleam owns demo payment validation and package prices', () => {
 
 
 test('demo discount reduces the order total and can be removed', () => {
-  const order = discount => Order$Order(10, ContactInfo$ContactInfo('Parent', 'parent@example.com'), toList([]), toList([]), toList([]), discount)
+  const order = discount => Order$Order(10, ContactInfo$ContactInfo('Parent', 'parent@example.com', '+44 20 7946 0958'), toList([]), toList([]), toList([]), discount)
   assert.equal(order_total(order(Option$None())), 750)
   assert.equal(order_total(order(Option$Some(demo_discount(10)))), 600)
   assert.equal(discount_amount(10, Option$Some(Discount$Discount(-10))), 0)
