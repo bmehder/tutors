@@ -1,4 +1,4 @@
-# Christian Tutors domain model
+# MyChristianTutors domain model
 
 This document records the exploratory domain design. The Astro prototype now runs its booking rules in Gleam, with calendar conversion in TypeScript. The earlier TypeScript booking rules and the Elm domain lab are kept here for reference and testing.
 

@@ -1,4 +1,4 @@
-# Christian Tutors
+# MyChristianTutors
 
 Static Astro site styled with Tailwind CSS. The booking flow runs as a Gleam/Lustre island.
 
