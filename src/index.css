@@ -12,7 +12,7 @@
 #booking .field{min-height:44px;min-width:0;font-size:16px}
 #booking button:disabled{transform:none}
 @media (max-width:480px){.planner-small{font-size:10px;padding:7px}.planner-label{font-size:12px}header{gap:10px!important;padding-left:16px!important;padding-right:16px!important}header>.btn{font-size:11px;padding:12px}}
-@media (max-width:480px){header>a[aria-label="MyChristianTutors.com home"]>div:last-child{font-size:16px}header>a[aria-label="MyChristianTutors.com home"]>div:last-child>div{font-size:8px;letter-spacing:.12em}}
+@media (max-width:480px){header>a[aria-label="MyChristianTutors home"]>div:last-child{font-size:16px}header>a[aria-label="MyChristianTutors home"]>div:last-child>div{font-size:8px;letter-spacing:.12em}}
 
 #booking .field[aria-invalid="true"]{border-color:#a65332;outline:2px solid #a65332;outline-offset:2px;background:#fffaf5}
 #booking .field[aria-invalid="true"]:focus{outline-color:#143f3c}

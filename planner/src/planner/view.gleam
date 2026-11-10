@@ -512,7 +512,7 @@ fn step_view(model: Model) -> Element(Msg) {
         ),
         confirmed_schedule(confirmed_groups, ScreenSchedule),
         h.section([a.id("print-order"), a.class("hidden")], [
-          h.h1([], [h.text("MyChristianTutors.com · Family plan")]),
+          h.h1([], [h.text("MyChristianTutors · Family plan")]),
           paragraph(
             order.contact.name
             <> " · "
