@@ -1,7 +1,7 @@
 @import "tailwindcss" source(".");
 @source "../planner/src";
-@theme { --color-ink:#143f3c; --color-coral:#ed806d; --color-cream:#faf8f3; --font-sans: 'Arial', sans-serif; }
-*{box-sizing:border-box} html{scroll-behavior:smooth;scroll-padding-top:100px}body{margin:0;background:#faf8f3;color:#143f3c;font-family:Arial,sans-serif}button,a,input,select{touch-action:manipulation}button,a{cursor:pointer}button:disabled{cursor:not-allowed}button,a,input,select{outline-offset:5px}h1,h2,h3{letter-spacing:-.045em} .serif{font-family:Georgia,serif;font-style:italic;font-weight:400} .btn{display:inline-flex;align-items:center;justify-content:center;gap:12px;border-radius:7px;padding:14px 22px;background:#143f3c;color:white;font-weight:700;font-size:14px;transition:.2s}.btn:hover{background:#245a54;transform:translateY(-1px)}.eyebrow{text-transform:uppercase;font-size:11px;font-weight:700;letter-spacing:.18em}.field{display:block;width:100%;background:white;border:1px solid #cfd8d3;border-radius:7px;padding:12px;font-size:14px;color:#143f3c}summary{cursor:pointer;padding:20px 0;font-weight:600}
+@theme { --color-ink:#143f3c; --color-coral:#ed806d; --color-cream:#faf8f3; --font-sans: 'Nunito', Arial, sans-serif; --font-serif: 'Lora', Georgia, serif; }
+*{box-sizing:border-box} html{scroll-behavior:smooth;scroll-padding-top:100px}body{margin:0;background:#faf8f3;color:#143f3c;font-family:var(--font-sans)}button,a,input,select{touch-action:manipulation}button,a{cursor:pointer}button:disabled{cursor:not-allowed}button,a,input,select{outline-offset:5px}h1,h2,h3{letter-spacing:-.045em} h1,h2,h3,h4,h5,h6{font-family:var(--font-serif)} .serif{font-family:var(--font-serif);font-style:italic;font-weight:400} .btn{display:inline-flex;align-items:center;justify-content:center;gap:12px;border-radius:7px;padding:14px 22px;background:#143f3c;color:white;font-weight:700;font-size:14px;transition:.2s}.btn:hover{background:#245a54;transform:translateY(-1px)}.eyebrow{text-transform:uppercase;font-size:11px;font-weight:700;letter-spacing:.18em}.field{display:block;width:100%;background:white;border:1px solid #cfd8d3;border-radius:7px;padding:12px;font-size:14px;color:#143f3c}summary{cursor:pointer;padding:20px 0;font-weight:600}
 
 .planner-step{display:inline-flex;align-items:center;justify-content:center;width:26px;height:26px;flex-shrink:0;border-radius:50%;background:#edf1e8;font-size:12px;font-weight:600}
 .planner-label{font-size:12px;font-weight:600;letter-spacing:0}
@@ -26,7 +26,7 @@
  body{background:white;color:#111}
  body *{visibility:hidden!important}
  #print-order,#print-order *{visibility:visible!important}
- #print-order{display:block!important;position:absolute;left:0;top:0;width:100%;font-family:Arial,sans-serif;font-size:11pt;line-height:1.5}
+ #print-order{display:block!important;position:absolute;left:0;top:0;width:100%;font-family:var(--font-sans);font-size:11pt;line-height:1.5}
  #print-order h1{font-size:22pt;margin:0 0 8pt}
  #print-order p{margin:6pt 0}
 }
