@@ -47,6 +47,7 @@ import {
 	formatExpiry,
 	formatSecurityCode,
 } from '@booking/payment-format.ts'
+import { formatCheckoutPhone } from '@booking/phone.ts'
 
 const catalog = toList(
 	sourceCatalog.map(tutor =>
@@ -256,11 +257,16 @@ export function listenForTutorCardClicks(dispatch, message) {
 	})
 }
 
-export function installPaymentMasks() {
+export function installInputMasks() {
 	document.getElementById('family-planner').addEventListener('input', event => {
 		const input = event.target
-		if (!(input instanceof HTMLInputElement) || !input.closest('[data-payment]'))
+		if (!(input instanceof HTMLInputElement)) return
+		if (input.name === 'phone' && input.type === 'tel') {
+			const formatted = formatCheckoutPhone(input.value)
+			if (formatted !== input.value) input.value = formatted
 			return
+		}
+		if (!input.closest('[data-payment]')) return
 		const format = {
 			card: formatCard,
 			expiry: formatExpiry,

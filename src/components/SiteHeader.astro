@@ -12,26 +12,26 @@ import Icon from "./Icon.astro";
 			>
 				<a
 					href='/'
-					aria-label='Christian Tutors home'
+					aria-label='MyChristianTutors.com home'
 					class='flex gap-2.5 items-center'
 				>
 					<div class='bg-coral/15 p-2 rounded-lg'>
 						<Icon name="BookOpen" size={29} strokeWidth={1.7} />
 					</div>
 					<div class='text-xl font-bold tracking-tight leading-5'>
-						christian<span class='text-coral'>tutors</span>
+						MyChristian<span class='text-coral'>Tutors</span>.com
 						<div class='text-[9px] leading-tight tracking-[.12em] uppercase font-normal mt-1 whitespace-nowrap'>
 							By MyFunScience
 						</div>
 					</div>
 				</a>
-				<nav class='hidden md:flex items-center gap-8 text-sm'>
+				<nav class='hidden lg:flex items-center gap-8 text-sm'>
 					<a href='#how'>How it works</a>
 					<a href='#tutors'>Our tutors</a>
 					<a href='#booking'>Book tutoring</a>
 					<a href='#contact'>Contact</a>
 				</nav>
-				<a class='btn !py-3 hidden md:inline-flex' href='#booking'>
+				<a class='btn !py-3 hidden lg:inline-flex' href='#booking'>
 					Find your tutor
 				</a>
 				<button
@@ -40,7 +40,7 @@ import Icon from "./Icon.astro";
 					aria-expanded="false" data-menu-button
 					aria-controls='mobile-navigation'
 
-					class='md:hidden min-w-11 min-h-11 flex items-center justify-center border border-ink/20 rounded-lg'
+					class='lg:hidden min-w-11 min-h-11 flex items-center justify-center border border-ink/20 rounded-lg'
 				>
 					<Icon name="Menu" size={23} />
 				</button>
@@ -48,7 +48,7 @@ import Icon from "./Icon.astro";
 					<nav
 						id='mobile-navigation' hidden
 						aria-label='Mobile navigation'
-						class='absolute top-full inset-x-4 z-40 bg-white border border-ink/15 rounded-xl shadow-lg p-3 md:hidden'
+						class='absolute top-full inset-x-4 z-40 bg-white border border-ink/15 rounded-xl shadow-lg p-3 lg:hidden'
 					>
 						{[
 							['#how', 'How it works'],

@@ -191,7 +191,7 @@ fn booking_progress(model: Model, progress: String) -> Element(Msg) {
           h.ol(
             [
               a.attribute("aria-label", "Booking steps"),
-              a.class("hidden sm:flex flex-wrap gap-2"),
+              a.class("hidden sm:grid grid-cols-5 gap-2"),
             ],
             list.index_map(steps, fn(step, index) {
               let #(label, destination) = step
@@ -203,7 +203,7 @@ fn booking_progress(model: Model, progress: String) -> Element(Msg) {
               h.li(
                 [
                   a.class(
-                    "flex items-center gap-2 rounded-lg border px-3 py-2 text-xs",
+                    "flex min-w-0 items-center justify-center gap-2 rounded-lg border px-2 py-2 text-center text-xs md:px-3",
                   ),
                   a.classes([
                     #("bg-white border-ink/25 font-bold", current),
@@ -477,7 +477,7 @@ fn step_view(model: Model) -> Element(Msg) {
         h.form([a.class("space-y-5"), e.on_submit(contact_submission)], [
           form_field("Contact name", "name", "text", name, ""),
           form_field("Email", "email", "email", email, ""),
-          form_field("Phone number", "phone", "tel", phone, ""),
+          form_field("Phone number", "phone", "tel", phone, "(555) 123-4567"),
           h.button([a.class("btn w-full")], [h.text("Next: payment")]),
         ]),
       ])
@@ -512,7 +512,7 @@ fn step_view(model: Model) -> Element(Msg) {
         ),
         confirmed_schedule(confirmed_groups, ScreenSchedule),
         h.section([a.id("print-order"), a.class("hidden")], [
-          h.h1([], [h.text("Christian Tutors · Family plan")]),
+          h.h1([], [h.text("MyChristianTutors.com · Family plan")]),
           paragraph(
             order.contact.name
             <> " · "

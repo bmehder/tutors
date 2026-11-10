@@ -55,8 +55,8 @@ pub fn listen_for_tutor_card_clicks(
   message: fn(String) -> Msg,
 ) -> Nil
 
-@external(javascript, "../planner_ffi.mjs", "installPaymentMasks")
-pub fn install_payment_masks() -> Nil
+@external(javascript, "../planner_ffi.mjs", "installInputMasks")
+pub fn install_input_masks() -> Nil
 
 @external(javascript, "../planner_ffi.mjs", "weekDates")
 pub fn week_dates(first: String) -> List(#(String, String))

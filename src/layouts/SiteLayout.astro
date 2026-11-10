@@ -6,7 +6,7 @@ import "../index.css";
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Christian Tutors | Grow in knowledge. Grounded in faith.</title>
+    <title>MyChristianTutors.com | Grow in knowledge. Grounded in faith.</title>
     <meta name="description" content="One-on-one online tutoring with a Biblical worldview. Find caring teachers, flexible packages, and support for students in grades 4–12." />
     <link rel="canonical" href="https://tutors-three.vercel.app/" />
     <meta name="theme-color" content="#143f3c" />
@@ -15,25 +15,49 @@ import "../index.css";
     <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Lora:ital,wght@0,400..700;1,400&family=Nunito:wght@400..800&display=swap" />
 
     <meta property="og:type" content="website" />
-    <meta property="og:site_name" content="Christian Tutors" />
+    <meta property="og:site_name" content="MyChristianTutors.com" />
     <meta property="og:locale" content="en_US" />
     <meta property="og:url" content="https://tutors-three.vercel.app/" />
-    <meta property="og:title" content="Christian Tutors | Grow in knowledge. Grounded in faith." />
+    <meta property="og:title" content="MyChristianTutors.com | Grow in knowledge. Grounded in faith." />
     <meta property="og:description" content="One-on-one online tutoring with a Biblical worldview. Caring teachers, flexible packages, and support for grades 4–12." />
     <meta property="og:image" content="https://tutors-three.vercel.app/images/christian-tutors-social.png" />
     <meta property="og:image:secure_url" content="https://tutors-three.vercel.app/images/christian-tutors-social.png" />
     <meta property="og:image:type" content="image/png" />
     <meta property="og:image:width" content="1200" />
     <meta property="og:image:height" content="630" />
-    <meta property="og:image:alt" content="Christian Tutors. Grow in knowledge. Grounded in faith. One-on-one online tutoring with a Biblical worldview." />
+    <meta property="og:image:alt" content="MyChristianTutors.com. Grow in knowledge. Grounded in faith. One-on-one online tutoring with a Biblical worldview." />
 
     <meta name="twitter:card" content="summary_large_image" />
-    <meta name="twitter:title" content="Christian Tutors | Grow in knowledge. Grounded in faith." />
+    <meta name="twitter:title" content="MyChristianTutors.com | Grow in knowledge. Grounded in faith." />
     <meta name="twitter:description" content="One-on-one online tutoring with a Biblical worldview. Caring teachers, flexible packages, and support for grades 4–12." />
     <meta name="twitter:image" content="https://tutors-three.vercel.app/images/christian-tutors-social.png" />
-    <meta name="twitter:image:alt" content="Christian Tutors. Grow in knowledge. Grounded in faith." />
+    <meta name="twitter:image:alt" content="MyChristianTutors.com. Grow in knowledge. Grounded in faith." />
   </head>
   <body>
     <slot />
+    <button
+      type="button"
+      hidden
+      data-back-to-top
+      class="fixed right-4 bottom-4 z-30 min-h-11 rounded-full border border-white/30 bg-ink px-4 text-sm font-bold text-white shadow-lg hover:bg-[#245a54] focus-visible:outline-2 focus-visible:outline-ink sm:right-6 sm:bottom-6 print:hidden"
+    >
+      <span aria-hidden="true">↑</span> Back to top
+    </button>
+    <script>
+      const backToTop = document.querySelector<HTMLButtonElement>('[data-back-to-top]');
+      if (backToTop) {
+        const updateVisibility = () => {
+          backToTop.hidden = window.scrollY < window.innerHeight;
+        };
+
+        window.addEventListener('scroll', updateVisibility, { passive: true });
+        window.addEventListener('resize', updateVisibility);
+        backToTop.addEventListener('click', () => {
+          const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+          window.scrollTo({ top: 0, behavior: reducedMotion ? 'instant' : 'smooth' });
+        });
+        updateVisibility();
+      }
+    </script>
   </body>
 </html>

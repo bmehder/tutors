@@ -1,309 +1,318 @@
 ---
-import SiteLayout from '../layouts/SiteLayout.astro';
-import SiteHeader from '../components/SiteHeader.astro';
-import Icon from '../components/Icon.astro';
-import BookingIsland from '../components/BookingIsland.astro';
-import ContactSection from '../components/ContactSection.astro';
-import DemoSignup from '../components/DemoSignup.astro';
-import { tutors } from '../tutoring-data';
+import SiteLayout from '../layouts/SiteLayout.astro'
+import SiteHeader from '../components/SiteHeader.astro'
+import Icon from '../components/Icon.astro'
+import BookingIsland from '../components/BookingIsland.astro'
+import ContactSection from '../components/ContactSection.astro'
+import DemoSignup from '../components/DemoSignup.astro'
+import { tutors } from '../tutoring-data'
 ---
+
 <SiteLayout>
-  <SiteHeader />
-<main>
-	<section class='max-w-7xl mx-auto px-6 md:px-12 pt-8 pb-16 md:pt-14 md:pb-20 grid md:grid-cols-2 gap-12 lg:gap-20 items-center'>
-		<div>
-			<div class='eyebrow flex items-center gap-2 mb-6'>
-				<span class='h-1.5 w-1.5 rounded-full bg-coral' />
-				Personal tutoring. Shared values.
-			</div>
-			<h1 class='text-5xl lg:text-[66px] leading-[1.06] font-semibold'>
-				Grow in knowledge.
-				<br />
-				<span class='serif text-coral'>Grounded in faith.</span>
-			</h1>
-			<p class='text-base leading-7 text-ink/70 max-w-md mt-6'>
-				The right support can change everything. One-on-one online tutoring
-				with caring teachers who bring a Biblical worldview to every session.
-			</p>
-			<div class='flex flex-wrap gap-4 items-center mt-8'>
-				<a href='#booking' class='btn'>
-					Find the right fit
-				</a>
-				<a href='#booking' class='text-sm font-semibold px-2'>
-					Explore packages
-				</a>
-			</div>
-			<div class='flex flex-col sm:flex-row sm:flex-wrap gap-x-6 gap-y-3 text-xs mt-8 text-ink/70'>
-				<span class='flex gap-1.5'>Subjects for your needs</span>
-				<span class='flex gap-1.5'>Live, online sessions</span>
-				<span class='flex gap-1.5'>Your family’s schedule</span>
-			</div>
-		</div>
-		<div class='relative pb-6'>
-			<img
-				src='/images/learning.jpg'
-				alt='Student taking notes while studying'
-				class='relative w-full h-[420px] object-cover shadow-[0_18px_40px_-18px_rgba(20,63,60,0.35)]'
-			/>
-			<div class='absolute bottom-0 left-3 md:-left-7 bg-white rounded-xl p-5 shadow-xl flex items-center gap-4'>
-				<span class='bg-[#e8eee7] rounded-full p-3'>
-					<Icon name="Heart" size={23} />
-				</span>
-				<div class='font-semibold text-sm'>
-					More than better grades.
-					<p class='text-xs font-normal text-ink/60 mt-1'>
-						Confidence for the journey ahead.
-					</p>
-				</div>
-			</div>
-			<span class='absolute right-4 bottom-10 bg-cream rounded-full px-4 py-2 text-xs'>
-				A heart for learning. A foundation in Christ.
-			</span>
-		</div>
-	</section>
-	<div class='border-y border-ink/10 bg-[#f0f2eb]'>
-		<div class='max-w-6xl mx-auto grid sm:grid-cols-3 gap-6 py-7 px-6 text-sm'>
-			<div class='flex items-center justify-center gap-3'>
-				<Icon name="BookOpen" size={21} />A Biblical worldview
-			</div>
-			<div class='flex items-center justify-center gap-3'>
-				<Icon name="GraduationCap" size={23} />
-				Teachers who know their subjects
-			</div>
-			<div class='flex items-center justify-center gap-3'>
-				<Icon name="Heart" size={21} />
-				Encouragement at every step
-			</div>
-		</div>
-	</div>
-	<section id='how' class='max-w-7xl mx-auto px-6 md:px-12 py-20'>
-		<div class='flex flex-wrap justify-between items-end gap-5 mb-10'>
+	<SiteHeader />
+	<main>
+		<section
+			class='max-w-7xl mx-auto px-6 md:px-12 pt-8 pb-16 md:pt-14 md:pb-20 grid md:grid-cols-2 gap-12 lg:gap-20 items-center'
+		>
 			<div>
-				<p class='eyebrow text-ink/55 mb-3'>A simple start</p>
-				<h2 class='text-4xl font-semibold'>
-					Your whole family.
-					<br />
-					<span class='serif'>One tutoring plan.</span>
-				</h2>
-			</div>
-			<p class='text-sm text-ink/65 max-w-xs leading-6'>
-				Built around your family’s real life.
-				<br />
-				One shared package. Different students and subjects. Weekly routines
-				planned together.
-			</p>
-		</div>
-		<div class='grid md:grid-cols-3 gap-10'>
-			{[
-				[
-					'01',
-					'Choose your tutors',
-					'Choose 5 hours for one student, or share 10 hours with up to three students and 20 hours with up to five.',
-				],
-				[
-					'02',
-					'Add your students',
-					'Plan for one child at a time. Assign their hours, then choose a subject, tutor, day, and time.',
-				],
-				[
-					'03',
-					'Watch confidence take root',
-					'Meet online for focused, one-on-one sessions built around your student.',
-				],
-			].map(([n, title, desc]) => (
-				<div class='border-t border-ink/20 pt-5'>
-					<span class='text-coral text-sm'>{n} /</span>
-					<h3 class='text-xl font-semibold mt-4 mb-3'>{title}</h3>
-					<p class='text-sm leading-6 text-ink/65 max-w-xs'>{desc}</p>
+				<div class='eyebrow flex items-center gap-2 mb-6'>
+					<span class='h-1.5 w-1.5 rounded-full bg-coral'></span>
+					Personal tutoring. Shared values.
 				</div>
-			))}
+				<h1 class='text-5xl lg:text-[66px] leading-[1.06] font-semibold'>
+					Grow in knowledge.
+					<br />
+					<span class='serif text-coral'>Grounded in faith.</span>
+				</h1>
+				<p class='text-base leading-7 text-ink/70 max-w-md mt-6'>
+					The right support can change everything. One-on-one online tutoring with
+					caring teachers who bring a Biblical worldview to every session.
+				</p>
+				<div class='flex flex-wrap gap-4 items-center mt-8'>
+					<a href='#booking' class='btn'> Find the right fit </a>
+				</div>
+				<div
+					class='flex flex-col sm:flex-row sm:flex-wrap gap-x-6 gap-y-3 text-xs mt-8 text-ink/70'
+				>
+					<span class='flex gap-1.5'>Subjects for your needs</span>
+					<span class='flex gap-1.5'>Live, online sessions</span>
+					<span class='flex gap-1.5'>Your family’s schedule</span>
+				</div>
+			</div>
+			<div class='relative pb-6'>
+				<img
+					src='/images/learning.jpg'
+					alt='Student taking notes while studying'
+					class='relative w-full h-[420px] object-cover shadow-[0_18px_40px_-18px_rgba(20,63,60,0.35)]'
+				/>
+				<div
+					class='absolute bottom-0 left-3 md:-left-7 bg-white rounded-xl p-5 shadow-xl flex items-center gap-4'
+				>
+					<span class='bg-[#e8eee7] rounded-full p-3'>
+						<Icon name='Heart' size={23} />
+					</span>
+					<div class='font-semibold text-sm'>
+						More than better grades.
+						<p class='text-xs font-normal text-ink/60 mt-1'>
+							Confidence for the journey ahead.
+						</p>
+					</div>
+				</div>
+				<span
+					class='absolute right-4 bottom-10 bg-cream rounded-full px-4 py-2 text-xs'
+				>
+					A heart for learning. A foundation in Christ.
+				</span>
+			</div>
+		</section>
+		<div class='border-y border-ink/10 bg-[#f0f2eb]'>
+			<div class='max-w-6xl mx-auto grid sm:grid-cols-3 gap-6 py-7 px-6 text-sm'>
+				<div class='flex items-center justify-center gap-3'>
+					<Icon name='BookOpen' size={21} />A Biblical worldview
+				</div>
+				<div class='flex items-center justify-center gap-3'>
+					<Icon name='GraduationCap' size={23} />
+					Teachers who know their subjects
+				</div>
+				<div class='flex items-center justify-center gap-3'>
+					<Icon name='Heart' size={21} />
+					Encouragement at every step
+				</div>
+			</div>
 		</div>
-	</section>
-	<BookingIsland />
-	<section id='tutors' class='bg-[#f0f2eb] py-20 border-y border-ink/10'>
-		<div class='max-w-7xl mx-auto px-6 md:px-12'>
-			<div class='flex flex-wrap justify-between items-end gap-4 mb-10'>
+		<section id='how' class='max-w-7xl mx-auto px-6 md:px-12 py-20'>
+			<div class='flex flex-wrap justify-between items-end gap-5 mb-10'>
 				<div>
-					<p class='eyebrow text-ink/55 mb-3'>
-						A teacher. A mentor. An encourager.
-					</p>
+					<p class='eyebrow text-ink/55 mb-3'>A simple start</p>
 					<h2 class='text-4xl font-semibold'>
-						People with a <span class='serif'>heart for teaching.</span>
+						Your whole family.
+						<br />
+						<span class='serif'>One tutoring plan.</span>
 					</h2>
 				</div>
-				<span class='text-xs text-ink/55'>
-					MyFunScience teachers · Sample tutoring availability
-				</span>
-			</div>
-			<div class='grid sm:grid-cols-2 lg:grid-cols-4 gap-5'>
-				{tutors.map(t => (
-					<article class='bg-white rounded-xl p-6'>
-						<div
-							class='h-28 rounded-lg flex items-center justify-center relative'
-							style={{ background: t.color }}
-						>
-							<span class='serif text-5xl opacity-55'>{t.initials}</span>
-							<Icon name="BookOpen"
-								class='absolute bottom-3 right-3 opacity-25'
-								size={22}
-							/>
-						</div>
-						<h3 class='text-xl font-semibold mt-5'>{t.name}</h3>
-						<p class='text-[11px] text-ink/55 mt-2'>{t.degree}</p>
-						<p class='text-sm leading-6 mt-4 text-ink/70'>{t.bio}</p>
-						<a href="#booking" data-preferred-tutor={t.id}
-							class='text-xs font-bold flex gap-2 items-center mt-5'
-						>
-							See availability
-						</a>
-					</article>
-				))}
-			</div>
-		</div>
-	</section>
-	<section
-		aria-labelledby='testimonials-heading'
-		class='max-w-7xl mx-auto px-6 md:px-12 pt-20'
-	>
-		<div class='flex flex-wrap justify-between items-end gap-5 mb-9'>
-			<div>
-				<p class='eyebrow text-ink/55 mb-3'>
-					Small steps. Meaningful progress.
+				<p class='text-sm text-ink/65 max-w-xs leading-6'>
+					Built around your family’s real life.
+					<br />
+					One shared package. Different students and subjects. Weekly routines planned
+					together.
 				</p>
-				<h2 id='testimonials-heading' class='text-4xl font-semibold'>
-					More confidence. <span class='serif'>For the whole family.</span>
-				</h2>
 			</div>
-			<p class='text-xs text-ink/55 max-w-xs leading-5'>
-				Sample testimonials for this demo. These are fictional stories, not
-				reviews from actual families.
-			</p>
-		</div>
-		<div class='grid md:grid-cols-3 gap-6'>
-			{[
+			<div class='grid md:grid-cols-3 gap-10'>
 				{
-					quote:
-						'Math used to be the part of our day we both dreaded. Having someone patiently explain it a different way helped my daughter start asking questions instead of giving up.',
-					name: 'Emily R.',
-					detail: 'Parent of a seventh grader',
-					initial: 'E',
-				},
-				{
-					quote:
-						'I wanted help with science from a teacher who shared our faith. The personal attention and thoughtful conversations are exactly the kind of support I was looking for.',
-					name: 'Michael T.',
-					detail: 'Parent of a tenth grader',
-					initial: 'M',
-				},
-				{
-					quote:
-						'We needed a little extra help with writing, without adding another complicated commitment. Choosing a time that fit our week made getting started feel manageable.',
-					name: 'Rebecca S.',
-					detail: 'Parent of a fifth grader',
-					initial: 'R',
-				},
-			].map(item => (
-				<figure
-					class='bg-white border border-ink/15 rounded-xl p-7 flex flex-col'
-				>
-					<span
-						aria-hidden='true'
-						class='serif text-coral text-6xl h-12 leading-none'
-					>
-						“
-					</span>
-					<blockquote class='text-sm leading-7 text-ink/80 mt-3 mb-7 flex-1'>
-						{item.quote}
-					</blockquote>
-					<figcaption class='flex items-center gap-3 border-t border-ink/10 pt-5'>
-						<span
-							aria-hidden='true'
-							class='bg-[#eaf0e9] rounded-full w-10 h-10 flex items-center justify-center serif text-xl'
-						>
-							{item.initial}
-						</span>
-						<div>
-							<p class='text-sm font-semibold'>
-								{item.name}
-								<span class='font-normal text-[10px] text-ink/50'>
-									· Sample parent
-								</span>
-							</p>
-							<p class='text-xs text-ink/60 mt-1'>{item.detail}</p>
+					[
+						[
+							'01',
+							'Choose your tutors',
+							'Choose 5 hours for one student, or share 10 hours with up to three students and 20 hours with up to five.',
+						],
+						[
+							'02',
+							'Add your students',
+							'Plan for one child at a time. Assign their hours, then choose a subject, tutor, day, and time.',
+						],
+						[
+							'03',
+							'Watch confidence take root',
+							'Meet online for focused, one-on-one sessions built around your student.',
+						],
+					].map(([n, title, desc]) => (
+						<div class='border-t border-ink/20 pt-5'>
+							<span class='text-coral text-sm'>{n} /</span>
+							<h3 class='text-xl font-semibold mt-4 mb-3'>{title}</h3>
+							<p class='text-sm leading-6 text-ink/65 max-w-xs'>{desc}</p>
 						</div>
-					</figcaption>
-				</figure>
-			))}
+					))
+				}
+			</div>
+		</section>
+		<BookingIsland />
+		<section id='tutors' class='bg-[#f0f2eb] py-20 border-y border-ink/10'>
+			<div class='max-w-7xl mx-auto px-6 md:px-12'>
+				<div class='flex flex-wrap justify-between items-end gap-4 mb-10'>
+					<div>
+						<p class='eyebrow text-ink/55 mb-3'>
+							A teacher. A mentor. An encourager.
+						</p>
+						<h2 class='text-4xl font-semibold'>
+							People with a <span class='serif'>heart for teaching.</span>
+						</h2>
+					</div>
+					<span class='text-xs text-ink/55'>
+						MyFunScience teachers · Sample tutoring availability
+					</span>
+				</div>
+				<div class='grid sm:grid-cols-2 lg:grid-cols-4 gap-5'>
+					{
+						tutors.map(t => (
+							<article class='bg-white rounded-xl p-6'>
+								<div
+									class='h-28 rounded-lg flex items-center justify-center relative'
+									style={{ background: t.color }}
+								>
+									<span class='serif text-5xl opacity-55'>{t.initials}</span>
+									<Icon
+										name='BookOpen'
+										class='absolute bottom-3 right-3 opacity-25'
+										size={22}
+									/>
+								</div>
+								<h3 class='text-xl font-semibold mt-5'>{t.name}</h3>
+								<p class='text-[11px] text-ink/55 mt-2'>{t.degree}</p>
+								<p class='text-sm leading-6 mt-4 text-ink/70'>{t.bio}</p>
+								<a
+									href='#booking'
+									data-preferred-tutor={t.id}
+									class='text-xs font-bold flex gap-2 items-center mt-5'
+								>
+									See availability
+								</a>
+							</article>
+						))
+					}
+				</div>
+			</div>
+		</section>
+		<section
+			aria-labelledby='testimonials-heading'
+			class='max-w-7xl mx-auto px-6 md:px-12 pt-20'
+		>
+			<div class='flex flex-wrap justify-between items-end gap-5 mb-9'>
+				<div>
+					<p class='eyebrow text-ink/55 mb-3'>Small steps. Meaningful progress.</p>
+					<h2 id='testimonials-heading' class='text-4xl font-semibold'>
+						More confidence. <span class='serif'>For the whole family.</span>
+					</h2>
+				</div>
+				<p class='text-xs text-ink/55 max-w-xs leading-5'>
+					Sample testimonials for this demo. These are fictional stories, not reviews
+					from actual families.
+				</p>
+			</div>
+			<div class='grid md:grid-cols-3 gap-6'>
+				{
+					[
+						{
+							quote:
+								'Math used to be the part of our day we both dreaded. Having someone patiently explain it a different way helped my daughter start asking questions instead of giving up.',
+							name: 'Emily R.',
+							detail: 'Parent of a seventh grader',
+							initial: 'E',
+						},
+						{
+							quote:
+								'I wanted help with science from a teacher who shared our faith. The personal attention and thoughtful conversations are exactly the kind of support I was looking for.',
+							name: 'Michael T.',
+							detail: 'Parent of a tenth grader',
+							initial: 'M',
+						},
+						{
+							quote:
+								'We needed a little extra help with writing, without adding another complicated commitment. Choosing a time that fit our week made getting started feel manageable.',
+							name: 'Rebecca S.',
+							detail: 'Parent of a fifth grader',
+							initial: 'R',
+						},
+					].map(item => (
+						<figure class='bg-white border border-ink/15 rounded-xl p-7 flex flex-col'>
+							<span
+								aria-hidden='true'
+								class='serif text-coral text-6xl h-12 leading-none'
+							>
+								“
+							</span>
+							<blockquote class='text-sm leading-7 text-ink/80 mt-3 mb-7 flex-1'>
+								{item.quote}
+							</blockquote>
+							<figcaption class='flex items-center gap-3 border-t border-ink/10 pt-5'>
+								<span
+									aria-hidden='true'
+									class='bg-[#eaf0e9] rounded-full w-10 h-10 flex items-center justify-center serif text-xl'
+								>
+									{item.initial}
+								</span>
+								<div>
+									<p class='text-sm font-semibold'>
+										{item.name}
+										<span class='font-normal text-[10px] text-ink/50'>
+											· Sample parent
+										</span>
+									</p>
+									<p class='text-xs text-ink/60 mt-1'>{item.detail}</p>
+								</div>
+							</figcaption>
+						</figure>
+					))
+				}
+			</div>
+		</section>
+		<DemoSignup />
+		<section class='max-w-3xl mx-auto px-6 pb-20'>
+			<p class='eyebrow text-center text-ink/55 mb-3'>A little more clarity</p>
+			<h2 class='text-3xl text-center font-semibold mb-8'>
+				Good questions. <span class='serif'>Thoughtful answers.</span>
+			</h2>
+			{
+				[
+					[
+						'How are hours shared between students?',
+						'The 5-hour package is for one student and cannot be shared. A 10-hour package can serve up to three students; a 20-hour package can serve up to five. Assign each child their hours from the package, then plan their weekly routine. One hour is one 60-minute session. Larger packages have lower hourly rates.',
+					],
+					[
+						'Does every session need to be scheduled separately?',
+						'No. Choose the subject, tutor, weekday, and time once. If you assign a student 10 hours, we create 10 weekly sessions with those details. Then complete your plan or add another student using the hours that remain.',
+					],
+					[
+						'Can we skip a week or change one session?',
+						'Your sessions repeat weekly with the same tutor, day, and time. Before checkout, use “Skip this week” to add a replacement at the end. Contact support for other adjustments. Unavailable dates are flagged before you save; choose another weekly routine or ask support for help. Simultaneous sibling sessions are allowed with different tutors, while any overlap for the same student or tutor is blocked.',
+					],
+					[
+						'Can I book by subject instead of choosing a tutor?',
+						'Start with your student and subject, then choose a named tutor and one of their available times. We recommend contacting your tutor before buying, but this is optional. Grade level does not restrict selection.',
+					],
+					[
+						'What does a Biblical worldview mean here?',
+						'The proposed service pairs academic support with a Christian view of truth, purpose, and the value of each student. Teachers would approach their subjects with faith, patience, and care.',
+					],
+					[
+						'Is this a live tutoring service?',
+						'This is a proof of concept for a proposed companion to MyFunScience. Teacher names and subjects come from MyFunScience. Tutoring prices and availability are illustrative. Checkout is simulated, and no money is collected.',
+					],
+				].map(([q, a]) => (
+					<details class='border-b border-ink/15'>
+						<summary class='text-sm'>{q}</summary>
+						<p class='text-sm leading-7 text-ink/65 pb-5'>{a}</p>
+					</details>
+				))
+			}
+		</section>
+		<ContactSection />
+	</main>
+	<footer class='bg-ink text-white px-6 md:px-12 py-10'>
+		<div class='max-w-6xl mx-auto flex flex-wrap justify-between gap-8'>
+			<div class='text-xl font-bold'>
+				MyChristian<span class='text-coral'>Tutors</span>.com
+				<p class='text-xs font-normal text-white/60 mt-3'>
+					Growing minds. Nurturing faith.
+				</p>
+				<a
+					href='#contact'
+					class='block text-xs font-normal underline underline-offset-4 mt-4'
+				>
+					Questions or interested in tutoring? Contact us
+				</a>
+			</div>
+			<div class='text-xs text-white/60 leading-6 text-right'>
+				<p>A proposed MyFunScience companion · Proof of concept</p>
+				<p>Working name · Demo profiles, availability, and prices</p>
+				<a
+					href='https://myfunscience.com'
+					target='_blank'
+					rel='noreferrer'
+					class='underline underline-offset-4'
+				>
+					Visit MyFunScience
+				</a>
+			</div>
 		</div>
-	</section>
-	<DemoSignup />
-	<section class='max-w-3xl mx-auto px-6 pb-20'>
-		<p class='eyebrow text-center text-ink/55 mb-3'>
-			A little more clarity
-		</p>
-		<h2 class='text-3xl text-center font-semibold mb-8'>
-			Good questions. <span class='serif'>Thoughtful answers.</span>
-		</h2>
-		{[
-			[
-				'How are hours shared between students?',
-				'The 5-hour package is for one student and cannot be shared. A 10-hour package can serve up to three students; a 20-hour package can serve up to five. Assign each child their hours from the package, then plan their weekly routine. One hour is one 60-minute session. Larger packages have lower hourly rates.',
-			],
-			[
-				'Does every session need to be scheduled separately?',
-				'No. Choose the subject, tutor, weekday, and time once. If you assign a student 10 hours, we create 10 weekly sessions with those details. Then complete your plan or add another student using the hours that remain.',
-			],
-			[
-				'Can we skip a week or change one session?',
-				'Your sessions repeat weekly with the same tutor, day, and time. Before checkout, use “Skip this week” to add a replacement at the end. Contact support for other adjustments. Unavailable dates are flagged before you save; choose another weekly routine or ask support for help. Simultaneous sibling sessions are allowed with different tutors, while any overlap for the same student or tutor is blocked.',
-			],
-			[
-				'Can I book by subject instead of choosing a tutor?',
-				'Start with your student and subject, then choose a named tutor and one of their available times. We recommend contacting your tutor before buying, but this is optional. Grade level does not restrict selection.',
-			],
-			[
-				'What does a Biblical worldview mean here?',
-				'The proposed service pairs academic support with a Christian view of truth, purpose, and the value of each student. Teachers would approach their subjects with faith, patience, and care.',
-			],
-			[
-				'Is this a live tutoring service?',
-				'This is a proof of concept for a proposed companion to MyFunScience. Teacher names and subjects come from MyFunScience. Tutoring prices and availability are illustrative. Checkout is simulated, and no money is collected.',
-			],
-		].map(([q, a]) => (
-			<details class='border-b border-ink/15'>
-				<summary class='text-sm'>{q}</summary>
-				<p class='text-sm leading-7 text-ink/65 pb-5'>{a}</p>
-			</details>
-		))}
-	</section>
-	<ContactSection />
-</main>
-<footer class='bg-ink text-white px-6 md:px-12 py-10'>
-	<div class='max-w-6xl mx-auto flex flex-wrap justify-between gap-8'>
-		<div class='text-xl font-bold'>
-			christian<span class='text-coral'>tutors</span>
-			<p class='text-xs font-normal text-white/60 mt-3'>
-				Growing minds. Nurturing faith.
-			</p>
-			<a
-				href='#contact'
-				class='block text-xs font-normal underline underline-offset-4 mt-4'
-			>
-				Questions or interested in tutoring? Contact us
-			</a>
-		</div>
-		<div class='text-xs text-white/60 leading-6 text-right'>
-			<p>A proposed MyFunScience companion · Proof of concept</p>
-			<p>Working name · Demo profiles, availability, and prices</p>
-			<a
-				href='https://myfunscience.com'
-				target='_blank'
-				rel='noreferrer'
-				class='underline underline-offset-4'
-			>
-				Visit MyFunScience
-			</a>
-		</div>
-	</div>
-</footer>
+	</footer>
 </SiteLayout>

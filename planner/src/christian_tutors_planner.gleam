@@ -10,7 +10,7 @@ import planner/allocation.{
 }
 import planner/browser.{
   add_days, after_payment, all_tutors, billing_month, booking_calendar,
-  browser_time_zone, install_payment_masks, listen_for_tutor_card_clicks, now,
+  browser_time_zone, install_input_masks, listen_for_tutor_card_clicks, now,
   print_page, random_uuid, scroll, session_date, tomorrow, valid_date,
 }
 import planner/checkout
@@ -34,7 +34,7 @@ pub fn main() {
     fn(message) { lustre.send(runtime, lustre.dispatch(message)) },
     model.UserClickedTutorAvailability,
   )
-  install_payment_masks()
+  install_input_masks()
 }
 
 fn init(_) {
