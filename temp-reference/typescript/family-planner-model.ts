@@ -12,9 +12,9 @@ import {
 	noticeSatisfied,
 	intervalsOverlap,
 	type BookingClock,
-} from '../../src/session-time.ts'
-export { formatDate, formatTime, parseTime } from '../../src/session-time.ts'
-export { SUBJECTS } from '../../src/tutoring-data.ts'
+} from '../../src/lib/session-time.ts'
+export { formatDate, formatTime, parseTime } from '../../src/lib/session-time.ts'
+export { SUBJECTS } from '../../src/lib/tutoring-data.ts'
 export type Child = { id: string; name: string; color: number }
 export type Lesson = {
 	id: string

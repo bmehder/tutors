@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {confirmOrder,newDraft,changePackage} from '../booking-domain.ts';
-import {tutors} from '../../../src/tutoring-data.ts';
+import {tutors} from '../../../src/lib/tutoring-data.ts';
 const contact={name:'Sample Parent',email:'parent@example.com'};
 const draft={kind:'draft',package:{kind:'tenHours'},students:[{id:'emma',name:'Emma',hours:2,subjects:[{id:'math',subject:'Algebra 1',hours:2}]}],routines:[{id:'math',studentId:'emma',subject:'Algebra 1',tutorId:'melissa-lopez',firstDate:'2030-01-07',start:915,count:2}]};
 test('package change removes all dependent draft data',()=>{

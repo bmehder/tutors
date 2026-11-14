@@ -368,6 +368,15 @@ fn update(model: Model, msg: Msg) -> #(Model, effect.Effect(Msg)) {
 
     model.DemoPaymentFinished(order) -> finish_payment(model, order)
 
+    model.DemoReservationFailed(issue) ->
+      case model.step {
+        PayForOrder(_, Processing) -> #(
+          Model(..model, step: ReviewFamilyPlan, error: Some(issue)),
+          effect.from(fn(_) { scroll() }),
+        )
+        _ -> #(model, effect.none())
+      }
+
     model.UserClickedStep(booking_step) ->
       case model.step {
         PayForOrder(_, Processing) -> #(model, effect.none())
@@ -674,7 +683,12 @@ fn submit_payment(model: Model, details: DemoPaymentDetails) {
         "" -> #(
           Model(..model, step: PayForOrder(order, Processing), error: None),
           effect.from(fn(dispatch) {
-            after_payment(dispatch, model.DemoPaymentFinished(order))
+            after_payment(
+              order,
+              dispatch,
+              model.DemoPaymentFinished(order),
+              model.DemoReservationFailed,
+            )
           }),
         )
         issue -> failure(model, issue)
@@ -687,13 +701,7 @@ fn submit_payment(model: Model, details: DemoPaymentDetails) {
 fn finish_payment(model: Model, order: Order) {
   case model.step {
     PayForOrder(_, Processing) -> {
-      case checkout.revalidate(order, all_tutors(), now(), booking_calendar()) {
-        "" -> go_to_booking_step(model, OrderComplete(order))
-        issue -> #(
-          Model(..model, step: ReviewFamilyPlan, error: Some(issue)),
-          effect.from(fn(_) { scroll() }),
-        )
-      }
+      go_to_booking_step(model, OrderComplete(order))
     }
     _ -> #(model, effect.none())
   }

@@ -1,3 +1,7 @@
+---
+import './booking.css'
+---
+
 <section id="booking" class="bg-[#f0f2eb] border-y border-ink/10 py-14 md:py-20">
   <div class="max-w-3xl mx-auto px-4 sm:px-8">
     <p class="eyebrow text-ink/55 mb-3">A steady rhythm. Room for real life.</p>
@@ -8,6 +12,9 @@
   </div>
 </section>
 <script>
-  import { main } from '../../planner/build/dev/javascript/christian_tutors_planner/christian_tutors_planner.mjs';
-  main();
+  import { main } from '../../../planner/build/dev/javascript/christian_tutors_planner/christian_tutors_planner.mjs';
+  import { loadTutorHours } from '../../../planner/build/dev/javascript/christian_tutors_planner/planner_ffi.mjs';
+  loadTutorHours().then(() => main()).catch(() => {
+    document.querySelector('#family-planner p')!.textContent = 'Tutor schedules could not be loaded. Please refresh to try again.';
+  });
 </script>

@@ -1,6 +1,6 @@
 import gleam/option.{type Option}
 import planner/model.{
-  type Date, type Msg, type Session, type Student, type SubjectAllocation,
+  type Date, type ErrorMessage, type Msg, type Order, type Session, type Student, type SubjectAllocation,
   type TimeChoice, type TimeZone, type TimeZoneQuery, type Tutor,
   type WeeklyRoutine,
 }
@@ -41,7 +41,12 @@ pub fn session_label(session: Session, time_zone: TimeZone) -> String
 pub fn session_date(session: Session, time_zone: TimeZone) -> String
 
 @external(javascript, "../planner_ffi.mjs", "afterPayment")
-pub fn after_payment(dispatch: fn(Msg) -> Nil, message: Msg) -> Nil
+pub fn after_payment(
+  order: Order,
+  dispatch: fn(Msg) -> Nil,
+  success: Msg,
+  failed: fn(ErrorMessage) -> Msg,
+) -> Nil
 
 @external(javascript, "../planner_ffi.mjs", "scroll")
 pub fn scroll() -> Nil

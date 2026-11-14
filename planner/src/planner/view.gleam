@@ -1232,7 +1232,10 @@ fn price_breakdown(hours: Hours, discount: Option(Discount)) -> Element(Msg) {
 }
 
 fn price_row(label: String, amount: String) -> Element(Msg) {
-  h.div([a.class("flex justify-between gap-3")], [h.text(label), h.text(amount)])
+  h.div([a.class("flex justify-between gap-3")], [
+    h.span([], [h.text(label)]),
+    h.span([], [h.text(amount)]),
+  ])
 }
 
 fn confirmed_schedule_groups(

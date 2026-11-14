@@ -62,6 +62,7 @@ pub type Msg {
   UserToggledDemoDiscount
   UserSubmittedPayment(DemoPaymentDetails)
   DemoPaymentFinished(Order)
+  DemoReservationFailed(ErrorMessage)
   UserClickedPrint
 }
 
@@ -94,6 +95,7 @@ pub type Tutor {
 pub type TutorAvailability {
   // Weekdays and start minutes are expressed in the tutor’s Eastern calendar.
   TutorAvailability(weekdays: List(Int), start_minutes: List(Int))
+  DailyAvailability(starts_by_day: List(List(Int)), start_minutes: List(Int))
 }
 
 pub type WeeklyRoutine {

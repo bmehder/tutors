@@ -68,7 +68,7 @@ Each handler returns a model and an effect. A branch with no additional work ret
 | [scheduling.gleam](../../planner/src/planner/scheduling.gleam) | Tutor availability, booking notice, conflicts, weekly recurrence, replacement weeks, and plan validation. |
 | [checkout.gleam](../../planner/src/planner/checkout.gleam) | Package prices, order confirmation and revalidation, and demo payment checks. |
 | [planner_ffi.mjs](../../planner/src/planner_ffi.mjs) | Supplies the catalog, clock, calendar conversion, formatting, and browser effects to the Gleam planner. |
-| [session-time.ts](../../src/session-time.ts) | Eastern time and viewing-zone conversion, including clock changes. The original TypeScript booking rules are kept as test references. |
+| [session-time.ts](../../src/lib/session-time.ts) | Eastern time and viewing-zone conversion, including clock changes. The original TypeScript booking rules are kept as test references. |
 | [view.gleam](../../planner/src/planner/view.gleam) | Projects the model into the page and connects controls to messages. Useful when tracing where a message comes from. |
 
 As we organize the code, use this reading order as the guide. The model should introduce the vocabulary, `update` should show the events and transitions, and named helpers should explain the individual rules. Keep a rule near the type or transition it describes until there’s a clear reason to move it.

@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {formatCard,formatExpiry,formatSecurityCode} from '../src/payment-format.ts';
+import {formatCard,formatExpiry,formatSecurityCode} from '../src/lib/payment-format.ts';
 test('card formatting handles typing, pasted formatting, clearing, and limits',()=>{
  assert.equal(formatCard('42424'),'4242 4');
  assert.equal(formatCard('4242-4242-4242-4242'),'4242 4242 4242 4242');

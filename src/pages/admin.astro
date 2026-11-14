@@ -1,0 +1,684 @@
+---
+import { createHmac, timingSafeEqual } from 'node:crypto'
+import { getSecret } from 'astro:env/server'
+import { pool, tutorHours } from '../server/tutor-hours'
+import { editBooking } from '../server/admin-bookings'
+import { SUBJECTS } from '../lib/tutoring-data'
+import { randomUUID } from 'node:crypto'
+import { formatTime } from '../lib/session-time'
+import SiteLayout from '../layouts/SiteLayout.astro'
+
+export const prerender = false
+Astro.response.headers.set('Cache-Control', 'no-store')
+const demo = getSecret('BOOKING_PUBLIC_ADMIN_DEMO') === '1'
+const email = demo ? 'demo@example.test' : getSecret('BOOKING_DEV_ADMIN_EMAIL')
+const password = demo ? 'tutor-demo' : getSecret('BOOKING_DEV_ADMIN_PASSWORD')
+const signingKey = demo ? getSecret('BOOKING_ADMIN_SIGNING_KEY') : password
+const enabled = (import.meta.env.DEV || demo) && !!signingKey && !!email && !!password && !!pool
+if (!enabled) return new Response('Not found', { status: 404 })
+
+const sign = (value: string) => createHmac('sha256', signingKey!).update(value).digest('hex')
+const equal = (a: string, b: string) =>
+  timingSafeEqual(Buffer.from(sign(a), 'hex'), Buffer.from(sign(b), 'hex'))
+const cookie = 'booking_admin'
+const [expiry, signature] = (Astro.cookies.get(cookie)?.value ?? '').split('.')
+const signedIn = !!signature && Number(expiry) > Date.now() && equal(signature, sign(expiry))
+const days = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday']
+const catalog = signedIn ? await tutorHours(true) : []
+const selected = catalog.find(t => t.id === Astro.url.searchParams.get('tutor')) ?? catalog[0]
+const times = Array.from({ length: 97 }, (_, index) => index * 15)
+function blocks(starts: number[]) {
+  const ranges: { start: number; end: number }[] = []
+  for (const start of starts) {
+    const last = ranges.at(-1)
+    if (last && start === last.end - 45) last.end = start + 60
+    else ranges.push({ start, end: start + 60 })
+  }
+  return ranges
+}
+let error = ''
+
+if (Astro.request.method === 'POST') {
+  if (Astro.request.headers.get('origin') !== Astro.url.origin)
+    return new Response('Forbidden', { status: 403 })
+  const form = await Astro.request.formData()
+  const action = form.get('action')
+  if (action === 'sign-in') {
+    if (equal(String(form.get('email')), email!) && equal(String(form.get('password')), password!)) {
+      const expires = String(Date.now() + 3_600_000)
+      Astro.cookies.set(cookie, expires + '.' + sign(expires), {
+        httpOnly: true, secure: demo, sameSite: 'strict', path: '/admin', maxAge: 3600,
+      })
+      return Astro.redirect('/admin', 303)
+    }
+    error = 'The email or password did not match.'
+  } else {
+    if (!signedIn) return new Response('Forbidden', { status: 403 })
+    if (action === 'sign-out') {
+      Astro.cookies.delete(cookie, { path: '/admin' })
+      return Astro.redirect('/admin', 303)
+    }
+    if (action === 'save-tutor' || action === 'archive-tutor' || action === 'restore-tutor') {
+      const id = String(form.get('tutor-id') ?? '')
+      const existing = catalog.find(tutor => tutor.id === id)
+      if (id && !existing) return new Response('Tutor not found', { status: 404 })
+      const name = action === 'save-tutor' ? String(form.get('name') ?? '').trim() : existing?.name
+      const subjects = action === 'save-tutor' ? form.getAll('subjects').filter(
+        (subject): subject is string => typeof subject === 'string' && SUBJECTS.includes(subject),
+      ) : existing?.subjects
+      if (!name || !subjects?.length) error = 'Enter a tutor name and choose at least one subject.'
+      else {
+        const tutorId = existing?.id ?? randomUUID()
+        await pool!.query(
+          'INSERT INTO tutor_profiles VALUES ($1,$2,$3,$4) ON CONFLICT (tutor_id) DO UPDATE SET name=EXCLUDED.name, subjects=EXCLUDED.subjects, archived=EXCLUDED.archived',
+          [tutorId, name, subjects, action === 'archive-tutor' || (action === 'save-tutor' && !!existing?.archived)],
+        )
+        return Astro.redirect('/admin?tutor=' + encodeURIComponent(tutorId) + '#tutors-admin', 303)
+      }
+    } else if (['create-booking', 'edit-booking', 'delete-booking', 'move-session', 'save-session-subject'].includes(String(action))) {
+      try {
+        if (action === 'create-booking' && !catalog.some(tutor => tutor.id === form.get('booking-tutor') && !tutor.archived))
+          throw new Error('Choose an active tutor.')
+        await editBooking(pool!, form, String(action))
+        const returnTutor = form.get('return-tutor')
+        return Astro.redirect(
+          ['move-session', 'save-session-subject'].includes(String(action)) && typeof returnTutor === 'string'
+            ? '/admin?open-tutor=' + encodeURIComponent(returnTutor) + '#tutors-admin'
+            : '/admin#bookings-admin',
+          303,
+        )
+      } catch (issue) {
+        error = issue instanceof Error && !('code' in issue) ? issue.message : 'The booking could not be updated.'
+      }
+    } else if (!selected) return new Response('Tutor not found', { status: 404 })
+    else if (action === 'reset') {
+      await pool!.query('DELETE FROM tutor_weekly_hours WHERE tutor_id = $1', [selected.id])
+    } else if (action === 'save') {
+      let invalid = false
+      const starts = days.map((_, day) => {
+        const starts = form.getAll('start-' + day)
+        const ends = form.getAll('end-' + day)
+        if (starts.length !== ends.length) invalid = true
+        return starts.flatMap((value, index) => {
+          const start = Number(value)
+          const end = Number(ends[index])
+          if (!times.includes(start) || !times.includes(end) || end - start < 60) {
+            invalid = true
+            return []
+          }
+          return Array.from({ length: (end - start - 60) / 15 + 1 }, (_, i) => start + i * 15)
+        })
+      })
+      if (invalid) {
+        error = 'Each block needs at least one hour. Check its start and end times.'
+      } else {
+        await pool!.query(
+          'INSERT INTO tutor_weekly_hours VALUES ($1, $2) ON CONFLICT (tutor_id) DO UPDATE SET starts_by_day = EXCLUDED.starts_by_day',
+          [selected.id, JSON.stringify(starts.map(day => [...new Set(day)].sort((a, b) => a - b)))],
+        )
+      }
+    } else return new Response('Invalid action', { status: 400 })
+    if (!error && selected) return Astro.redirect('/admin?tutor=' + encodeURIComponent(selected.id) + '&saved=1#schedules-admin', 303)
+  }
+}
+const bookings = signedIn ? (await pool!.query<{
+  id: string; confirmed_at: Date; package_hours: number | null; label: string | null; subtotal_cents: number | null; discount_cents: number | null;
+  sessions: { id: string; tutor: string; subject: string | null; start: string }[];
+}>(`SELECT b.id, b.confirmed_at, b.package_hours, b.label, b.subtotal_cents, b.discount_cents,
+  COALESCE(json_agg(json_build_object('id', s.id::text, 'tutor', s.tutor_id, 'subject', s.subject, 'start', lower(s.slot))
+  ORDER BY lower(s.slot)) FILTER (WHERE s.id IS NOT NULL), '[]') AS sessions
+  FROM booking_reservations b LEFT JOIN booking_sessions s ON s.reservation_id=b.id
+  WHERE confirmed_at IS NOT NULL GROUP BY b.id ORDER BY confirmed_at DESC`)).rows : []
+const money = (cents: number | null) => cents === null ? 'Unrecorded' :
+  new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(cents / 100)
+const orderDate = new Intl.DateTimeFormat('en-US', { dateStyle: 'medium', timeZone: 'America/New_York' })
+const reportDate = new Intl.DateTimeFormat('en-CA', { year: 'numeric', month: '2-digit', day: '2-digit', timeZone: 'America/New_York' })
+const reportRows = bookings.map(booking => ({
+  date: reportDate.format(booking.confirmed_at),
+  customer: booking.label,
+  hours: booking.package_hours,
+  subtotal: booking.subtotal_cents,
+  discount: booking.discount_cents,
+}))
+const eastern = new Intl.DateTimeFormat('en-US', { dateStyle: 'medium', timeStyle: 'short', timeZone: 'America/New_York' })
+
+---
+<SiteLayout>
+  <main class:list={['admin-shell', { 'admin-signed-in': signedIn }]}>
+    <header class="admin-heading">
+      <a href="/" class="admin-brand">MyChristianTutors</a>
+      <h1>Tutoring administration</h1>
+    </header>
+    {signedIn && (
+      <nav aria-label="Admin navigation" class="admin-nav">
+        <a href="#tutors-admin">Tutors</a>
+        <a href="#bookings-admin">Bookings</a>
+        <a href="#reports-admin">Reports</a>
+        <form method="post" class="admin-signout">
+          <button name="action" value="sign-out">Sign out</button>
+        </form>
+      </nav>
+    )}
+    <div class="admin-content">
+    {demo && <p class="mb-4">Shared demo. Use <strong>demo@example.test</strong> and <strong>tutor-demo</strong>. Changes are visible to other testers.</p>}
+    {error && <p role="alert" class="admin-error mb-4">{error}</p>}
+    {!signedIn ? (
+      <form method="post" class="grid gap-4">
+        <label>Email <input class="block w-full border rounded p-2" name="email" type="email" autocomplete="username" required /></label>
+        <label>Password <input class="block w-full border rounded p-2" name="password" type="password" autocomplete="current-password" required /></label>
+        <button class="rounded bg-ink text-white p-3" name="action" value="sign-in">Sign in</button>
+      </form>
+    ) : selected && (
+      <>
+        <section class="admin-panel" data-admin-view="schedules-admin">
+        <a href="#tutors-admin" data-admin-link class="underline">Back to tutors</a>
+        <h2 id="schedules-admin" class="scroll-mt-20 text-2xl font-bold mb-3">Tutor schedules</h2>
+        <div class="flex flex-wrap items-end justify-between gap-3 mb-4">
+        <form method="get" action="/admin#schedules-admin" class="min-w-0">
+          <label>Tutor <select class="block border rounded p-2" name="tutor" data-tutor-picker>
+            {catalog.map(t => <option value={t.id} selected={t.id === selected.id}>{t.name}{t.archived ? " (archived)" : ""}</option>)}
+          </select></label>
+          <noscript><button class="border rounded p-2">Open schedule</button></noscript>
+        </form>
+          <div class="ml-auto flex flex-wrap items-center justify-end gap-3">
+            <button type="button" data-undo disabled class="rounded px-3 py-2 disabled:invisible">Undo removal</button>
+            <button form="weekly-hours" class="admin-save rounded p-3" name="action" value="save">Save weekly hours</button>
+          </div>
+        </div>
+        {Astro.url.searchParams.has('saved') && <p role="status" class="mb-4">Schedule updated.</p>}
+        <p class="mb-4">Set available hours in Eastern time. A day with no blocks is closed. Existing bookings stay confirmed.</p>
+        <form id="weekly-hours" method="post" class="admin-week grid gap-2">
+          {days.map((day, index) => <fieldset class="rounded border border-ink/20 p-3" data-day={index} data-day-name={day}>
+            <legend class="px-2 font-semibold">{day}</legend>
+            <p data-closed hidden={selected.startsByDay[index].length > 0}>Unavailable</p>
+            <div data-blocks class="grid gap-2">
+              {blocks(selected.startsByDay[index]).map(({ start, end }) => (
+                <div data-block class="flex flex-wrap items-end gap-2">
+                  <label>From <select class="block rounded border p-2" name={'start-' + index}>
+                    {times.slice(0, -4).map(time => <option value={time} selected={time === start}>{formatTime(time)}</option>)}
+                  </select></label>
+                  <label>To <select class="block rounded border p-2" name={'end-' + index}>
+                    {times.slice(4).map(time => <option value={time} selected={time === end}>{time === 1440 ? 'Midnight (end of day)' : formatTime(time)}</option>)}
+                  </select></label>
+                  <button type="button" data-remove aria-label={`Remove ${day} time block`} title={`Remove ${day} time block`}><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" aria-hidden="true"><path d="M4 7h16M9 7V4h6v3M6 7l1 13h10l1-13M10 10v7m4-7v7"/></svg></button>
+                </div>
+              ))}
+            </div>
+            <button type="button" data-add aria-label={'Add time block for ' + day} title={'Add time block for ' + day}>
+              <span aria-hidden="true">+</span>
+            </button>
+          </fieldset>)}
+          <template id="weekly-hours-block">
+            <div data-block class="flex flex-wrap items-end gap-2">
+              <label>From <select class="block rounded border p-2">
+                {times.slice(0, -4).map(time => <option value={time}>{formatTime(time)}</option>)}
+              </select></label>
+              <label>To <select class="block rounded border p-2">
+                {times.slice(4).map(time => <option value={time}>{time === 1440 ? 'Midnight (end of day)' : formatTime(time)}</option>)}
+              </select></label>
+              <button type="button" data-remove aria-label="Remove time block"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" aria-hidden="true"><path d="M4 7h16M9 7V4h6v3M6 7l1 13h10l1-13M10 10v7m4-7v7"/></svg></button>
+            </div>
+          </template>
+          <button class="border rounded p-2" name="action" value="reset">Restore demo hours</button>
+
+        </form>
+        </section>
+      </>
+    )}
+    {signedIn && (
+      <>
+        <section data-admin-view="tutors-admin" id="tutors-admin" class="admin-panel scroll-mt-20">
+          <div class="flex flex-wrap items-baseline justify-between gap-2">
+            <h2 class="text-2xl font-bold mb-3">Manage tutors</h2>
+            <a href="#add-tutor" data-admin-link class="admin-secondary">Add tutor</a>
+          </div>
+          <label class="block mb-4">Filter by subject
+            <select data-subject-filter class="block rounded border p-2">
+              <option value="">All subjects</option>
+              {SUBJECTS.map(subject => <option>{subject}</option>)}
+            </select>
+          </label>
+          <p data-no-tutors hidden role="status">No tutors teach this subject.</p>
+          {catalog.map(tutor => (
+            <details class="admin-record" data-tutor-subjects={JSON.stringify(tutor.subjects)} open={Astro.url.searchParams.get('open-tutor') === tutor.id}>
+              <summary>{tutor.name}{tutor.archived ? ' (archived)' : ''}</summary>
+              <a href={'/admin?tutor=' + encodeURIComponent(tutor.id) + '#schedules-admin'} class="mx-3 underline">Edit weekly schedule</a>
+            <form method="post" class="grid gap-2 mb-3 rounded border p-3">
+              <input type="hidden" name="tutor-id" value={tutor?.id ?? ''} />
+              <label>Name <input name="name" required class="block border rounded p-2 w-full max-w-xs" value={tutor?.name} /></label>
+              <details class="rounded border border-ink/20 p-2">
+                <summary class="cursor-pointer">Subjects ({tutor.subjects.length}){tutor.subjects.length ? ' · ' + tutor.subjects.join(', ') : ''}</summary>
+                <fieldset aria-label="Subjects">
+                <div class="grid gap-1 sm:grid-cols-2">
+                  {SUBJECTS.map(subject => <label><input type="checkbox" name="subjects" value={subject} checked={tutor?.subjects.includes(subject)} /> {subject}</label>)}
+                </div>
+                </fieldset>
+              </details>
+              <button name="action" value="save-tutor" class="rounded bg-ink p-2 text-white">{tutor ? 'Save tutor' : 'Add tutor'}</button>
+              {tutor && <button formnovalidate name="action" value={tutor.archived ? 'restore-tutor' : 'archive-tutor'} class="underline">{tutor.archived ? 'Restore tutor' : 'Archive tutor'}</button>}
+            </form>
+              <section class="border-t border-ink/20 p-3">
+                <h3 class="mb-2 font-semibold">Bookings</h3>
+                {(() => {
+                  const sessions = bookings.flatMap(booking => booking.sessions
+                    .filter(session => session.tutor === tutor.id)
+                    .map(session => ({ ...session, label: booking.label ?? 'Booking ' + booking.id.slice(0, 8) })))
+                    .sort((a, b) => Date.parse(a.start) - Date.parse(b.start))
+                  return sessions.length ? (
+                    <ul class="grid gap-2">
+                      {sessions.map(session => (
+                        <li class="rounded border border-ink/20 p-2">
+                          <strong>{session.label}</strong>
+                          <p>{session.subject ?? 'Subject not saved'} · {eastern.format(new Date(session.start))} Eastern</p>
+                  <details class="ml-2">
+                    <summary class="cursor-pointer underline">Edit session</summary>
+                    <form method="post" class="grid gap-2 my-2">
+                      <input type="hidden" name="session" value={session.id} />
+                      <input type="hidden" name="return-tutor" value={tutor.id} />
+                      <label>Tutor <select name="replacement-tutor">
+                        <option value="">Keep current tutor</option>
+                        {session.subject && catalog.filter(candidate => !candidate.archived && candidate.id !== session.tutor && candidate.subjects.includes(session.subject!)).map(candidate => <option value={candidate.id}>{candidate.name}</option>)}
+                      </select></label>
+                      <label>New date <input type="date" name="date" required /></label>
+                      <label>New start (Eastern) <input type="time" name="time" step="900" required /></label>
+                      <button name="action" value="move-session" class="underline">Save new time</button>
+                      <label>Subject <select name="session-subject">
+                        <option value="">Choose a subject</option>
+                        {SUBJECTS.map(subject => <option value={subject} selected={subject === session.subject}>{subject}</option>)}
+                      </select></label>
+                      <button formnovalidate name="action" value="save-session-subject" class="underline">Save subject</button>
+                    </form>
+                  </details>
+                        </li>
+                      ))}
+                    </ul>
+                  ) : <p>No confirmed sessions.</p>
+                })()}
+              </section>
+            </details>
+          ))}
+        </section>
+        <section id="add-tutor" data-admin-view="add-tutor" class="admin-panel scroll-mt-20">
+          <a href="#tutors-admin" data-admin-link class="underline">Back to tutors</a>
+          <h2 class="mt-3">Add tutor</h2>
+            <form method="post" class="grid gap-2 mb-3 rounded border p-3">
+              <input type="hidden" name="tutor-id" value="" />
+              <label>Name <input name="name" required class="block border rounded p-2 w-full max-w-xs" /></label>
+              <fieldset>
+                <legend>Subjects</legend>
+                <div class="grid gap-1 sm:grid-cols-2">
+                  {SUBJECTS.map(subject => <label><input type="checkbox" name="subjects" value={subject} /> {subject}</label>)}
+                </div>
+              </fieldset>
+              <button name="action" value="save-tutor" class="rounded bg-ink p-2 text-white">Create tutor</button>
+            </form>
+        </section>
+        <section data-admin-view="bookings-admin" id="bookings-admin" class="admin-panel scroll-mt-20">
+          <h2 class="text-2xl font-bold mb-3">Bookings</h2>
+          <p class="mb-4">Amounts are demo records in USD. Enter amounts in cents when editing.</p>
+          {bookings.length === 0 && <p class="mb-4">No confirmed bookings yet.</p>}
+          {bookings.map(booking => (
+            <details class="mb-3 rounded border p-3">
+              <summary class="cursor-pointer font-semibold">{booking.label ?? 'Family contact not saved'} · {booking.sessions.length} {booking.sessions.length === 1 ? 'session' : 'sessions'}
+                <span class="ml-2 text-xs font-normal opacity-80">Order #{booking.id.slice(0, 8).toUpperCase()} · {orderDate.format(booking.confirmed_at)}</span>
+              </summary>
+              <p class="my-2">Amount paid {money(booking.subtotal_cents === null ? null : booking.subtotal_cents - (booking.discount_cents ?? 0))} · Discount {money(booking.discount_cents)}</p>
+              <ul class="mb-3">
+                {booking.sessions.map(session => <li>{catalog.find(tutor => tutor.id === session.tutor)?.name ?? session.tutor} · {session.subject ?? 'Subject not saved'} · {eastern.format(new Date(session.start))} Eastern
+                  <details class="ml-2">
+                    <summary class="cursor-pointer underline">Reschedule session</summary>
+                    <form method="post" class="grid gap-2 my-2">
+                      <input type="hidden" name="session" value={session.id} />
+                      <label>Tutor <select name="replacement-tutor">
+                        <option value="">Keep current tutor</option>
+                        {session.subject && catalog.filter(candidate => !candidate.archived && candidate.id !== session.tutor && candidate.subjects.includes(session.subject!)).map(candidate => <option value={candidate.id}>{candidate.name}</option>)}
+                      </select></label>
+                      <label>New date <input type="date" name="date" required /></label>
+                      <label>New start (Eastern) <input type="time" name="time" step="900" required /></label>
+                      <button name="action" value="move-session" class="underline">Save new time</button>
+                    </form>
+                  </details>
+                </li>)}
+              </ul>
+              <form method="post" class="grid gap-2">
+                <input type="hidden" name="booking" value={booking.id} />
+                <label>Family contact name <input class="block border rounded p-2" name="label" value={booking.label ?? 'Booking ' + booking.id.slice(0, 8)} required /></label>
+                <label>Subtotal in cents <input class="block border rounded p-2" type="number" min="0" name="subtotal" value={booking.subtotal_cents ?? undefined} required /></label>
+                <label>Discount in cents <input class="block border rounded p-2" type="number" min="0" name="discount" value={booking.discount_cents ?? undefined} required /></label>
+                <button name="action" value="edit-booking" class="rounded bg-ink p-2 text-white">Save booking details</button>
+                <details><summary class="cursor-pointer">Delete booking</summary>
+                  <p>This releases all its tutor times.</p>
+                  <button formnovalidate name="action" value="delete-booking" class="underline text-red-800">Confirm deletion</button>
+                </details>
+              </form>
+            </details>
+          ))}
+          <details class="rounded border p-3">
+            <summary class="cursor-pointer font-semibold">Add a manual booking</summary>
+            <form method="post" class="grid gap-2 mt-3">
+              <label>Family contact name <input class="block border rounded p-2" name="label" required /></label>
+              <label>Tutor <select class="block border rounded p-2" name="booking-tutor" required>
+                {catalog.filter(tutor => !tutor.archived).map(tutor => <option value={tutor.id}>{tutor.name}</option>)}
+              </select></label>
+              <label>Date <input class="block border rounded p-2" name="date" type="date" required /></label>
+              <label>Start time (Eastern) <input class="block border rounded p-2" name="time" type="time" step="900" required /></label>
+              <label>Subtotal in cents <input class="block border rounded p-2" name="subtotal" type="number" min="0" required /></label>
+              <label>Discount in cents <input class="block border rounded p-2" name="discount" type="number" min="0" value="0" required /></label>
+              <button name="action" value="create-booking" class="rounded bg-ink p-2 text-white">Create one-hour booking</button>
+            </form>
+          </details>
+        </section>
+      </>
+    )}
+
+    {signedIn && (
+      <section id="reports-admin" data-admin-view="reports-admin" class="admin-panel" data-report={JSON.stringify(reportRows)}>
+        <h2>Reports</h2>
+        <p class="mb-4">Confirmed bookings by order date in Eastern time. Amounts reflect demo payments.</p>
+        <div class="mb-4 flex flex-wrap gap-3">
+          <label>From <input class="block rounded border p-2" type="date" data-report-from /></label>
+          <label>Through <input class="block rounded border p-2" type="date" data-report-to /></label>
+        </div>
+        <p data-report-error hidden role="alert">Choose an end date on or after the start date.</p>
+        <dl class="mb-5 grid gap-3 sm:grid-cols-3" aria-live="polite">
+          <div><dt>Recorded revenue</dt><dd class="text-xl font-semibold" data-revenue></dd></div>
+          <div><dt>Recorded discounts</dt><dd class="text-xl font-semibold" data-discounts></dd></div>
+          <div><dt>Confirmed bookings</dt><dd class="text-xl font-semibold" data-booking-count></dd></div>
+        </dl>
+        <p class="mb-4" data-unrecorded></p>
+        <h3 class="font-semibold">Packages</h3>
+        <ul class="mb-5" data-package-counts></ul>
+        <h3 class="font-semibold">Booking contacts</h3>
+        <p class="mb-2">Identical names are grouped for display.</p>
+        <ul data-customers></ul>
+      </section>
+    )}
+    </div>
+  </main>
+</SiteLayout>
+
+<script>
+  const template = document.querySelector<HTMLTemplateElement>('#weekly-hours-block')
+  const dayFields = [...document.querySelectorAll<HTMLFieldSetElement>('[data-day]')]
+
+  function updateClosed(day: HTMLFieldSetElement) {
+    day.querySelector<HTMLElement>('[data-closed]')!.hidden = !!day.querySelector('[data-block]')
+  }
+
+  function addBlock(day: HTMLFieldSetElement, start: string, end: string) {
+    const block = template!.content.cloneNode(true) as DocumentFragment
+    const [from, to] = block.querySelectorAll('select')
+    const remove = block.querySelector('[data-remove]')!
+    const label = 'Remove ' + day.dataset.dayName + ' time block'
+    remove.setAttribute('aria-label', label)
+    remove.setAttribute('title', label)
+    from.name = 'start-' + day.dataset.day
+    from.value = start
+    to.name = 'end-' + day.dataset.day
+    to.value = end
+    day.querySelector('[data-blocks]')!.append(block)
+    updateClosed(day)
+    return from
+  }
+
+  const undo = document.querySelector<HTMLButtonElement>('[data-undo]')
+  const removed: { day: HTMLFieldSetElement; block: HTMLElement; next: Element | null }[] = []
+
+  for (const day of dayFields) {
+    day.addEventListener('click', async event => {
+      const button = (event.target as HTMLElement).closest('button')
+      if (button?.hasAttribute('data-add')) {
+        addBlock(day, '900', '960').focus()
+      } else if (button?.hasAttribute('data-remove')) {
+        const block = button.closest<HTMLElement>('[data-block]')!
+        const [from, to] = block.querySelectorAll('select')
+        const start = from.selectedOptions[0].textContent
+        const end = to.selectedOptions[0].textContent
+        if (!window.confirm('Remove the ' + day.dataset.dayName + ' block from ' + start + ' to ' + end + '?')) return
+        if (block.inert) return
+        block.inert = true
+        if (!window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
+          await block.animate([
+            { opacity: 1, height: block.offsetHeight + 'px' },
+            { opacity: 0, height: '0px', paddingBlock: '0px', borderBlockWidth: '0px' },
+          ], { duration: 200, easing: 'ease-out' }).finished
+        }
+        block.inert = false
+        removed.push({ day, block, next: block.nextElementSibling })
+        block.remove()
+        updateClosed(day)
+        undo!.disabled = false
+        day.querySelector<HTMLButtonElement>('[data-add]')?.focus({ preventScroll: true })
+      }
+    })
+  }
+
+  undo?.addEventListener('click', () => {
+    const entry = removed.pop()
+    if (!entry) return
+    const blocks = entry.day.querySelector('[data-blocks]')!
+    blocks.insertBefore(entry.block, entry.next?.parentElement === blocks ? entry.next : null)
+    updateClosed(entry.day)
+    undo.disabled = removed.length === 0
+    entry.block.querySelector('select')?.focus()
+  })
+</script>
+
+<style>
+  :global(body:has(.admin-shell)) { background: #161719; }
+  .admin-content :is(h1, h2, h3, p, label, input, select) { color: inherit; }
+  .admin-content .admin-error, .admin-content :global(.text-red-800) { color: #ffb5ae; }
+  .admin-brand { color: #d9c6aa; }
+  .admin-shell :focus-visible { outline: 2px solid #d9c6aa; outline-offset: 3px; }
+
+  .admin-shell {
+    color-scheme: dark;
+    font-family: system-ui, sans-serif;
+    font-size: .875rem;
+    line-height: 1.45;
+    --admin-line: #3a3d42;
+    --color-ink: #454c58;
+    color: #eef0f4;
+    max-width: 80rem;
+    margin-inline: auto;
+    padding: 1.25rem 1rem 3rem;
+  }
+
+  .admin-shell:not(.admin-signed-in) { max-width: 34rem; }
+  .admin-heading { margin-bottom: 1rem; }
+  .admin-brand { font-size: .875rem; font-weight: 700; }
+  .admin-shell :is(h1, h2, h3) { font-family: inherit; letter-spacing: -.025em; }
+  .admin-heading h1 { font-size: clamp(1.5rem, 3vw, 2rem); line-height: 1.15; margin-top: .25rem; }
+  .admin-content { display: grid; gap: 1.25rem; min-width: 0; }
+  .admin-panel, .admin-shell:not(.admin-signed-in) .admin-content {
+    background: #1d1f22;
+    border: 1px solid var(--admin-line);
+    border-radius: 1rem;
+    padding: clamp(.875rem, 2vw, 1.25rem);
+    box-shadow: 0 4px 20px rgb(0 0 0 / 20%);
+  }
+
+  .admin-nav {
+    position: sticky;
+    top: 0;
+    z-index: 20;
+    display: flex;
+    flex-wrap: wrap;
+    gap: .25rem;
+    align-self: start;
+    padding: .375rem;
+    margin-bottom: 1rem;
+    background: #1d1f22;
+    border: 1px solid var(--admin-line);
+    border-radius: .875rem;
+  }
+
+  .admin-nav a, .admin-signout button {
+    display: block;
+    padding: .7rem .55rem;
+    border-radius: .55rem;
+    font-size: .875rem;
+    font-weight: 700;
+  }
+
+  .admin-nav a { flex: 1; text-align: center; }
+  .admin-nav a:hover, .admin-nav a:focus-visible, .admin-signout button:hover { background: #30333c; }
+  .admin-save, .admin-nav a[aria-current="page"] { background: #d9c6aa; color: #171e2b; }
+  .admin-save { font-weight: 700; }
+  .admin-save:hover { background: #ead9c0; }
+  .admin-signout { margin-left: auto; }
+  .admin-content input:not([type="checkbox"]), .admin-content select { background: #17181c; border-color: var(--admin-line); }
+  .admin-content [data-day] { background: #24262c; }
+
+  .admin-week [data-block] {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr)) auto;
+  }
+
+  .admin-week [data-block] { border: 1px solid var(--admin-line); border-radius: .5rem; padding: .5rem; overflow: hidden; }
+  .admin-week [data-remove] { display: grid; place-items: center; min-width: 2.75rem; min-height: 2.75rem; border-radius: .4rem; color: #b9bbc2; }
+  .admin-week [data-remove]:hover { background: #382b2d; color: #ffb5ae; }
+
+  .admin-week [data-add] {
+    width: 100%;
+    min-height: 2.75rem;
+    margin-top: .5rem;
+    border: 1px dashed var(--admin-line);
+    border-radius: .4rem;
+    font-size: 1.25rem;
+    color: #d9c6aa;
+  }
+
+  .admin-week [data-add]:hover { background: #30333c; }
+
+  .admin-week [data-block] label { min-width: 0; }
+  .admin-week [data-block] select { width: 100%; }
+
+  .admin-content form.grid > button { justify-self: start; }
+  .admin-week [data-add] { width: 2.75rem; }
+
+  .admin-panel h2 { font-size: 1.25rem; margin-bottom: .75rem; }
+  .admin-picker { display: flex; flex-wrap: wrap; gap: .5rem; align-items: end; margin-bottom: 1rem; }
+  .admin-picker select { display: block; border: 1px solid var(--admin-line); border-radius: .4rem; padding: .5rem; }
+  .admin-secondary { border: 1px solid var(--admin-line); border-radius: .4rem; padding: .5rem .75rem; }
+  .admin-record { border: 1px solid var(--admin-line); border-radius: .5rem; margin-bottom: .5rem; }
+  .admin-record summary { cursor: pointer; font-weight: 650; padding: .65rem .75rem; }
+  .admin-record form { border: 0; margin-bottom: 0; }
+
+  @media (min-width: 48rem) {
+    .admin-week { grid-template-columns: repeat(2, minmax(0, 1fr)); align-items: start; }
+    .admin-week > button { grid-column: 1 / -1; justify-self: start; }
+  }
+
+  @media (min-width: 64rem) {
+    .admin-shell { padding: 2rem; }
+    .admin-signed-in { display: grid; grid-template-columns: 12rem minmax(0, 1fr); column-gap: 1rem; }
+    .admin-heading { grid-column: 1 / -1; }
+    .admin-nav { top: 1rem; flex-direction: column; padding: .625rem; }
+    .admin-nav a { text-align: left; padding-inline: .875rem; }
+    .admin-signout { margin: .5rem 0 0; border-top: 1px solid var(--admin-line); }
+    .admin-signout button { padding-inline: .875rem; }
+  }
+  @media (min-width: 90rem) {
+    .admin-shell.admin-signed-in { max-width: 104rem; }
+    .admin-week { grid-template-columns: repeat(7, minmax(0, 1fr)); }
+    .admin-week [data-block] { grid-template-columns: minmax(0, 1fr); }
+    .admin-week [data-remove] { justify-self: end; }
+  }
+</style>
+<script>
+  for (const picker of document.querySelectorAll<HTMLSelectElement>('[data-tutor-picker]')) {
+    picker.addEventListener('change', () => picker.form?.requestSubmit())
+  }
+
+  const subjectFilter = document.querySelector<HTMLSelectElement>('[data-subject-filter]')
+  subjectFilter?.addEventListener('change', () => {
+    let matches = 0
+    for (const profile of document.querySelectorAll<HTMLElement>('[data-tutor-subjects]')) {
+      const subjects: string[] = JSON.parse(profile.dataset.tutorSubjects!)
+      profile.hidden = !!subjectFilter.value && !subjects.includes(subjectFilter.value)
+      if (!profile.hidden) matches++
+    }
+    document.querySelector<HTMLElement>('[data-no-tutors]')!.hidden = matches > 0
+  })
+
+  const links = document.querySelectorAll<HTMLAnchorElement>('.admin-nav a')
+  const views = [...document.querySelectorAll<HTMLElement>('[data-admin-view]')]
+
+  function showSection(focusHeading = false) {
+    const requested = window.location.hash.slice(1)
+    const active = views.find(view => view.dataset.adminView === requested) ?? views.find(view => view.dataset.adminView === 'tutors-admin')
+    if (!active) return
+    for (const view of views) view.hidden = view !== active
+    for (const link of links) {
+      if (link.hash === '#' + (['add-tutor', 'schedules-admin'].includes(active.dataset.adminView ?? '') ? 'tutors-admin' : active.dataset.adminView)) link.setAttribute('aria-current', 'page')
+      else link.removeAttribute('aria-current')
+    }
+    if (focusHeading) {
+      const heading = active.querySelector('h2')
+      heading?.setAttribute('tabindex', '-1')
+      heading?.focus({ preventScroll: true })
+      window.scrollTo(0, 0)
+    }
+  }
+
+  for (const link of document.querySelectorAll<HTMLAnchorElement>('.admin-nav a, [data-admin-link]')) {
+    link.addEventListener('click', event => {
+      if (event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return
+      event.preventDefault()
+      if (window.location.hash !== link.hash) history.pushState(null, '', link.hash)
+      showSection(true)
+    })
+  }
+  showSection()
+  window.addEventListener('hashchange', () => showSection(true))
+</script>
+
+<script>
+  const report = document.querySelector<HTMLElement>('[data-report]')
+  if (report) {
+    const rows: { date: string; customer: string | null; hours: number | null; subtotal: number | null; discount: number | null }[] =
+      JSON.parse(report.dataset.report!)
+    const from = report.querySelector<HTMLInputElement>('[data-report-from]')!
+    const to = report.querySelector<HTMLInputElement>('[data-report-to]')!
+    const usd = new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' })
+
+    function renderReport() {
+      const invalid = !!from.value && !!to.value && from.value > to.value
+      report!.querySelector<HTMLElement>('[data-report-error]')!.hidden = !invalid
+      const matching = invalid ? [] : rows.filter(row =>
+        (!from.value || row.date >= from.value) && (!to.value || row.date <= to.value),
+      )
+      const complete = matching.filter(row => row.subtotal !== null && row.discount !== null)
+      report!.querySelector('[data-revenue]')!.textContent =
+        usd.format(complete.reduce((sum, row) => sum + row.subtotal! - row.discount!, 0) / 100)
+      report!.querySelector('[data-discounts]')!.textContent =
+        usd.format(matching.reduce((sum, row) => sum + (row.discount ?? 0), 0) / 100)
+      report!.querySelector('[data-booking-count]')!.textContent = String(matching.length)
+      const missing = matching.length - complete.length
+      report!.querySelector('[data-unrecorded]')!.textContent = missing
+        ? 'Bookings missing payment amounts: ' + missing
+        : ''
+      const packages = [5, 10, 20, null].map(hours =>
+        (hours === null ? 'No package recorded' : hours + ' hours') + ' · ' +
+        matching.filter(row => row.hours === hours).length,
+      )
+      const customers = new Map<string, number>()
+      for (const row of matching) {
+        if (row.customer) customers.set(row.customer, (customers.get(row.customer) ?? 0) + 1)
+      }
+      const contacts = [...customers].sort(([a], [b]) => a.localeCompare(b)).map(([name, count]) => name + ' · ' + count)
+      for (const [selector, values] of [['[data-package-counts]', packages], ['[data-customers]', contacts.length ? contacts : ['No booking contacts in this range.']]] as const) {
+        report!.querySelector(selector)!.replaceChildren(...values.map(value => {
+          const item = document.createElement('li')
+          item.textContent = value
+          return item
+        }))
+      }
+    }
+
+    from.addEventListener('change', renderReport)
+    to.addEventListener('change', renderReport)
+    renderReport()
+  }
+</script>

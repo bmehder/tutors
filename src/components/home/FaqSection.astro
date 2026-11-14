@@ -1,0 +1,39 @@
+<section class='max-w-3xl mx-auto px-6 pb-20'>
+	<p class='eyebrow text-center text-ink/55 mb-3'>A little more clarity</p>
+	<h2 class='text-3xl text-center font-semibold mb-8'>
+		Good questions. <span class='serif'>Thoughtful answers.</span>
+	</h2>
+	{
+		[
+			[
+				'How are hours shared between students?',
+				'The 5-hour package is for one student and cannot be shared. A 10-hour package can serve up to three students; a 20-hour package can serve up to five. Assign each child their hours from the package, then plan their weekly routine. One hour is one 60-minute session. Larger packages have lower hourly rates.',
+			],
+			[
+				'Does every session need to be scheduled separately?',
+				'No. Choose the subject, tutor, weekday, and time once. If you assign a student 10 hours, we create 10 weekly sessions with those details. Then complete your plan or add another student using the hours that remain.',
+			],
+			[
+				'Can we skip a week or change one session?',
+				'Your sessions repeat weekly with the same tutor, day, and time. Before checkout, use “Skip this week” to add a replacement at the end. Contact support for other adjustments. Unavailable dates are flagged before you save; choose another weekly routine or ask support for help. Simultaneous sibling sessions are allowed with different tutors, while any overlap for the same student or tutor is blocked.',
+			],
+			[
+				'Can I book by subject instead of choosing a tutor?',
+				'Start with your student and subject, then choose a named tutor and one of their available times. We recommend contacting your tutor before buying, but this is optional. Grade level does not restrict selection.',
+			],
+			[
+				'What does a Biblical worldview mean here?',
+				'The proposed service pairs academic support with a Christian view of truth, purpose, and the value of each student. Teachers would approach their subjects with faith, patience, and care.',
+			],
+			[
+				'Is this a live tutoring service?',
+				'This is a proof of concept for a proposed companion to MyFunScience. Teacher names and subjects come from MyFunScience. Tutoring prices and availability are illustrative. Checkout is simulated, and no money is collected.',
+			],
+		].map(([q, a]) => (
+			<details class='border-b border-ink/15'>
+				<summary class='text-sm'>{q}</summary>
+				<p class='text-sm leading-7 text-ink/65 pb-5'>{a}</p>
+			</details>
+		))
+	}
+</section>

@@ -30,7 +30,7 @@ import {
 } from '../../planner/build/dev/javascript/christian_tutors_planner/planner/checkout.mjs'
 import { confirmOrder, revalidateOrder } from '../../temp-reference/typescript/booking-domain.ts'
 import { formatDate, formatTime, isSoldOut } from '../../temp-reference/typescript/family-planner-model.ts'
-import { calendarAddDays, calendarWeekday, easternInstant, sessionInterval } from '../../src/session-time.ts'
+import { calendarAddDays, calendarWeekday, easternInstant, sessionInterval } from '../../src/lib/session-time.ts'
 
 const calendar = Calendar$Calendar(
   session => {

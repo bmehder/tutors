@@ -1,5 +1,5 @@
 import {weeklyDates} from './skip-week.ts';
-import {calendarDate,sessionInterval,bookingClock,type BookingClock} from '../../src/session-time.ts';
+import {calendarDate,sessionInterval,bookingClock,type BookingClock} from '../../src/lib/session-time.ts';
 import {studentLimit,validatePlan,type Child,type Lesson,type Tutor} from './family-planner-model.ts';
 import {allocationProblem,type StudentAllocation} from './subject-allocation.ts';
 

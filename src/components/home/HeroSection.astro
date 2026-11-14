@@ -1,0 +1,73 @@
+---
+import Icon from '../Icon.astro'
+---
+
+<section
+	class='max-w-7xl mx-auto px-6 md:px-12 pt-8 pb-16 md:pt-14 md:pb-20 grid md:grid-cols-2 gap-12 lg:gap-20 items-center'
+>
+	<div>
+		<div class='eyebrow flex items-center gap-2 mb-6'>
+			<span class='h-1.5 w-1.5 rounded-full bg-coral'></span>
+			Personal tutoring. Shared values.
+		</div>
+		<h1 class='text-5xl lg:text-[66px] leading-[1.06] font-semibold'>
+			Grow in knowledge.
+			<br />
+			<span class='serif text-coral'>Grounded in faith.</span>
+		</h1>
+		<p class='text-base leading-7 text-ink/70 max-w-md mt-6'>
+			The right support can change everything. One-on-one online tutoring with
+			caring teachers who bring a Biblical worldview to every session.
+		</p>
+		<div class='flex flex-wrap gap-4 items-center mt-8'>
+			<a href='#booking' class='btn'> Find the right fit </a>
+		</div>
+		<div
+			class='flex flex-col sm:flex-row sm:flex-wrap gap-x-6 gap-y-3 text-xs mt-8 text-ink/70'
+		>
+			<span class='flex gap-1.5'>Subjects for your needs</span>
+			<span class='flex gap-1.5'>Live, online sessions</span>
+			<span class='flex gap-1.5'>Your family’s schedule</span>
+		</div>
+	</div>
+	<div class='relative pb-6'>
+		<img
+			src='/images/online-tutoring.jpg'
+			alt='Student working through a problem with a tutor on a video call'
+			class='relative w-full aspect-[3/2] sm:h-[420px] object-cover shadow-[0_18px_40px_-18px_rgba(20,63,60,0.35)]'
+		/>
+		<div
+			class='absolute bottom-0 left-3 md:-left-7 bg-white rounded-xl p-5 shadow-xl flex items-center gap-4'
+		>
+			<span class='bg-[#e8eee7] rounded-full p-3'>
+				<Icon name='Heart' size={23} />
+			</span>
+			<div class='font-semibold text-sm'>
+				More than better grades.
+				<p class='text-xs font-normal text-ink/60 mt-1'>
+					Confidence for the journey ahead.
+				</p>
+			</div>
+		</div>
+		<span
+			class='absolute right-4 bottom-10 bg-cream rounded-full px-4 py-2 text-xs'
+		>
+			A heart for learning. A foundation in Christ.
+		</span>
+	</div>
+</section>
+<div class='border-y border-ink/10 bg-[#f0f2eb]'>
+	<div class='max-w-6xl mx-auto grid sm:grid-cols-3 gap-6 py-7 px-6 text-sm'>
+		<div class='flex items-center justify-center gap-3'>
+			<Icon name='BookOpen' size={21} />A Biblical worldview
+		</div>
+		<div class='flex items-center justify-center gap-3'>
+			<Icon name='GraduationCap' size={23} />
+			Teachers who know their subjects
+		</div>
+		<div class='flex items-center justify-center gap-3'>
+			<Icon name='Heart' size={21} />
+			Encouragement at every step
+		</div>
+	</div>
+</div>

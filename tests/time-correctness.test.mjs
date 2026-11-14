@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {calendarAddDays,calendarWeekday,easternInstant,localInstant,weeklyInstants,sessionInterval,instantParts,viewSession} from '../src/session-time.ts';
+import {calendarAddDays,calendarWeekday,easternInstant,localInstant,weeklyInstants,sessionInterval,instantParts,viewSession} from '../src/lib/session-time.ts';
 import {availabilityReason,validatePlan,isSoldOut,overlaps,weeklySeries} from '../temp-reference/typescript/family-planner-model.ts';
 import {confirmOrder,revalidateOrder} from '../temp-reference/typescript/booking-domain.ts';
 const hour=3600000;

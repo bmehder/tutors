@@ -6,7 +6,7 @@ import gleam/result
 import gleam/string
 import planner/model.{
   type Date, type Hours, type Session, type Student, type StudentId, type Tutor,
-  type TutorAvailability, type TutorId, type WeeklyRoutine, Session,
+  type TutorAvailability, type TutorId, type WeeklyRoutine, DailyAvailability, Session, TutorAvailability,
 }
 
 pub fn tutor_hours_issue(
@@ -16,14 +16,23 @@ pub fn tutor_hours_issue(
   session_end: Int,
   resolve_end: fn(Int) -> Option(Int),
 ) -> String {
-  case
-    list.contains(availability.weekdays, weekday)
-    && list.contains(availability.start_minutes, start_minute)
-  {
+  let starts = case availability {
+    TutorAvailability(days, starts) ->
+      case list.contains(days, weekday) {
+        True -> starts
+        False -> []
+      }
+    DailyAvailability(by_day, _) ->
+      case list.drop(by_day, weekday) {
+        [starts, ..] -> starts
+        [] -> []
+      }
+  }
+  case list.contains(starts, start_minute) {
     False -> "This tutor is not available at this time."
     True -> {
       let last_start =
-        list.fold(availability.start_minutes, start_minute, int.max)
+        list.fold(starts, start_minute, int.max)
       // The final listed start reserves an hour. Resolve its end on the
       // Eastern calendar before comparing it to the elapsed session end.
       case resolve_end(last_start + 60) {

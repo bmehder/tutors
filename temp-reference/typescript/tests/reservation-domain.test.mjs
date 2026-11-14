@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {Ledger} from '../reservation-domain.ts';
-import {easternInstant,weeklyInstants,viewSession} from '../../../src/session-time.ts';
+import {easternInstant,weeklyInstants,viewSession} from '../../../src/lib/session-time.ts';
 const hour=3600000;
 const policy={now:0,noticeMs:hour,availability:['sarah','daniel'].map(tutorId=>({tutorId,subjectIds:['math'],interval:{start:0,end:100*hour}}))};
 const session=(id,start=hour,tutorId='sarah',studentId='emma')=>({id,studentId,tutorId,subjectId:'math',interval:{start,end:start+hour}});

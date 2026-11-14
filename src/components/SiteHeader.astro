@@ -1,5 +1,9 @@
 ---
 import Icon from "./Icon.astro";
+
+const adminHref = import.meta.env.DEV
+  ? "/admin"
+  : "https://tutors-admin-demo.vercel.app/admin";
 ---
 <div class='bg-ink text-white text-center px-4 py-2.5 text-xs tracking-wide'>
 				A little encouragement goes a long way.
@@ -18,9 +22,9 @@ import Icon from "./Icon.astro";
 					<div class='bg-coral/15 p-2 rounded-lg'>
 						<Icon name="BookOpen" size={29} strokeWidth={1.7} />
 					</div>
-					<div class='text-xl font-bold tracking-tight leading-5'>
+					<div class='wordmark text-xl font-bold tracking-tight leading-5'>
 						MyChristian<span class='text-coral'>Tutors</span>
-						<div class='text-[9px] leading-tight tracking-[.12em] uppercase font-normal mt-1 whitespace-nowrap'>
+						<div class='wordmark-attribution text-[9px] leading-tight tracking-[.12em] uppercase font-normal mt-1 whitespace-nowrap'>
 							By MyFunScience
 						</div>
 					</div>
@@ -30,6 +34,7 @@ import Icon from "./Icon.astro";
 					<a href='#tutors'>Our tutors</a>
 					<a href='#booking'>Book tutoring</a>
 					<a href='#contact'>Contact</a>
+					<a href={adminHref}>Admin</a>
 				</nav>
 				<a class='btn !py-3 hidden lg:inline-flex' href='#booking'>
 					Find your tutor
@@ -55,6 +60,7 @@ import Icon from "./Icon.astro";
 							['#tutors', 'Our tutors'],
 							['#booking', 'Book tutoring'],
 							['#contact', 'Contact'],
+							[adminHref, 'Admin'],
 							['#offer', 'Get 20% off'],
 						].map(([href, label]) => (
 							<a
@@ -83,3 +89,20 @@ import Icon from "./Icon.astro";
     });
   }
 </script>
+
+<style>
+  @media (max-width: 480px) {
+    header {
+      gap: 10px;
+      padding-inline: 16px;
+    }
+
+    .wordmark {
+      font-size: 16px;
+    }
+
+    .wordmark-attribution {
+      font-size: 8px;
+    }
+  }
+</style>

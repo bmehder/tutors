@@ -1,4 +1,4 @@
-import {noticeSatisfied,intervalsOverlap} from '../../src/session-time.ts';
+import {noticeSatisfied,intervalsOverlap} from '../../src/lib/session-time.ts';
 // Pure reference model. A production adapter must execute reserve atomically
 // against shared storage; this in-memory value is NOT a concurrency guarantee.
 export type Interval=Readonly<{start:number;end:number}>; // epoch milliseconds

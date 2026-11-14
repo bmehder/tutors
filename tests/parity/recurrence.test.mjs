@@ -6,7 +6,7 @@ import {
   replace_week, skipped_dates, weekly_dates, weekly_series,
 } from '../../planner/build/dev/javascript/christian_tutors_planner/planner/scheduling.mjs'
 import { availabilityReason, weeklySeries } from '../../temp-reference/typescript/family-planner-model.ts'
-import { calendarAddDays, calendarWeekday } from '../../src/session-time.ts'
+import { calendarAddDays, calendarWeekday } from '../../src/lib/session-time.ts'
 import { skipWeek, skippedWeeks, weeklyDates } from '../../temp-reference/typescript/skip-week.ts'
 
 const first = { id: 'bio', childId: 'emma', tutorId: 'sarah', subject: 'Biology', date: '2030-01-07', start: 900, duration: 60 }

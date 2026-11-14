@@ -1,0 +1,73 @@
+<section
+	aria-labelledby='testimonials-heading'
+	class='max-w-7xl mx-auto px-6 md:px-12 pt-20'
+>
+	<div class='flex flex-wrap justify-between items-end gap-5 mb-9'>
+		<div>
+			<p class='eyebrow text-ink/55 mb-3'>Small steps. Meaningful progress.</p>
+			<h2 id='testimonials-heading' class='text-4xl font-semibold'>
+				More confidence. <span class='serif'>For the whole family.</span>
+			</h2>
+		</div>
+		<p class='text-xs text-ink/55 max-w-xs leading-5'>
+			Sample testimonials for this demo. These are fictional stories, not reviews
+			from actual families.
+		</p>
+	</div>
+	<div class='grid md:grid-cols-3 gap-6'>
+		{
+			[
+				{
+					quote:
+						'Math used to be the part of our day we both dreaded. Having someone patiently explain it a different way helped my daughter start asking questions instead of giving up.',
+					name: 'Emily R.',
+					detail: 'Parent of a seventh grader',
+					initial: 'E',
+				},
+				{
+					quote:
+						'I wanted help with science from a teacher who shared our faith. The personal attention and thoughtful conversations are exactly the kind of support I was looking for.',
+					name: 'Michael T.',
+					detail: 'Parent of a tenth grader',
+					initial: 'M',
+				},
+				{
+					quote:
+						'We needed a little extra help with writing, without adding another complicated commitment. Choosing a time that fit our week made getting started feel manageable.',
+					name: 'Rebecca S.',
+					detail: 'Parent of a fifth grader',
+					initial: 'R',
+				},
+			].map(item => (
+				<figure class='bg-white border border-ink/15 rounded-xl p-7 flex flex-col'>
+					<span
+						aria-hidden='true'
+						class='serif text-coral text-6xl h-12 leading-none'
+					>
+						“
+					</span>
+					<blockquote class='text-sm leading-7 text-ink/80 mt-3 mb-7 flex-1'>
+						{item.quote}
+					</blockquote>
+					<figcaption class='flex items-center gap-3 border-t border-ink/10 pt-5'>
+						<span
+							aria-hidden='true'
+							class='bg-[#eaf0e9] rounded-full w-10 h-10 flex items-center justify-center serif text-xl'
+						>
+							{item.initial}
+						</span>
+						<div>
+							<p class='text-sm font-semibold'>
+								{item.name}
+								<span class='font-normal text-[10px] text-ink/50'>
+									· Sample parent
+								</span>
+							</p>
+							<p class='text-xs text-ink/60 mt-1'>{item.detail}</p>
+						</div>
+					</figcaption>
+				</figure>
+			))
+		}
+	</div>
+</section>

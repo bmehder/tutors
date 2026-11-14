@@ -1,0 +1,139 @@
+.planner-step {
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	width: 26px;
+	height: 26px;
+	flex-shrink: 0;
+	border-radius: 50%;
+	background: #edf1e8;
+	font-size: 12px;
+	font-weight: 600;
+}
+.planner-label {
+	font-size: 12px;
+	font-weight: 600;
+	letter-spacing: 0;
+}
+.planner-outline {
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	gap: 8px;
+	padding: 10px 14px;
+	min-height: 44px;
+	border: 1px solid #143f3c40;
+	border-radius: 7px;
+	font-size: 12px;
+	font-weight: 600;
+	background: white;
+}
+.planner-outline:hover {
+	background: #f0f3ee;
+}
+.planner-small {
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	gap: 6px;
+	padding: 8px;
+	min-height: 40px;
+	font-size: 11px;
+	color: #143f3cb3;
+	border-radius: 5px;
+}
+.planner-small:hover {
+	background: #143f3c08;
+	color: #143f3c;
+}
+#booking .field {
+	min-height: 44px;
+	min-width: 0;
+	font-size: 16px;
+}
+#booking button:disabled {
+	transform: none;
+}
+@media (max-width: 480px) {
+	.planner-small {
+		font-size: 10px;
+		padding: 7px;
+	}
+}
+
+#booking .field[aria-invalid='true'] {
+	border-color: #a65332;
+	outline: 2px solid #a65332;
+	outline-offset: 2px;
+	background: #fffaf5;
+}
+#booking .field[aria-invalid='true']:focus {
+	outline-color: #143f3c;
+}
+#booking form .planner-label {
+	line-height: 1.4;
+}
+#booking form .field {
+	line-height: 1.4;
+}
+.planner-action {
+	color: #843c30;
+	font-size: 14px;
+	line-height: 1.5;
+	font-weight: 600;
+	border-left: 3px solid #a65332;
+	padding: 6px 0 6px 10px;
+}
+
+#booking input[required]:placeholder-shown {
+	border-color: #cfd8d3;
+	outline: none;
+	background: white;
+}
+@media print {
+	@page {
+		margin: 16mm;
+	}
+	body {
+		background: white;
+		color: #111;
+	}
+	body * {
+		visibility: hidden !important;
+	}
+	#print-order,
+	#print-order * {
+		visibility: visible !important;
+	}
+	#print-order {
+		display: block !important;
+		position: absolute;
+		left: 0;
+		top: 0;
+		width: 100%;
+		font-family: var(--font-sans);
+		font-size: 11pt;
+		line-height: 1.5;
+	}
+	#print-order h1 {
+		font-size: 22pt;
+		margin: 0 0 8pt;
+	}
+	#print-order p {
+		margin: 6pt 0;
+	}
+}
+@media print {
+	body *:not(#print-order):not(#print-order *):not(:has(#print-order)) {
+		display: none !important;
+	}
+	body *:has(#print-order) {
+		margin: 0 !important;
+		padding: 0 !important;
+		border: 0 !important;
+		background: white !important;
+	}
+	#print-order {
+		position: static !important;
+	}
+}

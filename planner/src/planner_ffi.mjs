@@ -1,7 +1,19 @@
 // Browser, catalog, and calendar adapters for the Gleam planner.
 import { toArray, toList } from './gleam_lists.mjs'
-import { Option$None, Option$Some } from '../gleam_stdlib/gleam/option.mjs'
+import { Option$None, Option$Some, Option$isSome } from '../gleam_stdlib/gleam/option.mjs'
 import {
+	TutorAvailability$DailyAvailability,
+	TutorAvailability$DailyAvailability$start_minutes,
+	TutorAvailability$isDailyAvailability,
+	Order$Order$sessions,
+	Order$Order$contact,
+	ContactInfo$ContactInfo$name,
+	Order$Order$package_hours,
+	Order$Order$discount,
+	ConfirmedSession$ConfirmedSession$session,
+	Session$Session$tutor_id,
+	Session$Session$student_id,
+	Session$Session$subject,
 	Availability$Available,
 	Session$Session,
 	TimeChoice$TimeChoice,
@@ -49,7 +61,7 @@ import {
 } from '@booking/payment-format.ts'
 import { formatCheckoutPhone } from '@booking/phone.ts'
 
-const catalog = toList(
+let catalog = toList(
 	sourceCatalog.map(tutor =>
 		Tutor$Tutor(
 			tutor.id,
@@ -62,6 +74,21 @@ const catalog = toList(
 		),
 	),
 )
+
+export async function loadTutorHours() {
+	const response = await fetch('/api/tutor-hours')
+	if (!response.ok) throw new Error('Tutor schedules could not be loaded.')
+	const tutors = await response.json()
+	catalog = toList(tutors.map(tutor => Tutor$Tutor(
+		tutor.id,
+		tutor.name,
+		toList(tutor.subjects),
+		TutorAvailability$DailyAvailability(
+			toList(tutor.startsByDay.map(toList)),
+			toList([...new Set(tutor.startsByDay.flat())].sort((a, b) => a - b)),
+		),
+	)))
+}
 
 const booked = schedules =>
 	toArray(schedules).flatMap(schedule =>
@@ -151,14 +178,14 @@ export const allTutors = () => catalog
 export function choices(tutor, student, allocation, date, zone, schedules) {
 	const existing = toList(booked(schedules))
 	const now = Date.now()
+	const availability = Tutor$Tutor$availability(tutor)
+	const starts = TutorAvailability$isDailyAvailability(availability)
+		? TutorAvailability$DailyAvailability$start_minutes(availability)
+		: TutorAvailability$TutorAvailability$start_minutes(availability)
 	const options = []
 	for (const delta of [-1, 0, 1]) {
 		const easternDate = calendarAddDays(date, delta)
-		for (const start of toArray(
-			TutorAvailability$TutorAvailability$start_minutes(
-				Tutor$Tutor$availability(tutor),
-			),
-		)) {
+		for (const start of toArray(starts)) {
 			const resolved = easternInstant(easternDate, start)
 			if (
 				resolved.kind !== 'resolved' ||
@@ -231,10 +258,33 @@ export function billingMonth() {
 	return [now.getFullYear(), now.getMonth() + 1]
 }
 
-// Keep browser effects here, including the demo timer, scrolling, printing,
+// Keep browser effects here, including mock checkout, scrolling, printing,
 // Astro tutor-card events, and payment input masks.
-export function afterPayment(dispatch, message) {
-	setTimeout(() => dispatch(message), 800)
+export function afterPayment(order, dispatch, success, failed) {
+	const sessions = toArray(Order$Order$sessions(order)).map(confirmed => {
+		const session = ConfirmedSession$ConfirmedSession$session(confirmed)
+		return {
+			tutorId: Session$Session$tutor_id(session),
+			studentId: Session$Session$student_id(session),
+			subject: Session$Session$subject(session),
+			date: Session$Session$date(session),
+			start: Session$Session$start(session),
+		}
+	})
+	async function reserve(body) {
+		const response = await fetch('/api/reservations', {
+			method: 'POST',
+			headers: { 'Content-Type': 'application/json' },
+			body: JSON.stringify(body),
+		})
+		const result = await response.json()
+		if (!response.ok) throw new Error(result.error)
+		return result.id
+	}
+	reserve({ sessions, familyName: ContactInfo$ContactInfo$name(Order$Order$contact(order)), packageHours: Order$Order$package_hours(order), demoDiscount: Option$isSome(Order$Order$discount(order)) })
+		.then(id => reserve({ id }))
+		.then(() => dispatch(success))
+		.catch(error => dispatch(failed(error.message || 'Could not reserve your sessions.')))
 }
 
 export function scroll() {

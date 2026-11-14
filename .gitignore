@@ -46,3 +46,4 @@ Thumbs.db
 # Astro and Gleam build output
 /.astro/
 /planner/build/
+.neon

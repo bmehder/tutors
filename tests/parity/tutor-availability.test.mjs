@@ -5,7 +5,7 @@ import { Option$None, Option$Some } from '../../planner/build/dev/javascript/gle
 import { TutorAvailability$TutorAvailability } from '../../planner/build/dev/javascript/christian_tutors_planner/planner/model.mjs'
 import { BookingInterval$BookingInterval, booking_notice_satisfied, conflict_issue, tutor_hours_issue } from '../../planner/build/dev/javascript/christian_tutors_planner/planner/scheduling.mjs'
 import { conflictReason, parseTime, tutorHoursIssue } from '../../temp-reference/typescript/family-planner-model.ts'
-import { calendarAddDays, calendarWeekday, easternInstant, noticeSatisfied, sessionInterval } from '../../src/session-time.ts'
+import { calendarAddDays, calendarWeekday, easternInstant, noticeSatisfied, sessionInterval } from '../../src/lib/session-time.ts'
 
 test('Gleam tutor hours agree with TypeScript for closed days, exact starts, and elapsed ends', () => {
   const scenarios = [

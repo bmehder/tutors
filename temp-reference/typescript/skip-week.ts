@@ -1,5 +1,5 @@
 import {addDays,availabilityReason,type Lesson,type Tutor,type Child} from './family-planner-model.ts';
-import {calendarDate} from '../../src/session-time.ts';
+import {calendarDate} from '../../src/lib/session-time.ts';
 export function skippedWeeks(firstDate:string,sessions:readonly Lesson[]):string[]{
  const dates=new Set(sessions.map(s=>s.date));const last=[...dates].sort().at(-1);const skipped:string[]=[];
  if(!last)return skipped;
