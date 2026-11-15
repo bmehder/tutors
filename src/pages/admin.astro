@@ -13,181 +13,380 @@ const demo = getSecret('BOOKING_PUBLIC_ADMIN_DEMO') === '1'
 const email = demo ? 'demo@example.test' : getSecret('BOOKING_DEV_ADMIN_EMAIL')
 const password = demo ? 'tutor-demo' : getSecret('BOOKING_DEV_ADMIN_PASSWORD')
 const signingKey = demo ? getSecret('BOOKING_ADMIN_SIGNING_KEY') : password
-const enabled = (import.meta.env.DEV || demo) && !!signingKey && !!email && !!password && !!pool
+const enabled =
+	(import.meta.env.DEV || demo) && !!signingKey && !!email && !!password && !!pool
 if (!enabled) return new Response('Not found', { status: 404 })
 
-const sign = (value: string) => createHmac('sha256', signingKey!).update(value).digest('hex')
+const sign = (value: string) =>
+	createHmac('sha256', signingKey!).update(value).digest('hex')
 const equal = (a: string, b: string) =>
-  timingSafeEqual(Buffer.from(sign(a), 'hex'), Buffer.from(sign(b), 'hex'))
+	timingSafeEqual(Buffer.from(sign(a), 'hex'), Buffer.from(sign(b), 'hex'))
 const cookie = 'booking_admin'
 const [expiry, signature] = (Astro.cookies.get(cookie)?.value ?? '').split('.')
-const signedIn = !!signature && Number(expiry) > Date.now() && equal(signature, sign(expiry))
-const days = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday']
+const signedIn =
+	!!signature && Number(expiry) > Date.now() && equal(signature, sign(expiry))
+const days = [
+	'Monday',
+	'Tuesday',
+	'Wednesday',
+	'Thursday',
+	'Friday',
+	'Saturday',
+	'Sunday',
+]
 const catalog = signedIn ? await tutorHours(true) : []
-const selected = catalog.find(t => t.id === Astro.url.searchParams.get('tutor')) ?? catalog[0]
+const selected =
+	catalog.find(t => t.id === Astro.url.searchParams.get('tutor')) ?? catalog[0]
 const times = Array.from({ length: 97 }, (_, index) => index * 15)
 function blocks(starts: number[]) {
-  const ranges: { start: number; end: number }[] = []
-  for (const start of starts) {
-    const last = ranges.at(-1)
-    if (last && start === last.end - 45) last.end = start + 60
-    else ranges.push({ start, end: start + 60 })
-  }
-  return ranges
+	const ranges: { start: number; end: number }[] = []
+	for (const start of starts) {
+		const last = ranges.at(-1)
+		if (last && start === last.end - 45) last.end = start + 60
+		else ranges.push({ start, end: start + 60 })
+	}
+	return ranges
 }
 const wantsJson = Astro.request.headers.get('accept')?.includes('application/json')
-const redirect = (url: string, status: 303) => wantsJson ? Response.json({ ok: true }) : Astro.redirect(url, status)
+const redirect = (url: string, status: 303) =>
+	wantsJson ? Response.json({ ok: true }) : Astro.redirect(url, status)
 let error = ''
 
 if (Astro.request.method === 'POST') {
-  if (Astro.request.headers.get('origin') !== Astro.url.origin)
-    return new Response('Forbidden', { status: 403 })
-  const form = await Astro.request.formData()
-  const action = form.get('action')
-  if (action === 'sign-in') {
-    if (equal(String(form.get('email')), email!) && equal(String(form.get('password')), password!)) {
-      const expires = String(Date.now() + 3_600_000)
-      Astro.cookies.set(cookie, expires + '.' + sign(expires), {
-        httpOnly: true, secure: demo, sameSite: 'strict', path: '/admin', maxAge: 3600,
-      })
-      return redirect('/admin', 303)
-    }
-    error = 'The email or password did not match.'
-  } else {
-    if (!signedIn) return new Response('Forbidden', { status: 403 })
-    if (action === 'sign-out') {
-      Astro.cookies.delete(cookie, { path: '/admin' })
-      return redirect('/admin', 303)
-    }
-    if (action === 'save-tutor' || action === 'archive-tutor' || action === 'restore-tutor') {
-      const id = String(form.get('tutor-id') ?? '')
-      const existing = catalog.find(tutor => tutor.id === id)
-      if (id && !existing) return new Response('Tutor not found', { status: 404 })
-      const name = action === 'save-tutor' ? String(form.get('name') ?? '').trim() : existing?.name
-      const subjects = action === 'save-tutor' ? form.getAll('subjects').filter(
-        (subject): subject is string => typeof subject === 'string' && SUBJECTS.includes(subject),
-      ) : existing?.subjects
-      if (!name || !subjects?.length) error = 'Enter a tutor name and choose at least one subject.'
-      else {
-        const tutorId = existing?.id ?? randomUUID()
-        await pool!.query(
-          'INSERT INTO tutor_profiles VALUES ($1,$2,$3,$4) ON CONFLICT (tutor_id) DO UPDATE SET name=EXCLUDED.name, subjects=EXCLUDED.subjects, archived=EXCLUDED.archived',
-          [tutorId, name, subjects, action === 'archive-tutor' || (action === 'save-tutor' && !!existing?.archived)],
-        )
-        return redirect('/admin?tutor=' + encodeURIComponent(tutorId) + '#tutors-admin', 303)
-      }
-    } else if (['create-booking', 'edit-booking', 'delete-booking', 'move-session', 'save-session-subject'].includes(String(action))) {
-      try {
-        if (action === 'create-booking' && !catalog.some(tutor => tutor.id === form.get('booking-tutor') && !tutor.archived))
-          throw new Error('Choose an active tutor.')
-        await editBooking(pool!, form, String(action))
-        const returnTutor = form.get('return-tutor')
-        return redirect(
-          ['move-session', 'save-session-subject'].includes(String(action)) && typeof returnTutor === 'string'
-            ? '/admin?open-tutor=' + encodeURIComponent(returnTutor) + '#tutors-admin'
-            : '/admin#bookings-admin',
-          303,
-        )
-      } catch (issue) {
-        error = issue instanceof Error && !('code' in issue) ? issue.message : 'The booking could not be updated.'
-      }
-    } else if (!selected || !catalog.some(tutor => tutor.id === Astro.url.searchParams.get('tutor'))) return new Response('Tutor not found', { status: 404 })
-    else if (action === 'reset') {
-      await pool!.query('DELETE FROM tutor_weekly_hours WHERE tutor_id = $1', [selected.id])
-    } else if (action === 'save') {
-      let invalid = false
-      const starts = days.map((_, day) => {
-        const starts = form.getAll('start-' + day)
-        const ends = form.getAll('end-' + day)
-        if (starts.length !== ends.length) invalid = true
-        return starts.flatMap((value, index) => {
-          const start = Number(value)
-          const end = Number(ends[index])
-          if (!times.includes(start) || !times.includes(end) || end - start < 60) {
-            invalid = true
-            return []
-          }
-          return Array.from({ length: (end - start - 60) / 15 + 1 }, (_, i) => start + i * 15)
-        })
-      })
-      if (invalid) {
-        error = 'Each block needs at least one hour. Check its start and end times.'
-      } else {
-        await pool!.query(
-          'INSERT INTO tutor_weekly_hours VALUES ($1, $2) ON CONFLICT (tutor_id) DO UPDATE SET starts_by_day = EXCLUDED.starts_by_day',
-          [selected.id, JSON.stringify(starts.map(day => [...new Set(day)].sort((a, b) => a - b)))],
-        )
-      }
-    } else return new Response('Invalid action', { status: 400 })
-    if (!error && selected) return redirect('/admin?tutor=' + encodeURIComponent(selected.id) + '&saved=1#schedules-admin', 303)
-  }
+	if (Astro.request.headers.get('origin') !== Astro.url.origin)
+		return new Response('Forbidden', { status: 403 })
+	const form = await Astro.request.formData()
+	const action = form.get('action')
+	if (action === 'sign-in') {
+		if (
+			equal(String(form.get('email')), email!) &&
+			equal(String(form.get('password')), password!)
+		) {
+			const expires = String(Date.now() + 3_600_000)
+			Astro.cookies.set(cookie, expires + '.' + sign(expires), {
+				httpOnly: true,
+				secure: demo,
+				sameSite: 'strict',
+				path: '/admin',
+				maxAge: 3600,
+			})
+			return redirect('/admin', 303)
+		}
+		error = 'The email or password did not match.'
+	} else {
+		if (!signedIn) return new Response('Forbidden', { status: 403 })
+		if (action === 'sign-out') {
+			Astro.cookies.delete(cookie, { path: '/admin' })
+			return redirect('/admin', 303)
+		}
+		if (
+			action === 'save-tutor' ||
+			action === 'archive-tutor' ||
+			action === 'restore-tutor'
+		) {
+			const id = String(form.get('tutor-id') ?? '')
+			const existing = catalog.find(tutor => tutor.id === id)
+			if (id && !existing) return new Response('Tutor not found', { status: 404 })
+			const name =
+				action === 'save-tutor'
+					? String(form.get('name') ?? '').trim()
+					: existing?.name
+			const subjects =
+				action === 'save-tutor'
+					? form
+							.getAll('subjects')
+							.filter(
+								(subject): subject is string =>
+									typeof subject === 'string' && SUBJECTS.includes(subject),
+							)
+					: existing?.subjects
+			if (!name || !subjects?.length)
+				error = 'Enter a tutor name and choose at least one subject.'
+			else {
+				const tutorId = existing?.id ?? randomUUID()
+				await pool!.query(
+					'INSERT INTO tutor_profiles VALUES ($1,$2,$3,$4) ON CONFLICT (tutor_id) DO UPDATE SET name=EXCLUDED.name, subjects=EXCLUDED.subjects, archived=EXCLUDED.archived',
+					[
+						tutorId,
+						name,
+						subjects,
+						action === 'archive-tutor' ||
+							(action === 'save-tutor' && !!existing?.archived),
+					],
+				)
+				return redirect(
+					'/admin?tutor=' + encodeURIComponent(tutorId) + '#tutors-admin',
+					303,
+				)
+			}
+		} else if (
+			[
+				'create-booking',
+				'edit-booking',
+				'delete-booking',
+				'move-session',
+				'save-session-subject',
+			].includes(String(action))
+		) {
+			try {
+				if (
+					action === 'create-booking' &&
+					!catalog.some(
+						tutor => tutor.id === form.get('booking-tutor') && !tutor.archived,
+					)
+				)
+					throw new Error('Choose an active tutor.')
+				await editBooking(pool!, form, String(action))
+				const returnTutor = form.get('return-tutor')
+				return redirect(
+					['move-session', 'save-session-subject'].includes(String(action)) &&
+						typeof returnTutor === 'string'
+						? '/admin?open-tutor=' +
+								encodeURIComponent(returnTutor) +
+								'#tutors-admin'
+						: '/admin#bookings-admin',
+					303,
+				)
+			} catch (issue) {
+				error =
+					issue instanceof Error && !('code' in issue)
+						? issue.message
+						: 'The booking could not be updated.'
+			}
+		} else if (
+			!selected ||
+			!catalog.some(tutor => tutor.id === Astro.url.searchParams.get('tutor'))
+		)
+			return new Response('Tutor not found', { status: 404 })
+		else if (action === 'reset') {
+			await pool!.query('DELETE FROM tutor_weekly_hours WHERE tutor_id = $1', [
+				selected.id,
+			])
+		} else if (action === 'save') {
+			let invalid = false
+			const starts = days.map((_, day) => {
+				const starts = form.getAll('start-' + day)
+				const ends = form.getAll('end-' + day)
+				if (starts.length !== ends.length) invalid = true
+				return starts.flatMap((value, index) => {
+					const start = Number(value)
+					const end = Number(ends[index])
+					if (!times.includes(start) || !times.includes(end) || end - start < 60) {
+						invalid = true
+						return []
+					}
+					return Array.from(
+						{ length: (end - start - 60) / 15 + 1 },
+						(_, i) => start + i * 15,
+					)
+				})
+			})
+			if (invalid) {
+				error = 'Each block needs at least one hour. Check its start and end times.'
+			} else {
+				await pool!.query(
+					'INSERT INTO tutor_weekly_hours VALUES ($1, $2) ON CONFLICT (tutor_id) DO UPDATE SET starts_by_day = EXCLUDED.starts_by_day',
+					[
+						selected.id,
+						JSON.stringify(
+							starts.map(day => [...new Set(day)].sort((a, b) => a - b)),
+						),
+					],
+				)
+			}
+		} else return new Response('Invalid action', { status: 400 })
+		if (!error && selected)
+			return redirect(
+				'/admin?tutor=' +
+					encodeURIComponent(selected.id) +
+					'&saved=1#schedules-admin',
+				303,
+			)
+	}
 }
-const bookings = signedIn ? (await pool!.query<{
-  id: string; confirmed_at: Date; package_hours: number | null; label: string | null; subtotal_cents: number | null; discount_cents: number | null;
-  sessions: { id: string; tutor: string; subject: string | null; start: string }[];
-}>(`SELECT b.id, b.confirmed_at, b.package_hours, b.label, b.subtotal_cents, b.discount_cents,
+const bookings = signedIn
+	? (
+			await pool!.query<{
+				id: string
+				confirmed_at: Date
+				package_hours: number | null
+				label: string | null
+				subtotal_cents: number | null
+				discount_cents: number | null
+				sessions: {
+					id: string
+					tutor: string
+					subject: string | null
+					start: string
+				}[]
+			}>(`SELECT b.id, b.confirmed_at, b.package_hours, b.label, b.subtotal_cents, b.discount_cents,
   COALESCE(json_agg(json_build_object('id', s.id::text, 'tutor', s.tutor_id, 'subject', s.subject, 'start', lower(s.slot))
   ORDER BY lower(s.slot)) FILTER (WHERE s.id IS NOT NULL), '[]') AS sessions
   FROM booking_reservations b LEFT JOIN booking_sessions s ON s.reservation_id=b.id
-  WHERE confirmed_at IS NOT NULL GROUP BY b.id ORDER BY confirmed_at DESC`)).rows : []
-const reportDate = new Intl.DateTimeFormat('en-CA', { year: 'numeric', month: '2-digit', day: '2-digit', timeZone: 'America/New_York' })
-const easternTime = new Intl.DateTimeFormat('en-GB', { hour: '2-digit', minute: '2-digit', hourCycle: 'h23', timeZone: 'America/New_York' })
-const eastern = new Intl.DateTimeFormat('en-US', { dateStyle: 'medium', timeStyle: 'short', timeZone: 'America/New_York' })
+  WHERE confirmed_at IS NOT NULL GROUP BY b.id ORDER BY confirmed_at DESC`)
+		).rows
+	: []
+const reportDate = new Intl.DateTimeFormat('en-CA', {
+	year: 'numeric',
+	month: '2-digit',
+	day: '2-digit',
+	timeZone: 'America/New_York',
+})
+const easternTime = new Intl.DateTimeFormat('en-GB', {
+	hour: '2-digit',
+	minute: '2-digit',
+	hourCycle: 'h23',
+	timeZone: 'America/New_York',
+})
+const eastern = new Intl.DateTimeFormat('en-US', {
+	dateStyle: 'medium',
+	timeStyle: 'short',
+	timeZone: 'America/New_York',
+})
 const data = {
-  tutors: catalog.map(tutor => ({ ...tutor, blocks: tutor.startsByDay.flatMap((starts, day) => blocks(starts).map(block => ({ ...block, day }))) })),
-  subjects: SUBJECTS,
-  bookings: bookings.map(booking => ({
-    id: booking.id, name: booking.label ?? 'Contact unrecorded', date: reportDate.format(booking.confirmed_at),
-    hours: booking.package_hours ?? 0, subtotal: booking.subtotal_cents, discount: booking.discount_cents,
-    sessions: booking.sessions.map(session => ({
-      ...session, subject: session.subject ?? '', date: reportDate.format(new Date(session.start)),
-      time: easternTime.format(new Date(session.start)), label: eastern.format(new Date(session.start)) + ' Eastern',
-    })),
-  })),
+	tutors: catalog.map(tutor => ({
+		...tutor,
+		blocks: tutor.startsByDay.flatMap((starts, day) =>
+			blocks(starts).map(block => ({ ...block, day })),
+		),
+	})),
+	subjects: SUBJECTS,
+	bookings: bookings.map(booking => ({
+		id: booking.id,
+		name: booking.label ?? 'Contact unrecorded',
+		date: reportDate.format(booking.confirmed_at),
+		hours: booking.package_hours ?? 0,
+		subtotal: booking.subtotal_cents,
+		discount: booking.discount_cents,
+		sessions: booking.sessions.map(session => ({
+			...session,
+			subject: session.subject ?? '',
+			date: reportDate.format(new Date(session.start)),
+			time: easternTime.format(new Date(session.start)),
+			label: eastern.format(new Date(session.start)) + ' Eastern',
+		})),
+	})),
 }
 if (wantsJson) {
-  if (!signedIn) return Response.json({ error: 'Your session expired. Sign in again to continue.' }, { status: 401 })
-  if (error) return Response.json({ error }, { status: 400 })
-  return Response.json(data)
+	if (!signedIn)
+		return Response.json(
+			{ error: 'Your session expired. Sign in again to continue.' },
+			{ status: 401 },
+		)
+	if (error) return Response.json({ error }, { status: 400 })
+	return Response.json(data)
 }
 ---
+
 <!doctype html>
-<html lang="en">
-  <head>
-    <meta charset="utf-8" />
-    <meta name="viewport" content="width=device-width" />
-    <meta name="robots" content="noindex, nofollow" />
-    <title>Administration | MyChristianTutors</title>
-  </head>
-  <body class="bg-zinc-950 text-zinc-200">
-    {demo && <p class="px-4 py-2 text-xs bg-zinc-900 text-zinc-400">Shared demo · demo@example.test / tutor-demo · Changes are visible to other testers.</p>}
-    {signedIn ? <>
-      <div id="tutoring-admin"><p class="p-6">Loading administration…</p></div>
-      <script id="admin-data" type="application/json" set:html={JSON.stringify(data).replace(/</g, '\\u003c')} />
-    </> : <main class="max-w-sm mx-auto p-6 mt-16">
-      <a href="/" class="text-zinc-400">MyChristianTutors</a>
-      <h1 class="text-2xl font-semibold my-5">Admin sign in</h1>
-      {error && <p role="alert" class="text-amber-300 mb-4">{error}</p>}
-      <form method="post" class="grid gap-4">
-        <label>Email<input class="block w-full border border-zinc-700 bg-zinc-900 rounded p-2 mt-1" name="email" type="email" autocomplete="username" required /></label>
-        <label>Password<input class="block w-full border border-zinc-700 bg-zinc-900 rounded p-2 mt-1" name="password" type="password" autocomplete="current-password" required /></label>
-        <button class="rounded bg-stone-300 text-zinc-950 p-2 font-semibold" name="action" value="sign-in">Sign in</button>
-      </form>
-    </main>}
-    <noscript><p class="p-4">Enable JavaScript to manage tutors and bookings.</p></noscript>
-    <script>
-      import { main } from '../../planner/build/dev/javascript/christian_tutors_planner/christian_tutors_admin.mjs'
-      if (document.querySelector('#tutoring-admin')) main()
-    </script>
-  </body>
+<html lang='en'>
+	<head>
+		<meta charset='utf-8' />
+		<meta name='viewport' content='width=device-width' />
+		<meta name='robots' content='noindex, nofollow' />
+		<title>Administration | MyChristianTutors</title>
+	</head>
+	<body class='bg-zinc-950 text-zinc-200'>
+		{
+			demo && (
+				<p class='px-4 py-2 text-xs bg-zinc-900 text-zinc-400'>
+					Shared demo · demo@example.test / tutor-demo · Changes are visible to other
+					testers.
+				</p>
+			)
+		}
+		{
+			signedIn ? (
+				<>
+					<div id='tutoring-admin'>
+						<p class='p-6'>Loading administration…</p>
+					</div>
+					<script
+						id='admin-data'
+						type='application/json'
+						set:html={JSON.stringify(data).replace(/</g, '\\u003c')}
+					/>
+				</>
+			) : (
+				<main class='max-w-sm mx-auto p-6 mt-16'>
+					<a href='/' class='text-zinc-400'>
+						MyChristianTutors
+					</a>
+					<h1 class='text-2xl font-semibold my-5'>Admin sign in</h1>
+					{error && (
+						<p role='alert' class='text-amber-300 mb-4'>
+							{error}
+						</p>
+					)}
+					<form method='post' class='grid gap-4'>
+						<label>
+							Email
+							<input
+								class='block w-full border border-zinc-700 bg-zinc-900 rounded p-2 mt-1'
+								name='email'
+								type='email'
+								autocomplete='username'
+								required
+							/>
+						</label>
+						<label>
+							Password
+							<input
+								class='block w-full border border-zinc-700 bg-zinc-900 rounded p-2 mt-1'
+								name='password'
+								type='password'
+								autocomplete='current-password'
+								required
+							/>
+						</label>
+						<button
+							class='rounded bg-stone-300 text-zinc-950 p-2 font-semibold'
+							name='action'
+							value='sign-in'
+						>
+							Sign in
+						</button>
+					</form>
+				</main>
+			)
+		}
+		<noscript
+			><p class='p-4'>Enable JavaScript to manage tutors and bookings.</p></noscript
+		>
+		<script>
+			import { main } from '../../planner/build/dev/javascript/christian_tutors_planner/christian_tutors_admin.mjs'
+			if (document.querySelector('#tutoring-admin')) main()
+		</script>
+	</body>
 </html>
 <style is:global>
-  body:has(#tutoring-admin), body:has(form[action="/admin"]), body.bg-zinc-950 { font-family: system-ui, sans-serif; color-scheme: dark; }
-  body.bg-zinc-950 :is(h1,h2,h3,h4) { font-family: inherit; letter-spacing: normal; }
-  #tutoring-admin { --font-sans: system-ui, sans-serif; }
-  #tutoring-admin summary { padding: 0; }
-  #tutoring-admin details > form { margin-top: .75rem; }
-  #tutoring-admin label > :is(input,select) { margin-top: .375rem; }
-  #tutoring-admin :is(input,select):focus-visible { outline: 2px solid #a8a29e; outline-offset: 2px; }
-  #tutoring-admin button:disabled { opacity: .45; }
+	body:has(#tutoring-admin),
+	body:has(form[action='/admin']),
+	body.bg-zinc-950 {
+		font-family: system-ui, sans-serif;
+		color-scheme: dark;
+	}
+	body.bg-zinc-950 :is(h1, h2, h3, h4) {
+		font-family: inherit;
+		letter-spacing: normal;
+	}
+	#tutoring-admin {
+		--font-sans: system-ui, sans-serif;
+	}
+	#tutoring-admin summary {
+		padding: 0;
+	}
+	#tutoring-admin details > form {
+		margin-top: 0.75rem;
+	}
+	#tutoring-admin label > :is(input, select) {
+		margin-top: 0.375rem;
+	}
+	#tutoring-admin :is(input, select):focus-visible {
+		outline: 2px solid #a8a29e;
+		outline-offset: 2px;
+	}
+	#tutoring-admin button:disabled {
+		opacity: 0.45;
+	}
 </style>
