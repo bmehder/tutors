@@ -134,6 +134,7 @@ if (Astro.request.method === 'POST') {
 		} else if (
 			[
 				'create-booking',
+				'mark-booking-paid',
 				'edit-booking',
 				'delete-booking',
 				'move-session',
@@ -225,13 +226,16 @@ const bookings = signedIn
 				label: string | null
 				subtotal_cents: number | null
 				discount_cents: number | null
+				payment_pending: boolean
+				contact_email: string | null
+				contact_phone: string | null
 				sessions: {
 					id: string
 					tutor: string
 					subject: string | null
 					start: string
 				}[]
-			}>(`SELECT b.id, b.confirmed_at, b.package_hours, b.label, b.subtotal_cents, b.discount_cents,
+			}>(`SELECT b.id, b.confirmed_at, b.package_hours, b.label, b.subtotal_cents, b.discount_cents, b.payment_pending, b.contact_email, b.contact_phone,
   COALESCE(json_agg(json_build_object('id', s.id::text, 'tutor', s.tutor_id, 'subject', s.subject, 'start', lower(s.slot))
   ORDER BY lower(s.slot)) FILTER (WHERE s.id IS NOT NULL), '[]') AS sessions
   FROM booking_reservations b LEFT JOIN booking_sessions s ON s.reservation_id=b.id
@@ -270,6 +274,9 @@ const data = {
 		hours: booking.package_hours ?? 0,
 		subtotal: booking.subtotal_cents,
 		discount: booking.discount_cents,
+		paymentPending: booking.payment_pending,
+		contactEmail: booking.contact_email,
+		contactPhone: booking.contact_phone,
 		sessions: booking.sessions.map(session => ({
 			...session,
 			subject: session.subject ?? '',

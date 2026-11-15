@@ -9,6 +9,13 @@ import TestimonialsSection from '../components/home/TestimonialsSection.astro'
 import DemoSignup from '../components/home/DemoSignup.astro'
 import FaqSection from '../components/home/FaqSection.astro'
 import ContactSection from '../components/home/ContactSection.astro'
+import { tutorHours } from '../server/tutor-hours'
+
+export const prerender = false
+Astro.response.headers.set('Cache-Control', 'no-store')
+const featuredTutors = await tutorHours()
+	.then(tutors => tutors.slice(0, 4))
+	.catch(() => [])
 import SiteFooter from '../components/SiteFooter.astro'
 ---
 
@@ -18,7 +25,7 @@ import SiteFooter from '../components/SiteFooter.astro'
 		<HeroSection />
 		<HowItWorksSection />
 		<BookingIsland />
-		<TutorsSection />
+		<TutorsSection tutors={featuredTutors} />
 		<TestimonialsSection />
 		<DemoSignup />
 		<FaqSection />

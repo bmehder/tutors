@@ -16,11 +16,11 @@ export async function tutorHours(
   const catalogSubjects = subjects ?? await subjectCatalog(executor)
   const originalNames = new Map(catalogSubjects.map(row => [row.catalog_name, row.name]))
   const activeNames = new Set(catalogSubjects.map(row => row.name))
-  const profiles = await executor?.query<{ tutor_id: string; name: string; subjects: string[]; archived: boolean }>(
-    'SELECT * FROM tutor_profiles ORDER BY name',
+  const profiles = await executor?.query<{ tutor_id: string; name: string; subjects: string[]; archived: boolean; slug: string }>(
+    'SELECT p.*, s.slug FROM tutor_profiles p JOIN tutor_profile_slugs s USING (tutor_id) ORDER BY p.name',
   )
   const catalog = new Map(tutors.map(tutor => [tutor.id, {
-    id: tutor.id, name: tutor.name, subjects: tutor.subjects.flatMap(name => {
+    id: tutor.id, profileSlug: tutor.id, name: tutor.name, subjects: tutor.subjects.flatMap(name => {
       const current = originalNames.get(name)
       return current ? [current] : []
     }), archived: false,
@@ -29,7 +29,7 @@ export async function tutorHours(
   for (const profile of profiles?.rows ?? []) {
     const existing = catalog.get(profile.tutor_id)
     catalog.set(profile.tutor_id, {
-      id: profile.tutor_id, name: profile.name, subjects: profile.subjects.filter(name => activeNames.has(name)),
+      id: profile.tutor_id, profileSlug: profile.slug, name: profile.name, subjects: profile.subjects.filter(name => activeNames.has(name)),
       archived: profile.archived, days: existing?.days ?? [], times: existing?.times ?? [],
     })
   }

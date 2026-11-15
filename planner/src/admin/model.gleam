@@ -65,6 +65,16 @@ pub type Session {
   )
 }
 
+pub type PaymentStatus {
+  PendingPayment
+  PaymentComplete
+}
+
+pub type ContactDetails {
+  ContactNotRecorded
+  ContactRecorded(email: String, phone: String)
+}
+
 pub type Booking {
   Booking(
     id: BookingId,
@@ -74,6 +84,8 @@ pub type Booking {
     subtotal: Money,
     discount: Money,
     sessions: List(Session),
+    payment_status: PaymentStatus,
+    contact_details: ContactDetails,
   )
 }
 

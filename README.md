@@ -11,7 +11,7 @@ npm install
 npm run dev
 ```
 
-Open http://127.0.0.1:4321 in your browser. After editing Gleam, run `npm run build:planner` to refresh the compiled island while Astro is running.
+Open http://127.0.0.1:5200 in your browser. After editing Gleam, run `npm run build:planner` to refresh the compiled island while Astro is running.
 
 ## Build
 

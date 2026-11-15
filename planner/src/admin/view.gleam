@@ -82,8 +82,8 @@ pub fn render(model: Model) -> Element(Msg) {
               [
                 #("Tutors", Tutors),
                 #("Bookings", Bookings),
-                #("Reports", Reports),
                 #("Subjects", Subjects),
+                #("Reports", Reports),
               ],
               fn(item) {
                 h.button(
@@ -145,11 +145,32 @@ pub fn render(model: Model) -> Element(Msg) {
                           ),
                         ]),
                         manual_booking(model),
+                        h.p([a.class("font-medium text-slate-700")], [
+                          h.text(
+                            int.to_string(
+                              list.length(
+                                list.filter(model.data.bookings, fn(booking) {
+                                  booking.payment_status == model.PendingPayment
+                                }),
+                              ),
+                            )
+                            <> " awaiting payment",
+                          ),
+                        ]),
                         keyed.div(
                           [a.class("space-y-3")],
-                          list.map(model.data.bookings, fn(booking) {
-                            #(booking.id, booking_view(model, booking))
-                          }),
+                          list.sort(model.data.bookings, fn(left, right) {
+                            case left.payment_status, right.payment_status {
+                              model.PendingPayment, model.PaymentComplete ->
+                                order.Lt
+                              model.PaymentComplete, model.PendingPayment ->
+                                order.Gt
+                              _, _ -> order.Eq
+                            }
+                          })
+                            |> list.map(fn(booking) {
+                              #(booking.id, booking_view(model, booking))
+                            }),
                         ),
                         empty_state(
                           model.data.bookings == [],
@@ -186,6 +207,17 @@ fn input(
   value: String,
   kind: String,
 ) {
+  form_input(fields, label, name, value, kind, True)
+}
+
+fn form_input(
+  fields: model.FormFields,
+  label: String,
+  name: String,
+  value: String,
+  kind: String,
+  required: Bool,
+) {
   h.label([a.class("block")], [
     h.text(label),
     h.input([
@@ -193,11 +225,7 @@ fn input(
       a.name(name),
       a.type_(kind),
       a.value(field_value(fields, name, value)),
-      a.required(True),
-      a.attribute("step", case kind {
-        "time" -> "900"
-        _ -> "1"
-      }),
+      a.required(required),
       a.attribute("min", case kind {
         "number" -> "0"
         _ -> ""
@@ -519,11 +547,62 @@ fn time_label(minute: Int) {
   }
 }
 
+const eastern_zone = "America/New_York"
+
+fn booking_zone_select(fields: model.FormFields) {
+  let current = field_value(fields, "time-zone", eastern_zone)
+  h.label([a.class("block")], [
+    h.text("Time zone"),
+    h.select(
+      [
+        a.class(field),
+        a.name("time-zone"),
+        a.attribute("data-previous-zone", current),
+      ],
+      zone_options(current),
+    ),
+  ])
+}
+
+fn zone_options(current: String) {
+  list.map(browser.time_zones(), fn(zone) {
+    h.option([a.value(zone.0), a.selected(zone.0 == current)], zone.1)
+  })
+}
+
+fn session_time_select(
+  fields: model.FormFields,
+  label: String,
+  fallback: String,
+) {
+  let selected = field_value(fields, "time", fallback)
+  let times =
+    list.index_map(list.repeat(Nil, 96), fn(_, index) {
+      let minute = index * 15
+      let value =
+        string.pad_start(int.to_string(minute / 60), 2, "0")
+        <> ":"
+        <> string.pad_start(int.to_string(minute % 60), 2, "0")
+      h.option(
+        [a.value(value), a.selected(value == selected)],
+        time_label(minute),
+      )
+    })
+  h.label([a.class("block")], [
+    h.text(label),
+    h.select([a.class(field), a.name("time"), a.required(True)], [
+      h.option([a.value(""), a.selected(selected == "")], "Choose a time"),
+      ..times
+    ]),
+  ])
+}
+
 fn time_select(
   label: String,
   name: String,
   value: Int,
   change: fn(Int) -> Msg,
+  label_time: fn(Int) -> String,
 ) {
   h.label([a.class("block")], [
     h.text(label),
@@ -536,7 +615,7 @@ fn time_select(
       list.index_map(list.repeat(Nil, 97), fn(_, index) {
         h.option(
           [a.value(int.to_string(index * 15)), a.selected(index * 15 == value)],
-          time_label(index * 15),
+          label_time(index * 15),
         )
       }),
     ),
@@ -549,11 +628,38 @@ fn schedule(
   blocks: List(model.Block),
   removed: List(model.Block),
 ) {
+  let zone =
+    field_value(form_fields(model, "weekly-time-zone"), "zone", eastern_zone)
   h.div([a.class("space-y-4")], [
     heading(tutor.name <> " · Weekly schedule"),
     h.p([], [
-      h.text("All times Eastern. Each block must allow at least one hour."),
+      h.text(
+        "Weekly hours repeat on the Eastern calendar. Each block must allow at least one hour.",
+      ),
     ]),
+    h.label([a.class("block")], [
+      h.text("Display and edit times in"),
+      h.select(
+        [
+          a.class(field),
+          e.on_input(fn(value) {
+            model.UserEditedForm("weekly-time-zone", [#("zone", value)])
+          }),
+        ],
+        zone_options(zone),
+      ),
+    ]),
+    case zone == eastern_zone {
+      True -> element.none()
+      False ->
+        h.p([a.class("text-sm text-slate-600")], [
+          h.text(
+            "Showing local times for the Eastern week of "
+            <> browser.reference_week()
+            <> ". The local day or time can shift when clocks change.",
+          ),
+        ])
+    },
     form("weekly-hours", "save", tutor.id, [
       h.div([a.class("flex flex-wrap items-end justify-between gap-3")], [
         h.label([a.class("block")], [
@@ -594,7 +700,12 @@ fn schedule(
           ],
           fn(day, index) {
             h.fieldset([a.class(panel)], [
-              h.legend([], [h.text(day)]),
+              h.legend([], [
+                h.text(case zone == eastern_zone {
+                  True -> day
+                  False -> day <> " (Eastern)"
+                }),
+              ]),
               keyed.div(
                 [],
                 blocks
@@ -615,12 +726,20 @@ fn schedule(
                             "start-" <> int.to_string(index),
                             block.start,
                             model.UserChangedBlockStart(block.id, _),
+                            case zone == eastern_zone {
+                              True -> time_label
+                              False -> browser.weekly_time_label(zone, index, _)
+                            },
                           ),
                           time_select(
                             "To",
                             "end-" <> int.to_string(index),
                             block.end,
                             model.UserChangedBlockEnd(block.id, _),
+                            case zone == eastern_zone {
+                              True -> time_label
+                              False -> browser.weekly_time_label(zone, index, _)
+                            },
                           ),
                           h.button(
                             [
@@ -694,8 +813,9 @@ fn session_view(model: Model, name: String, session: Session) {
         ],
         "",
       ),
-      input(fields, "Date (Eastern)", "date", session.date, "date"),
-      input(fields, "Time (Eastern)", "time", session.time, "time"),
+      booking_zone_select(fields),
+      input(fields, "Date", "date", session.date, "date"),
+      session_time_select(fields, "Time", session.time),
       submit("Save session"),
       form_error(model, "session-" <> session.id),
     ]),
@@ -734,6 +854,10 @@ fn form_error(model: Model, form_id: String) {
 
 fn booking_view(model: Model, booking: Booking) {
   let fields = form_fields(model, "booking-" <> booking.id)
+  let #(email, phone) = case booking.contact_details {
+    model.ContactRecorded(email, phone) -> #(email, phone)
+    model.ContactNotRecorded -> #("", "")
+  }
 
   h.details([a.class(panel)], [
     h.summary(
@@ -766,8 +890,13 @@ fn booking_view(model: Model, booking: Booking) {
           ],
           [
             h.text(
-              "Paid "
-              <> format_money(report.amount_paid(booking))
+              case booking.payment_status {
+                model.PendingPayment ->
+                  "Awaiting payment · Due "
+                  <> format_money(report.order_total(booking))
+                model.PaymentComplete ->
+                  "Paid " <> format_money(report.amount_paid(booking))
+              }
               <> " · Discount "
               <> format_money(booking.discount),
             ),
@@ -776,6 +905,36 @@ fn booking_view(model: Model, booking: Booking) {
       ],
     ),
     h.div([a.class("mt-4 space-y-3 border-t border-slate-200 pt-4")], [
+      case booking.contact_details {
+        model.ContactNotRecorded ->
+          h.p([a.class("text-sm text-slate-600")], [
+            h.text("Email and phone not recorded."),
+          ])
+        model.ContactRecorded(email, phone) ->
+          h.p([a.class("break-words text-sm text-slate-700")], [
+            h.text(email <> " · " <> phone),
+          ])
+      },
+      case booking.payment_status {
+        model.PendingPayment ->
+          h.details(
+            [a.class("rounded-lg border border-amber-200 bg-amber-50 p-3")],
+            [
+              h.summary([a.class("font-semibold")], [h.text("Mark as paid")]),
+              form("payment-" <> booking.id, "mark-booking-paid", "", [
+                hidden("booking", booking.id),
+                h.p([], [
+                  h.text(
+                    "Confirm that you received the payment outside this site.",
+                  ),
+                ]),
+                submit("Confirm payment received"),
+                form_error(model, "payment-" <> booking.id),
+              ]),
+            ],
+          )
+        model.PaymentComplete -> element.none()
+      },
       h.h3([a.class("font-semibold")], [h.text("Sessions")]),
       keyed.div(
         [a.class("space-y-2")],
@@ -787,7 +946,23 @@ fn booking_view(model: Model, booking: Booking) {
         h.summary([], [h.text("Edit order details")]),
         form("booking-" <> booking.id, "edit-booking", "", [
           hidden("booking", booking.id),
-          input(fields, "Family contact", "label", booking.name, "text"),
+          input(fields, "Family contact name", "label", booking.name, "text"),
+          form_input(
+            fields,
+            "Email",
+            "contact-email",
+            email,
+            "email",
+            email != "",
+          ),
+          form_input(
+            fields,
+            "Phone",
+            "contact-phone",
+            phone,
+            "tel",
+            phone != "",
+          ),
           input(
             fields,
             "Subtotal in cents",
@@ -803,6 +978,7 @@ fn booking_view(model: Model, booking: Booking) {
             "number",
           ),
           submit("Save booking"),
+          form_error(model, "booking-" <> booking.id),
         ]),
       ]),
       h.details([], [
@@ -823,7 +999,14 @@ fn manual_booking(model: Model) {
   h.details([a.class(panel)], [
     h.summary([], [h.text("Add manual booking")]),
     form("manual", "create-booking", "", [
-      input(fields, "Family contact", "label", "", "text"),
+      h.p([], [
+        h.text(
+          "This reserves the tutor’s time and creates an order awaiting payment. Send the invoice separately.",
+        ),
+      ]),
+      input(fields, "Family contact name", "label", "", "text"),
+      input(fields, "Email", "contact-email", "", "email"),
+      input(fields, "Phone", "contact-phone", "", "tel"),
       select(
         fields,
         "Tutor",
@@ -833,11 +1016,13 @@ fn manual_booking(model: Model) {
           |> list.map(fn(t) { #(t.id, t.name) }),
         "",
       ),
-      input(fields, "Date (Eastern)", "date", "", "date"),
-      input(fields, "Start (Eastern)", "time", "", "time"),
+      booking_zone_select(fields),
+      input(fields, "Date", "date", "", "date"),
+      session_time_select(fields, "Start time", ""),
       input(fields, "Subtotal in cents", "subtotal", "", "number"),
       input(fields, "Discount in cents", "discount", "0", "number"),
-      submit("Create one-hour booking"),
+      submit("Create pending booking"),
+      form_error(model, "manual"),
     ]),
   ])
 }
@@ -845,8 +1030,12 @@ fn manual_booking(model: Model) {
 fn reports(model: Model) {
   let bookings =
     report.in_period(model.data.bookings, model.report_from, model.report_to)
-  let recorded =
+  let completed =
     list.filter(bookings, fn(booking) {
+      booking.payment_status == model.PaymentComplete
+    })
+  let recorded =
+    list.filter(completed, fn(booking) {
       report.amount_paid(booking) != model.Unrecorded
     })
   h.div([a.class(panel <> " space-y-4")], [
@@ -890,8 +1079,8 @@ fn reports(model: Model) {
       metric("Bookings", int.to_string(list.length(bookings))),
     ]),
     empty_state(
-      list.length(bookings) != list.length(recorded),
-      int.to_string(list.length(bookings) - list.length(recorded))
+      list.length(completed) != list.length(recorded),
+      int.to_string(list.length(completed) - list.length(recorded))
         <> " without payment details",
     ),
     h.div([a.class("grid items-start gap-4 md:grid-cols-2")], [

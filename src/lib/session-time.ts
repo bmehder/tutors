@@ -71,12 +71,12 @@ export function sessionInterval(session: {
 	date: string
 	start: number
 	duration: number
-}):
+}, timeZone = TUTOR_ZONE):
 	| { kind: 'resolved'; start: number; end: number }
 	| Exclude<TimeResult, { kind: 'resolved' }> {
 	if (!Number.isInteger(session.duration) || session.duration <= 0)
 		return { kind: 'invalidDate' }
-	const result = easternInstant(session.date, session.start)
+	const result = localInstant(session.date, session.start, timeZone)
 	return result.kind === 'resolved'
 		? {
 				kind: 'resolved',

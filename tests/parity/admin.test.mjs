@@ -58,7 +58,7 @@ test('schedule selection loads the chosen tutor, unknown selections do nothing',
   assert.deepEqual(opened.screen.blocks, tutor.blocks)
 })
 
-const booking = (id, date, subtotal, discount) => model.Booking$Booking(id, 'Test family', date, 5, subtotal, discount, empty)
+const booking = (id, date, subtotal, discount) => model.Booking$Booking(id, 'Test family', date, 5, subtotal, discount, empty, model.PaymentStatus$PaymentComplete(), model.ContactDetails$ContactNotRecorded())
 const recorded = model.Money$Recorded
 const unknown = model.Money$Unrecorded
 const bookings = toList([
@@ -112,4 +112,11 @@ test('failed saves retain form drafts; successful saves clear only the submitted
   assert.deepEqual(failed.form_drafts, saving.form_drafts)
   const saved = next(saving, model.Msg$ServerSaved(data))
   assert.deepEqual(toArray(saved.form_drafts).map(([id]) => id), ['tutor-b'])
+})
+
+
+test('pending invoices are excluded from received revenue and paid discounts', () => {
+  const pending = model.Booking$Booking('pending', 'Test family', '2026-11-14', 0, recorded(10000), recorded(1000), empty, model.PaymentStatus$PendingPayment(), model.ContactDetails$ContactNotRecorded())
+  assert.equal(revenue(toList([pending])), 0)
+  assert.equal(discounts(toList([pending])), 0)
 })

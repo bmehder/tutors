@@ -1,0 +1,69 @@
+---
+import ContactPreview from "../ContactPreview.astro"
+const { tutorId, tutorName } = Astro.props
+---
+<section id="contact-tutor" aria-labelledby="contact-tutor-heading" class="scroll-mt-6 rounded-2xl border border-ink/15 bg-white p-5 md:p-7">
+  <h2 id="contact-tutor-heading" class="text-2xl font-semibold">Ask {tutorName} a question</h2>
+  <p class="mt-2 text-sm leading-6 text-ink/75">This is a demo form. Use fictional details. Our server validates the preview without sending an email or saving an inquiry.</p>
+  <form method="post" data-tutor-inquiry class="mt-5 grid gap-4">
+    <input type="hidden" name="contact-type" value="tutor-inquiry" />
+    <input type="hidden" name="tutor-id" value={tutorId} />
+    <div class="grid gap-4 sm:grid-cols-2">
+      <label class="grid gap-1 text-sm font-semibold">First name
+        <input name="first-name" class="field font-normal" autocomplete="given-name" maxlength="120" required />
+      </label>
+      <label class="grid gap-1 text-sm font-semibold">Last name
+        <input name="last-name" class="field font-normal" autocomplete="family-name" maxlength="120" required />
+      </label>
+    </div>
+    <label class="grid gap-1 text-sm font-semibold">Email address
+      <input name="email" type="email" class="field font-normal" autocomplete="email" maxlength="254" required />
+    </label>
+    <label class="grid gap-1 text-sm font-semibold">Phone number (optional)
+      <input name="phone" type="tel" class="field font-normal" autocomplete="tel" maxlength="40" />
+    </label>
+    <label class="grid gap-1 text-sm font-semibold">Your question
+      <textarea name="message" class="field font-normal" rows="4" maxlength="2000" required></textarea>
+    </label>
+    <button type="submit" class="btn w-fit" disabled>Preview inquiry</button>
+    <p role="status" class="empty:hidden rounded-lg bg-[#edf3ed] p-3 text-sm"></p>
+  </form>
+  <ContactPreview />
+</section>
+<script>
+  import { actions } from "astro:actions"
+  import { renderContactPreview } from "../../lib/contact-preview"
+  import { formatCheckoutPhone } from "../../lib/phone"
+
+  const form = document.querySelector<HTMLFormElement>('[data-tutor-inquiry]')
+  if (form) {
+    const phone = form.querySelector<HTMLInputElement>('input[type="tel"]')
+    phone?.addEventListener("input", () => {
+      const formatted = formatCheckoutPhone(phone.value)
+      if (formatted !== phone.value) phone.value = formatted
+    })
+    const button = form.querySelector('button')!
+    const status = form.querySelector('[role="status"]')!
+    const section = form.closest('section')!
+    form.addEventListener('submit', async event => {
+      event.preventDefault()
+      button.disabled = true
+      section.querySelector<HTMLDetailsElement>('[data-message-preview]')!.hidden = true
+      status.textContent = 'Preparing preview…'
+      try {
+        const result = await actions.previewContact(new FormData(form))
+        if (result.error) {
+          status.textContent = result.error.message
+          return
+        }
+        renderContactPreview(section, result.data)
+        status.textContent = 'Inquiry preview complete. No message was sent.'
+      } catch {
+        status.textContent = 'The preview could not be loaded. Please try again.'
+      } finally {
+        button.disabled = false
+      }
+    })
+    button.disabled = false
+  }
+</script>

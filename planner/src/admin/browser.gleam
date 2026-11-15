@@ -29,8 +29,17 @@ pub fn show_confirmation() -> Nil
 @external(javascript, "../admin_ffi.mjs", "focusScreen")
 pub fn focus_screen() -> Nil
 
-@external(javascript, "../admin_ffi.mjs", "formFields")
+@external(javascript, "../admin_time_ffi.mjs", "formFields")
 pub fn form_fields(event: Dynamic) -> List(#(String, String))
 
 @external(javascript, "../admin_ffi.mjs", "revealFormError")
 pub fn reveal_form_error(form_id: String) -> Nil
+
+@external(javascript, "../admin_time_ffi.mjs", "adminTimeZones")
+pub fn time_zones() -> List(#(String, String))
+
+@external(javascript, "../admin_time_ffi.mjs", "referenceWeek")
+pub fn reference_week() -> String
+
+@external(javascript, "../admin_time_ffi.mjs", "weeklyTimeLabel")
+pub fn weekly_time_label(zone: String, day: Int, minute: Int) -> String

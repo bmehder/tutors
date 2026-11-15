@@ -2,7 +2,9 @@
 import "../index.css";
 
 const siteName = "MyChristianTutors";
-const siteTitle = `${siteName} | Grow in knowledge. Grounded in faith.`;
+const { title, description = 'One-on-one online tutoring with a Biblical worldview. Find caring teachers, flexible packages, and support for students in grades 4–12.' } = Astro.props;
+const siteTitle = title ? `${title} | ${siteName}` : `${siteName} | Grow in knowledge. Grounded in faith.`;
+const canonical = new URL(Astro.url.pathname, 'https://tutors-admin-demo.vercel.app');
 ---
 <!doctype html>
 <html lang="en" prefix="og: https://ogp.me/ns#">
@@ -11,8 +13,8 @@ const siteTitle = `${siteName} | Grow in knowledge. Grounded in faith.`;
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>{siteTitle}</title>
     <meta name="robots" content="noindex" />
-    <meta name="description" content="One-on-one online tutoring with a Biblical worldview. Find caring teachers, flexible packages, and support for students in grades 4–12." />
-    <link rel="canonical" href="https://tutors-three.vercel.app/" />
+    <meta name="description" content={description} />
+    <link rel="canonical" href={canonical} />
     <meta name="theme-color" content="#143f3c" />
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
@@ -21,9 +23,9 @@ const siteTitle = `${siteName} | Grow in knowledge. Grounded in faith.`;
     <meta property="og:type" content="website" />
     <meta property="og:site_name" content={siteName} />
     <meta property="og:locale" content="en_US" />
-    <meta property="og:url" content="https://tutors-three.vercel.app/" />
+    <meta property="og:url" content={canonical.toString()} />
     <meta property="og:title" content={siteTitle} />
-    <meta property="og:description" content="One-on-one online tutoring with a Biblical worldview. Caring teachers, flexible packages, and support for grades 4–12." />
+    <meta property="og:description" content={description} />
     <meta property="og:image" content="https://tutors-three.vercel.app/images/my-christian-tutors-social.png" />
     <meta property="og:image:secure_url" content="https://tutors-three.vercel.app/images/my-christian-tutors-social.png" />
     <meta property="og:image:type" content="image/png" />
@@ -33,7 +35,7 @@ const siteTitle = `${siteName} | Grow in knowledge. Grounded in faith.`;
 
     <meta name="twitter:card" content="summary_large_image" />
     <meta name="twitter:title" content={siteTitle} />
-    <meta name="twitter:description" content="One-on-one online tutoring with a Biblical worldview. Caring teachers, flexible packages, and support for grades 4–12." />
+    <meta name="twitter:description" content={description} />
     <meta name="twitter:image" content="https://tutors-three.vercel.app/images/my-christian-tutors-social.png" />
     <meta name="twitter:image:alt" content="MyChristianTutors. Grow in knowledge. Grounded in faith." />
   </head>

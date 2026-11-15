@@ -1,0 +1,25 @@
+---
+import Icon from '../Icon.astro'
+import { tutors as originalTutors } from '../../lib/tutoring-data'
+
+interface Props {
+  tutor: { id: string; name: string; subjects: string[]; profileSlug: string }
+  featured?: boolean
+}
+
+const { tutor, featured = false } = Astro.props
+const href = `/tutors/${encodeURIComponent(tutor.profileSlug)}`
+const original = originalTutors.find(item => item.id === tutor.id)
+const Heading = featured ? "h3" : "h2"
+const initials = tutor.name.trim().split(/\s+/).slice(0, 2).map(part => part[0]).join('')
+---
+  <li class="flex min-w-0 flex-col rounded-xl bg-white p-6">
+    <div aria-hidden="true" class="relative flex h-28 items-center justify-center rounded-lg" style={{ background: original?.color ?? '#e5d8ca' }}>
+      <span class="serif text-5xl opacity-55">{initials}</span>
+      <Icon name="BookOpen" class="absolute bottom-3 right-3 opacity-25" size={22} />
+    </div>
+    <Heading class="mt-5 text-xl font-semibold"><a class="hover:underline" href={href}>{tutor.name}</a></Heading>
+    <p class="mt-2 text-xs text-ink/65">{tutor.subjects.join(' · ')}</p>
+    {original && <p class="mt-4 text-sm leading-6 text-ink/70">{original.bio}</p>}
+    <a href={href} aria-label={`View ${tutor.name}'s profile and availability`} class="mt-auto w-fit pt-5 text-xs font-bold hover:underline">See profile and availability</a>
+  </li>

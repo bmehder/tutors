@@ -434,7 +434,12 @@ fn step_view(model: Model) -> Element(Msg) {
                       ),
                       a.attribute("role", "status"),
                     ],
-                    [h.text("All student and subject hours are ready.")],
+                    [
+                      h.text(allocation_summary(
+                        total_allocated_hours(model.students),
+                        model.package_hours,
+                      )),
+                    ],
                   )
                 False -> element.none()
               },
@@ -530,6 +535,23 @@ fn step_view(model: Model) -> Element(Msg) {
 }
 
 // Student allocation
+
+fn allocation_summary(assigned: Int, package_hours: Int) -> String {
+  let remaining = package_hours - assigned
+  case remaining {
+    0 -> "All " <> text(package_hours) <> " package hours are assigned."
+    _ ->
+      text(assigned)
+      <> " of "
+      <> text(package_hours)
+      <> " package hours assigned. "
+      <> text(remaining)
+      <> case remaining {
+        1 -> " hour left to assign."
+        _ -> " hours left to assign."
+      }
+  }
+}
 
 fn student_view(
   student: Student,

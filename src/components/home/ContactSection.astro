@@ -1,4 +1,5 @@
 ---
+import ContactPreview from "../ContactPreview.astro"
 import Icon from '../Icon.astro'
 ---
 
@@ -38,8 +39,7 @@ import Icon from '../Icon.astro'
 				</div>
 			</div>
 			<p class='text-xs leading-5 text-ink/55 mt-8 border-t border-ink/10 pt-5'>
-				This is a mock form. Use sample information. Nothing entered here is sent or
-				saved.
+				Use fictional details to preview your message.
 			</p>
 		</div>
 		<div class='border border-ink/15 bg-cream rounded-xl p-6 md:p-8'>
@@ -71,24 +71,25 @@ import Icon from '../Icon.astro'
 				<Icon name='CheckCircle2' size={36} class='text-[#517253] mb-4' />
 				<h3 data-contact-heading class='text-2xl font-semibold'></h3>
 				<p class='text-sm leading-7 text-ink/70 mt-3'>
-					This was a demo only. Your information was not sent or saved.
+					This was a preview. No email was sent and no inquiry was saved.
 				</p>
+				<ContactPreview />
 				<button type='button' class='btn mt-6' data-contact-retry
 					>Try the form again</button
 				>
 			</div>
-			<form class='space-y-5' data-contact-form>
+			<form method='post' class='space-y-5' data-contact-form>
 				<div class='grid sm:grid-cols-2 gap-4'>
-					<label class='block text-xs font-semibold'
-						>Your name <span class='font-normal'>(required)</span><input
-							required
-							name='name'
-							autocomplete='name'
-							class='field mt-2'
-							placeholder='Alex Taylor'
-							maxlength={120}
-						/></label
-					>
+					<label class='block text-xs font-semibold'>
+						First name <span class='font-normal'>(required)</span>
+						<input required name='first-name' autocomplete='given-name' class='field mt-2' maxlength={120} />
+					</label>
+					<label class='block text-xs font-semibold'>
+						Last name <span class='font-normal'>(required)</span>
+						<input required name='last-name' autocomplete='family-name' class='field mt-2' maxlength={120} />
+					</label>
+				</div>
+				<div class='grid sm:grid-cols-2 gap-4'>
 					<label class='block text-xs font-semibold'
 						>Email address <span class='font-normal'>(required)</span><input
 							required
@@ -100,23 +101,23 @@ import Icon from '../Icon.astro'
 							maxlength={254}
 						/></label
 					>
+					<label class='block text-xs font-semibold'
+						>Phone number (required)<input
+							required
+							type='tel'
+							inputmode='tel'
+							autocomplete='tel-national'
+							name='phone'
+							class='field mt-2'
+							placeholder='(555) 123-4567'
+							pattern={'\\([0-9]{3}\\) [0-9]{3}-[0-9]{4}'}
+							title='Enter a 10-digit US or Canadian phone number.'
+							aria-describedby='phone-format'
+						/><span id='phone-format' class='block font-normal text-ink/60 mt-2'
+							>US / Canada · 10 digits</span
+						></label
+					>
 				</div>
-				<label class='block text-xs font-semibold'
-					>Phone number (required)<input
-						required
-						type='tel'
-						inputmode='tel'
-						autocomplete='tel-national'
-						name='phone'
-						class='field mt-2'
-						placeholder='(555) 123-4567'
-						pattern={'\\([0-9]{3}\\) [0-9]{3}-[0-9]{4}'}
-						title='Enter a 10-digit US or Canadian phone number.'
-						aria-describedby='phone-format'
-					/><span id='phone-format' class='block font-normal text-ink/60 mt-2'
-						>US / Canada · 10 digits</span
-					></label
-				>
 				<fieldset data-tutor-fields hidden disabled class='space-y-5'>
 					<div class='grid sm:grid-cols-2 gap-4'>
 						<label class='block text-xs font-semibold'
@@ -177,9 +178,10 @@ import Icon from '../Icon.astro'
 					>
 				</fieldset>
 				<p class='text-xs text-ink/60'>
-					Demo only · Nothing will be submitted or saved.
+					Preview only. Our server validates the form without sending an email or saving an inquiry.
 				</p>
-				<button type='submit' data-contact-submit class='btn w-full sm:w-auto'
+				<p role='alert' data-contact-error class='empty:hidden text-sm text-rose-800'></p>
+				<button type='submit' disabled data-contact-submit class='btn w-full sm:w-auto'
 					>Preview inquiry confirmation</button
 				>
 			</form>
@@ -187,6 +189,8 @@ import Icon from '../Icon.astro'
 	</div>
 </section>
 <script>
+	import { actions } from 'astro:actions'
+	import { renderContactPreview } from '../../lib/contact-preview'
 	import { formatPhone } from '../../lib/phone'
 	const section = document.getElementById('contact')
 	if (section) {
@@ -223,14 +227,33 @@ import Icon from '../Icon.astro'
 		phone.addEventListener('input', () => {
 			phone.value = formatPhone(phone.value)
 		})
-		form.addEventListener('submit', event => {
+		const error = form.querySelector('[data-contact-error]')!
+		submit.disabled = false
+		form.addEventListener('submit', async event => {
 			event.preventDefault()
-			section.querySelector('[data-contact-heading]')!.textContent = isTutor
-				? 'A thoughtful first step.'
-				: 'Thanks for reaching out.'
-			form.reset()
-			form.hidden = true
-			confirmation.hidden = false
+			const application = isTutor
+			const fields = new FormData(form)
+			fields.set('contact-type', application ? 'tutor' : 'family')
+			error.textContent = ''
+			submit.disabled = true
+			try {
+				const result = await actions.previewContact(fields)
+				if (result.error) {
+					error.textContent = result.error.message
+					return
+				}
+				renderContactPreview(confirmation, result.data)
+				section.querySelector('[data-contact-heading]')!.textContent = application
+					? 'A thoughtful first step.'
+					: 'Thanks for reaching out.'
+				form.reset()
+				form.hidden = true
+				confirmation.hidden = false
+			} catch {
+				error.textContent = 'The preview could not be loaded. Please try again.'
+			} finally {
+				submit.disabled = false
+			}
 		})
 		section
 			.querySelector('[data-contact-retry]')

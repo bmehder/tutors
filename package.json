@@ -2,11 +2,14 @@
   "name": "christian-tutors",
   "version": "0.1.0",
   "private": true,
+  "imports": {
+    "#booking/session-time": "./src/lib/session-time.ts"
+  },
   "engines": {
     "node": "22.x"
   },
   "scripts": {
-    "dev": "npm run build:planner && astro dev --host 127.0.0.1",
+    "dev": "npm run build:planner && astro dev --host 127.0.0.1 --port 5200",
     "build": "npm run build:planner && tsc --noEmit && astro build",
     "preview": "astro preview --host 127.0.0.1",
     "test": "node --experimental-strip-types --test tests/*.test.mjs temp-reference/typescript/tests/*.test.mjs",

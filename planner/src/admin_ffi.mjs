@@ -44,6 +44,12 @@ export function decodeData(data) {
 							),
 						),
 					),
+					booking.paymentPending
+						? model.PaymentStatus$PendingPayment()
+						: model.PaymentStatus$PaymentComplete(),
+					booking.contactEmail && booking.contactPhone
+						? model.ContactDetails$ContactRecorded(booking.contactEmail, booking.contactPhone)
+						: model.ContactDetails$ContactNotRecorded(),
 				),
 			),
 		),
@@ -123,14 +129,6 @@ export function focusScreen() {
 		document.querySelector('#tutoring-admin main h2')?.focus({ preventScroll: true })
 		window.scrollTo({ top: 0, behavior: 'instant' })
 	})
-}
-
-export function formFields(event) {
-	return toList(
-		Array.from(new FormData(event.target.form).entries()).filter(
-			([, value]) => typeof value === 'string',
-		),
-	)
 }
 
 export function revealFormError(formId) {

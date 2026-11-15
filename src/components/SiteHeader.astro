@@ -15,7 +15,7 @@ const adminHref = import.meta.env.DEV
 </p>
 <div class='bg-ink text-white text-center px-4 py-2.5 text-xs tracking-wide'>
 				A little encouragement goes a long way.
-				<a href='#offer' class='font-bold underline underline-offset-4 ml-1'>
+				<a href='/#offer' class='font-bold underline underline-offset-4 ml-1'>
 					Get 20% off your first package
 				</a>
 			</div>
@@ -38,13 +38,13 @@ const adminHref = import.meta.env.DEV
 					</div>
 				</a>
 				<nav class='hidden lg:flex items-center gap-8 text-sm'>
-					<a href='#how'>How it works</a>
-					<a href='#tutors'>Our tutors</a>
-					<a href='#booking'>Book tutoring</a>
-					<a href='#contact'>Contact</a>
+					<a href='/#how'>How it works</a>
+					<a href='/tutors'>Our tutors</a>
+					<a href='/#booking'>Book tutoring</a>
+					<a href='/#contact'>Contact</a>
 					<a href={adminHref}>Admin</a>
 				</nav>
-				<a class='btn !py-3 hidden lg:inline-flex' href='#booking'>
+				<a class='btn !py-3 hidden lg:inline-flex' href='/#booking'>
 					Find your tutor
 				</a>
 				<button
@@ -64,12 +64,12 @@ const adminHref = import.meta.env.DEV
 						class='absolute top-full inset-x-4 z-40 bg-white border border-ink/15 rounded-xl shadow-lg p-3 lg:hidden'
 					>
 						{[
-							['#how', 'How it works'],
-							['#tutors', 'Our tutors'],
-							['#booking', 'Book tutoring'],
-							['#contact', 'Contact'],
+							['/#how', 'How it works'],
+							['/tutors', 'Our tutors'],
+							['/#booking', 'Book tutoring'],
+							['/#contact', 'Contact'],
 							[adminHref, 'Admin'],
-							['#offer', 'Get 20% off'],
+							['/#offer', 'Get 20% off'],
 						].map(([href, label]) => (
 							<a
 								href={href}

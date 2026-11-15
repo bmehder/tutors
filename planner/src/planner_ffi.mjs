@@ -345,6 +345,10 @@ export function print() {
 }
 
 export function listenForTutorCardClicks(dispatch, message) {
+	const preferred = new URLSearchParams(location.search).get('tutor')
+	if (preferred && toArray(catalog).some(tutor => Tutor$Tutor$id(tutor) === preferred)) {
+		dispatch(message(preferred))
+	}
 	document.querySelectorAll('[data-preferred-tutor]').forEach(link => {
 		link.addEventListener('click', () =>
 			dispatch(message(link.dataset.preferredTutor)),
