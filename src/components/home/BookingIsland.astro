@@ -17,10 +17,7 @@ import './booking.css'
   loadTutorHours().then(async () => {
     const requested = import.meta.env.PUBLIC_TIMETRAVEL_DEMO
       && new URLSearchParams(location.search).get('timetravel') === '1';
-    const tester = requested && await fetch('/admin?timetravel-access=1')
-      .then(response => response.status === 204)
-      .catch(() => false);
-    if (import.meta.env.DEV || tester) {
+    if (import.meta.env.DEV || requested) {
       const debug = await import('../../../planner/build/dev/javascript/christian_tutors_planner/tutors_debug.mjs');
       debug.start_planner();
     } else {

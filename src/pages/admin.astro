@@ -26,12 +26,6 @@ const [expiry, signature] = (Astro.cookies.get(cookie)?.value ?? '').split('.')
 const signedIn =
 	!!signature && Number(expiry) > Date.now() && equal(signature, sign(expiry))
 const timeTravelDemo = demo && import.meta.env.PUBLIC_TIMETRAVEL_DEMO
-if (Astro.request.method === 'GET' && Astro.url.searchParams.has('timetravel-access')) {
-	return new Response(null, {
-		status: timeTravelDemo && signedIn ? 204 : 403,
-		headers: { 'Cache-Control': 'no-store' },
-	})
-}
 const days = [
 	'Monday',
 	'Tuesday',

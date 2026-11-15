@@ -7,6 +7,11 @@ const adminHref = import.meta.env.DEV
 ---
 <p class='bg-cream px-4 py-1.5 text-center text-xs font-semibold text-ink'>
   {import.meta.env.PUBLIC_BUILD_LABEL}
+  {import.meta.env.PUBLIC_TIMETRAVEL_DEMO && (
+    <a class='ml-2 underline underline-offset-2' href='/?timetravel=1#booking'>
+      Debug planner
+    </a>
+  )}
 </p>
 <div class='bg-ink text-white text-center px-4 py-2.5 text-xs tracking-wide'>
 				A little encouragement goes a long way.
