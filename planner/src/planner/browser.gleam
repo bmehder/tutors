@@ -43,6 +43,7 @@ pub fn session_date(session: Session, time_zone: TimeZone) -> String
 @external(javascript, "../planner_ffi.mjs", "afterPayment")
 pub fn after_payment(
   order: Order,
+  time_zone: TimeZone,
   dispatch: fn(Msg) -> Nil,
   success: Msg,
   failed: fn(ErrorMessage) -> Msg,
@@ -89,3 +90,6 @@ pub fn instant_label(instant: Int, time_zone: TimeZone) -> String
 
 @external(javascript, "../planner_ffi.mjs", "watchTutorHours")
 pub fn watch_tutor_hours(notify: fn() -> Nil) -> Nil
+
+@external(javascript, "../planner_ffi.mjs", "stripeSandboxEnabled")
+pub fn stripe_sandbox_enabled() -> Bool

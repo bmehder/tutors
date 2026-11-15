@@ -1,0 +1,67 @@
+---
+import SiteLayout from '../../layouts/SiteLayout.astro'
+import { confirmSandboxCheckout, sandboxBookingDetails, stripe } from '../../server/stripe-sandbox'
+
+import { tutors, money } from '../../lib/tutoring-data'
+import { viewSession } from '../../lib/session-time'
+
+export const prerender = false
+Astro.response.headers.set('Cache-Control', 'no-store')
+Astro.response.headers.set('Referrer-Policy', 'no-referrer')
+const sessionId = Astro.url.searchParams.get('session_id') ?? ''
+const cancelled = Astro.url.searchParams.get('cancelled') === '1'
+let booking: string | null = null
+let sessions: Awaited<ReturnType<typeof sandboxBookingDetails>> = []
+if (stripe && /^cs_test_[A-Za-z0-9]+$/.test(sessionId)) {
+  try {
+    booking = await confirmSandboxCheckout(await stripe.checkout.sessions.retrieve(sessionId))
+    if (booking) sessions = await sandboxBookingDetails(booking)
+  } catch {
+    Astro.response.status = 503
+  }
+}
+const summary = sessions[0]
+const zone = summary?.display_time_zone ?? 'America/New_York'
+---
+<SiteLayout title="Stripe sandbox checkout">
+  <main class="mx-auto max-w-3xl px-6 py-16 print:max-w-none print:p-0">
+    <p class="eyebrow mb-4">Stripe sandbox</p>
+    <h1 class="text-4xl font-semibold">{booking ? 'Booking confirmed' : cancelled ? 'Checkout canceled' : 'Booking confirmation unavailable'}</h1>
+    <p class="mt-5 leading-7">
+      {booking
+        ? `Your sessions are booked. Reference: ${booking.slice(0, 8).toUpperCase()}. No real money was charged.`
+        : cancelled
+          ? 'No payment was recorded. Your selected times will be released when the checkout hold expires.'
+          : 'We could not verify a paid booking on this page. If you completed checkout, refresh before trying to book again.'}
+    </p>
+    {summary && (
+      <section class="mt-8" aria-labelledby="booked-sessions">
+        <h2 id="booked-sessions" class="text-2xl font-semibold">Your booked sessions</h2>
+        <p class="mt-2">
+          {summary.label && <>{summary.label} · </>}
+          {summary.package_hours}-hour package · {sessions.length} {sessions.length === 1 ? 'session' : 'sessions'}
+        </p>
+        <ul class="mt-4 divide-y divide-current/15 border-y border-current/15">
+          {sessions.map(session => (
+            <li class="break-inside-avoid py-3">
+              <p class="font-bold">{[session.student_name, session.subject].filter(Boolean).join(' · ') || 'Tutoring session'}</p>
+              <p>{session.tutor_name ?? tutors.find(tutor => tutor.id === session.tutor_id)?.name ?? 'Tutor'}</p>
+              <p>{viewSession(session.starts_at.getTime(), zone)}</p>
+            </li>
+          ))}
+        </ul>
+        <p class="mt-4 font-bold">Sandbox payment total {money((summary.subtotal_cents - summary.discount_cents) / 100)}</p>
+      </section>
+    )}
+    {booking && !summary && <p class="mt-4">Session details are temporarily unavailable. Refresh to try again.</p>}
+    <div class="mt-6 flex flex-wrap gap-3 print:hidden">
+      {summary && <button type="button" class="btn" data-print-booking>Print details</button>}
+      {booking && <a class="btn" href="/#contact">Contact support</a>}
+      <a class="btn" href="/#booking">Back to tutoring</a>
+    </div>
+  </main>
+</SiteLayout>
+
+<script>
+  document.querySelector('[data-print-booking]')?.addEventListener('click', () => window.print())
+</script>

@@ -6,6 +6,8 @@ import {
 	TutorAvailability$DailyAvailability$start_minutes,
 	TutorAvailability$isDailyAvailability,
 	Order$Order$sessions,
+	Order$Order$students,
+	Student$Student$name,
 	Order$Order$contact,
 	ContactInfo$ContactInfo$name,
 	Order$Order$package_hours,
@@ -302,12 +304,19 @@ export function billingMonth() {
 
 // Keep browser effects here, including mock checkout, scrolling, printing,
 // Astro tutor-card events, and payment input masks.
-export function afterPayment(order, dispatch, success, failed) {
+export const stripeSandboxEnabled = () =>
+	document.getElementById('family-planner')?.dataset.stripeSandbox === '1'
+
+export function afterPayment(order, timeZone, dispatch, success, failed) {
+	const studentNames = new Map(toArray(Order$Order$students(order)).map(student =>
+		[Student$Student$id(student), Student$Student$name(student)],
+	))
 	const sessions = toArray(Order$Order$sessions(order)).map(confirmed => {
 		const session = ConfirmedSession$ConfirmedSession$session(confirmed)
 		return {
 			tutorId: Session$Session$tutor_id(session),
 			studentId: Session$Session$student_id(session),
+			studentName: studentNames.get(Session$Session$student_id(session)),
 			subject: Session$Session$subject(session),
 			date: Session$Session$date(session),
 			start: Session$Session$start(session),
@@ -321,11 +330,17 @@ export function afterPayment(order, dispatch, success, failed) {
 		})
 		const result = await response.json()
 		if (!response.ok) throw new Error(result.error)
-		return result.id
+		return result
 	}
-	reserve({ sessions, familyName: ContactInfo$ContactInfo$name(Order$Order$contact(order)), packageHours: Order$Order$package_hours(order), demoDiscount: Option$isSome(Order$Order$discount(order)) })
-		.then(id => reserve({ id }))
-		.then(() => dispatch(success))
+	reserve({ sessions, timeZone, familyName: ContactInfo$ContactInfo$name(Order$Order$contact(order)), packageHours: Order$Order$package_hours(order), demoDiscount: Option$isSome(Order$Order$discount(order)), checkout: stripeSandboxEnabled() ? 'stripe' : 'mock' })
+		.then(async result => {
+			if (result.checkoutUrl) {
+				window.location.assign(result.checkoutUrl)
+				return
+			}
+			await reserve({ id: result.id })
+			dispatch(success)
+		})
 		.catch(async error => {
 			await loadTutorHours().catch(() => {})
 			dispatch(failed(error.message || 'Could not reserve your sessions.'))

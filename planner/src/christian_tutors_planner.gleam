@@ -11,8 +11,8 @@ import planner/allocation.{
 import planner/browser.{
   add_days, after_payment, all_tutors, billing_month, booking_calendar,
   browser_time_zone, install_input_masks, listen_for_tutor_card_clicks, now,
-  print_page, random_uuid, scroll, session_date, tomorrow, valid_date,
-  watch_tutor_hours,
+  print_page, random_uuid, scroll, session_date, stripe_sandbox_enabled,
+  tomorrow, valid_date, watch_tutor_hours,
 }
 import planner/checkout
 import planner/model.{
@@ -367,6 +367,12 @@ pub fn update(model: Model, msg: Msg) -> #(Model, effect.Effect(Msg)) {
         _ -> #(model, effect.none())
       }
 
+    model.UserClickedStripeCheckout ->
+      case model.step, stripe_sandbox_enabled() {
+        PayForOrder(order, NotProcessing), True -> start_payment(model, order)
+        _, _ -> #(model, effect.none())
+      }
+
     model.UserSubmittedPayment(payment_details) ->
       submit_payment(model, payment_details)
 
@@ -689,22 +695,27 @@ fn submit_payment(model: Model, details: DemoPaymentDetails) {
     PayForOrder(order, NotProcessing) -> {
       let #(year, month) = billing_month()
       case checkout.payment_issue(details, year, month) {
-        "" -> #(
-          Model(..model, step: PayForOrder(order, Processing), error: None),
-          effect.from(fn(dispatch) {
-            after_payment(
-              order,
-              dispatch,
-              model.DemoPaymentFinished(order),
-              model.DemoReservationFailed,
-            )
-          }),
-        )
+        "" -> start_payment(model, order)
         issue -> failure(model, issue)
       }
     }
     _ -> #(model, effect.none())
   }
+}
+
+fn start_payment(model: Model, order: Order) {
+  #(
+    Model(..model, step: PayForOrder(order, Processing), error: None),
+    effect.from(fn(dispatch) {
+      after_payment(
+        order,
+        model.time_zone,
+        dispatch,
+        model.DemoPaymentFinished(order),
+        model.DemoReservationFailed,
+      )
+    }),
+  )
 }
 
 fn finish_payment(model: Model, order: Order) {

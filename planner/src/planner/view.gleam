@@ -15,7 +15,8 @@ import planner/allocation.{
 }
 import planner/browser.{
   all_tutors, booking_calendar, choices, format_money, instant_label,
-  matching_zones, now, session_label, subjects, tomorrow, week_dates,
+  matching_zones, now, session_label, stripe_sandbox_enabled, subjects, tomorrow,
+  week_dates,
 }
 import planner/checkout.{
   discount_amount, hourly_rate, order_total, package_total,
@@ -31,11 +32,11 @@ import planner/model.{
   UserClickedAddSubject, UserClickedChangeTimeZone, UserClickedEditSchedule,
   UserClickedNext, UserClickedPrint, UserClickedRemoveSubject,
   UserClickedSaveSchedule, UserClickedSkipWeekInDraft,
-  UserClickedSkipWeekInReview, UserClickedStep, UserComparedDate,
-  UserEnteredStudentName, UserSearchedTimeZones, UserSelectedPackage,
-  UserSelectedSubject, UserSelectedTimeZone, UserSelectedTutor,
-  UserSelectedWeeklyTime, UserSubmittedContact, UserSubmittedPayment,
-  UserToggledDemoDiscount,
+  UserClickedSkipWeekInReview, UserClickedStep, UserClickedStripeCheckout,
+  UserComparedDate, UserEnteredStudentName, UserSearchedTimeZones,
+  UserSelectedPackage, UserSelectedSubject, UserSelectedTimeZone,
+  UserSelectedTutor, UserSelectedWeeklyTime, UserSubmittedContact,
+  UserSubmittedPayment, UserToggledDemoDiscount,
 }
 import planner/scheduling
 
@@ -487,7 +488,11 @@ fn step_view(model: Model) -> Element(Msg) {
         ]),
       ])
     }
-    PayForOrder(order, state) -> payment_view(order, state)
+    PayForOrder(order, state) ->
+      case stripe_sandbox_enabled() {
+        True -> stripe_payment_view(order, state)
+        False -> payment_view(order, state)
+      }
     OrderComplete(order) -> {
       let confirmed_groups = confirmed_schedule_groups(order, model.time_zone)
       h.div([a.class("space-y-5")], [
@@ -1356,6 +1361,54 @@ fn form_field(
       a.autocomplete("off"),
       ..format
     ]),
+  ])
+}
+
+fn stripe_payment_view(order: Order, state: PaymentState) -> Element(Msg) {
+  h.div([a.class("space-y-5")], [
+    heading("Pay for your family’s package."),
+    paragraph(
+      "You’ll enter a test card on Stripe’s sandbox checkout. No real money is charged.",
+    ),
+    price_breakdown(order.package_hours, order.discount),
+    h.button(
+      [
+        a.type_("button"),
+        a.class("planner-outline"),
+        a.disabled(state == Processing),
+        e.on_click(UserToggledDemoDiscount),
+      ],
+      [
+        h.text(case order.discount {
+          None -> "Apply demo 20% discount"
+          Some(_) -> "Remove demo discount"
+        }),
+      ],
+    ),
+    h.button(
+      [
+        a.type_("button"),
+        a.class("btn w-full"),
+        a.disabled(state == Processing),
+        e.on_click(UserClickedStripeCheckout),
+      ],
+      [
+        h.text(case state {
+          Processing -> "Opening Stripe checkout…"
+          NotProcessing ->
+            "Continue to Stripe · " <> format_money(order_total(order))
+        }),
+      ],
+    ),
+    h.button(
+      [
+        a.type_("button"),
+        a.class("planner-small underline"),
+        a.disabled(state == Processing),
+        e.on_click(UserClickedStep(EnterContactInfo)),
+      ],
+      [h.text("Back to contact details")],
+    ),
   ])
 }
 

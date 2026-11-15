@@ -62,6 +62,7 @@ pub type Msg {
   UserSubmittedContact(ContactInfo)
   UserToggledDemoDiscount
   UserSubmittedPayment(DemoPaymentDetails)
+  UserClickedStripeCheckout
   DemoPaymentFinished(Order)
   DemoReservationFailed(ErrorMessage)
   TutorAvailabilityRefreshed
