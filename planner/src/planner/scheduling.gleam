@@ -6,7 +6,8 @@ import gleam/result
 import gleam/string
 import planner/model.{
   type Date, type Hours, type Session, type Student, type StudentId, type Tutor,
-  type TutorAvailability, type TutorId, type WeeklyRoutine, DailyAvailability, Session, TutorAvailability,
+  type TutorAvailability, type TutorId, type WeeklyRoutine, DailyAvailability,
+  Session, TutorAvailability,
 }
 
 pub fn tutor_hours_issue(
@@ -31,8 +32,7 @@ pub fn tutor_hours_issue(
   case list.contains(starts, start_minute) {
     False -> "This tutor is not available at this time."
     True -> {
-      let last_start =
-        list.fold(starts, start_minute, int.max)
+      let last_start = list.fold(starts, start_minute, int.max)
       // The final listed start reserves an hour. Resolve its end on the
       // Eastern calendar before comparing it to the elapsed session end.
       case resolve_end(last_start + 60) {
@@ -269,6 +269,7 @@ pub type Calendar {
     weekday: fn(Date) -> Int,
     end_instant: fn(Date, Int) -> Option(Int),
     label: fn(Session) -> String,
+    reserved: fn(TutorId, Int, Int, Int) -> Option(Bool),
   )
 }
 
@@ -347,9 +348,10 @@ fn resolved_session_issue(
             )
           {
             "" ->
-              case sold_out(session) {
-                True -> "This time is sold out."
-                False -> ""
+              case calendar.reserved(session.tutor_id, start, end, now) {
+                Some(True) -> "This tutor is already booked at this time."
+                Some(False) -> ""
+                None -> demo_availability(session)
               }
             issue -> issue
           }
@@ -357,6 +359,13 @@ fn resolved_session_issue(
         issue -> issue
       }
     }
+  }
+}
+
+fn demo_availability(session: Session) {
+  case sold_out(session) {
+    True -> "This time is sold out."
+    False -> ""
   }
 }
 

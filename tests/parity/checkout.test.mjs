@@ -21,6 +21,7 @@ import {
 import {
   SessionTime$AmbiguousTime,
   Calendar$Calendar,
+  series_issue,
   SessionTime$InvalidTime,
   SessionTime$NonexistentTime,
   SessionTime$Resolved,
@@ -32,7 +33,7 @@ import { confirmOrder, revalidateOrder } from '../../temp-reference/typescript/b
 import { formatDate, formatTime, isSoldOut } from '../../temp-reference/typescript/family-planner-model.ts'
 import { calendarAddDays, calendarWeekday, easternInstant, sessionInterval } from '../../src/lib/session-time.ts'
 
-const calendar = Calendar$Calendar(
+const makeCalendar = (reserved = () => Option$None()) => Calendar$Calendar(
   session => {
     const interval = sessionInterval({ date: Session$Session$date(session), start: Session$Session$start(session), duration: Session$Session$duration(session) })
     if (interval.kind === 'resolved') return SessionTime$Resolved(interval.start, interval.end)
@@ -46,7 +47,9 @@ const calendar = Calendar$Calendar(
     return end.kind === 'resolved' ? Option$Some(end.instant) : Option$None()
   },
   session => `${formatDate(Session$Session$date(session))} at ${formatTime(Session$Session$start(session))}`,
+  reserved,
 )
+const calendar = makeCalendar()
 
 test('Gleam checkout matches TypeScript for skipped weeks, validation, and expiry', () => {
   let first = '2030-01-07'
@@ -113,4 +116,20 @@ test('demo discount reduces the order total and can be removed', () => {
   assert.equal(order_total(order(Option$Some(demo_discount(10)))), 600)
   assert.equal(discount_amount(10, Option$Some(Discount$Discount(-10))), 0)
   assert.equal(order_total(order(Option$Some(Discount$Discount(800)))), 0)
+})
+
+test('a live reservation in a later week blocks the whole routine', () => {
+  const tutor = Tutor$Tutor('tutor', 'Tutor', toList(['Biology']),
+    TutorAvailability$TutorAvailability(toList([0]), toList([900])))
+  const firstDate = '2030-01-07'
+  const secondDate = calendarAddDays(firstDate, 7)
+  const sessions = toList([firstDate, secondDate].map(date =>
+    Session$Session('biology', 'student', 'tutor', 'Biology', date, 900, 60)))
+  const secondStart = easternInstant(secondDate, 900).instant
+  const now = easternInstant(calendarAddDays(firstDate, -7), 900).instant
+  assert.match(series_issue(sessions, tutor, toList([]), now,
+    makeCalendar((tutorId, start) => Option$Some(tutorId === 'tutor' && start === secondStart))),
+    /already booked/)
+  assert.equal(series_issue(sessions, tutor, toList([]), now,
+    makeCalendar(() => Option$Some(false))), '')
 })

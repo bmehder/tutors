@@ -75,10 +75,25 @@ let catalog = toList(
 	),
 )
 
-export async function loadTutorHours() {
-	const response = await fetch('/api/tutor-hours')
+let reservations = null
+let availabilitySignature
+
+let loadingAvailability
+export function loadTutorHours() {
+	loadingAvailability ??= fetchTutorHours().finally(() => { loadingAvailability = undefined })
+	return loadingAvailability
+}
+
+async function fetchTutorHours() {
+	const response = await fetch('/api/tutor-hours?includeReservations=1', {
+		signal: AbortSignal.timeout(8000),
+	})
 	if (!response.ok) throw new Error('Tutor schedules could not be loaded.')
-	const tutors = await response.json()
+	const { tutors, reservations: slots } = await response.json()
+	const signature = JSON.stringify([tutors, slots])
+	if (signature === availabilitySignature) return false
+	const byTutor = slots === null ? null : Map.groupBy(slots, slot => slot.tutorId)
+
 	catalog = toList(tutors.map(tutor => Tutor$Tutor(
 		tutor.id,
 		tutor.name,
@@ -88,6 +103,26 @@ export async function loadTutorHours() {
 			toList([...new Set(tutor.startsByDay.flat())].sort((a, b) => a - b)),
 		),
 	)))
+	reservations = byTutor
+	availabilitySignature = signature
+	return true
+}
+
+export function watchTutorHours(notify) {
+	let refreshing = false
+	async function refresh() {
+		if (refreshing || document.hidden) return
+		refreshing = true
+		try {
+			if (await loadTutorHours()) notify()
+		} catch {
+			// Keep the last snapshot when offline. Checkout still checks the database.
+		} finally {
+			refreshing = false
+		}
+	}
+	document.addEventListener('visibilitychange', refresh)
+	window.setInterval(refresh, 15000)
 }
 
 const booked = schedules =>
@@ -134,6 +169,11 @@ const calendar = Calendar$Calendar(
 	endInstant,
 	session =>
 		`${formatDate(Session$Session$date(session))} at ${formatTime(Session$Session$start(session))}`,
+	(tutorId, start, end, now) => reservations === null
+		? Option$None()
+		: Option$Some((reservations.get(tutorId) ?? []).some(slot =>
+			(slot.holdUntil === null || slot.holdUntil > now) && start < slot.end && slot.start < end,
+		)),
 )
 
 // Keep browser time-zone detection, supported-zone search, and local calendar dates here.
@@ -284,7 +324,10 @@ export function afterPayment(order, dispatch, success, failed) {
 	reserve({ sessions, familyName: ContactInfo$ContactInfo$name(Order$Order$contact(order)), packageHours: Order$Order$package_hours(order), demoDiscount: Option$isSome(Order$Order$discount(order)) })
 		.then(id => reserve({ id }))
 		.then(() => dispatch(success))
-		.catch(error => dispatch(failed(error.message || 'Could not reserve your sessions.')))
+		.catch(async error => {
+			await loadTutorHours().catch(() => {})
+			dispatch(failed(error.message || 'Could not reserve your sessions.'))
+		})
 }
 
 export function scroll() {

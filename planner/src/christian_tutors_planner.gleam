@@ -12,6 +12,7 @@ import planner/browser.{
   add_days, after_payment, all_tutors, billing_month, booking_calendar,
   browser_time_zone, install_input_masks, listen_for_tutor_card_clicks, now,
   print_page, random_uuid, scroll, session_date, tomorrow, valid_date,
+  watch_tutor_hours,
 }
 import planner/checkout
 import planner/model.{
@@ -34,6 +35,9 @@ pub fn main() {
     fn(message) { lustre.send(runtime, lustre.dispatch(message)) },
     model.UserClickedTutorAvailability,
   )
+  watch_tutor_hours(fn() {
+    lustre.send(runtime, lustre.dispatch(model.TutorAvailabilityRefreshed))
+  })
   install_input_masks()
 }
 
@@ -51,6 +55,7 @@ fn init(_) {
       error: None,
       notice: None,
       contact: None,
+      availability_revision: 0,
     ),
     effect.none(),
   )
@@ -365,6 +370,11 @@ fn update(model: Model, msg: Msg) -> #(Model, effect.Effect(Msg)) {
 
     model.UserSubmittedPayment(payment_details) ->
       submit_payment(model, payment_details)
+
+    model.TutorAvailabilityRefreshed -> #(
+      Model(..model, availability_revision: model.availability_revision + 1),
+      effect.none(),
+    )
 
     model.DemoPaymentFinished(order) -> finish_payment(model, order)
 

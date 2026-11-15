@@ -15,6 +15,7 @@ pub type Model {
     error: Option(ErrorMessage),
     notice: Option(BookingNotice),
     contact: Option(ContactInfo),
+    availability_revision: Int,
   )
 }
 
@@ -63,6 +64,7 @@ pub type Msg {
   UserSubmittedPayment(DemoPaymentDetails)
   DemoPaymentFinished(Order)
   DemoReservationFailed(ErrorMessage)
+  TutorAvailabilityRefreshed
   UserClickedPrint
 }
 

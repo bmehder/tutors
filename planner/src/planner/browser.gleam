@@ -1,8 +1,8 @@
 import gleam/option.{type Option}
 import planner/model.{
-  type Date, type ErrorMessage, type Msg, type Order, type Session, type Student, type SubjectAllocation,
-  type TimeChoice, type TimeZone, type TimeZoneQuery, type Tutor,
-  type WeeklyRoutine,
+  type Date, type ErrorMessage, type Msg, type Order, type Session, type Student,
+  type SubjectAllocation, type TimeChoice, type TimeZone, type TimeZoneQuery,
+  type Tutor, type WeeklyRoutine,
 }
 import planner/scheduling.{type Calendar}
 
@@ -86,3 +86,6 @@ pub fn format_money(amount: Int) -> String
 
 @external(javascript, "../planner_ffi.mjs", "instantLabel")
 pub fn instant_label(instant: Int, time_zone: TimeZone) -> String
+
+@external(javascript, "../planner_ffi.mjs", "watchTutorHours")
+pub fn watch_tutor_hours(notify: fn() -> Nil) -> Nil
