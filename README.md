@@ -1,6 +1,6 @@
 # MyChristianTutors
 
-Static Astro site styled with Tailwind CSS. The booking flow runs as a Gleam/Lustre island.
+Astro site styled with Tailwind CSS. The family booking flow and admin dashboard run as separate Gleam/Lustre islands. Server routes handle authentication and database operations.
 
 ## Run locally
 
@@ -20,7 +20,7 @@ npm run build
 npm run preview
 ```
 
-The production website is generated in `dist/` and can be hosted on any static web host.
+The build uses the Vercel adapter: public pages are static, while authenticated administration and reservation routes run on the server.
 
 ## Family planner demo
 
@@ -43,3 +43,20 @@ Run the TypeScript tests with `npm test` and the Gleam parity tests with `npm ru
 [The reference folder](temp-reference/) contains the design notes, the Elm domain lab, and the earlier TypeScript booking rules. The TypeScript rules still run in the test suite and serve as a parity reference for Gleam.
 
 Run the Elm scenarios with `node temp-reference/domain-lab/run.mjs`.
+
+## Admin application
+
+`/admin` uses the existing server-side sign-in and database. Navigation, schedule drafts, removal/undo, and report calculations now live in Lustre; switching screens and saving do not refresh the page.
+
+Start reading here:
+
+- `planner/src/admin/model.gleam`: loaded records, screen states, and messages.
+- `planner/src/christian_tutors_admin.gleam`: application initialization and update.
+- `planner/src/admin/view.gleam`: Tailwind UI and derived display values.
+- `planner/src/admin/reports.gleam`: inclusive date filters and payment totals. Unknown payments are distinct from zero.
+- `planner/src/admin/browser.gleam` and `planner/src/admin_ffi.mjs`: HTTP, JSON conversion, and browser confirmations/animation.
+- `src/pages/admin.astro`: authenticated HTML shell and JSON/form endpoint; `src/server/admin-bookings.ts` retains authoritative booking checks and writes.
+
+The local admin still uses the existing `BOOKING_DEV_ADMIN_EMAIL` and `BOOKING_DEV_ADMIN_PASSWORD`. Public demo mode remains explicitly enabled by its existing environment settings. The migration adds no credentials or database schema changes.
+
+Admin model tests run with `npm run test:parity`, alongside the family planner parity tests.
