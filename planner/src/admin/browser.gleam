@@ -31,3 +31,6 @@ pub fn focus_screen() -> Nil
 
 @external(javascript, "../admin_ffi.mjs", "formFields")
 pub fn form_fields(event: Dynamic) -> List(#(String, String))
+
+@external(javascript, "../admin_ffi.mjs", "revealFormError")
+pub fn reveal_form_error(form_id: String) -> Nil

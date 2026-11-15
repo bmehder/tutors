@@ -1,4 +1,5 @@
 import type { APIRoute } from 'astro'
+import { subjectCatalog } from '../../server/subjects'
 import { pool, tutorHours } from '../../server/tutor-hours'
 
 export const prerender = false
@@ -8,7 +9,7 @@ export const GET: APIRoute = async ({ url }) => {
     if (url.searchParams.get('includeReservations') !== '1') {
       return Response.json(await tutorHours(), { headers })
     }
-    const [tutors, reservations] = await Promise.all([
+    const [tutors, reservations, subjects] = await Promise.all([
       tutorHours(),
       pool?.query<{ tutorId: string; start: number; end: number; holdUntil: number | null }>(`
         SELECT s.tutor_id AS "tutorId",
@@ -23,8 +24,9 @@ export const GET: APIRoute = async ({ url }) => {
           AND (r.confirmed_at IS NOT NULL OR r.expires_at > now())
         ORDER BY s.tutor_id, lower(s.slot), upper(s.slot)
       `),
+      subjectCatalog(pool),
     ])
-    return Response.json({ tutors, reservations: reservations?.rows ?? null }, { headers })
+    return Response.json({ tutors, subjects: subjects.map(subject => subject.name), reservations: reservations?.rows ?? null }, { headers })
   } catch {
     return Response.json({ error: 'Tutor schedules are temporarily unavailable.' }, { status: 503, headers })
   }

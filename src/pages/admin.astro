@@ -3,7 +3,8 @@ import { createHmac, timingSafeEqual } from 'node:crypto'
 import { getSecret } from 'astro:env/server'
 import { pool, tutorHours } from '../server/tutor-hours'
 import { editBooking } from '../server/admin-bookings'
-import { SUBJECTS } from '../lib/tutoring-data'
+import { editSubject } from '../server/admin-subjects'
+import { subjectCatalog } from '../server/subjects'
 import { randomUUID } from 'node:crypto'
 import '../index.css'
 
@@ -35,7 +36,9 @@ const days = [
 	'Saturday',
 	'Sunday',
 ]
-const catalog = signedIn ? await tutorHours(true) : []
+const subjects = signedIn ? await subjectCatalog(pool) : []
+const subjectNames = subjects.map(subject => subject.name)
+const catalog = signedIn ? await tutorHours(true, pool, subjects) : []
 const selected =
 	catalog.find(t => t.id === Astro.url.searchParams.get('tutor')) ?? catalog[0]
 const times = Array.from({ length: 97 }, (_, index) => index * 15)
@@ -80,7 +83,15 @@ if (Astro.request.method === 'POST') {
 			Astro.cookies.delete(cookie, { path: '/admin' })
 			return redirect('/admin', 303)
 		}
-		if (
+		if (typeof action === 'string' && ['create-subject', 'rename-subject', 'delete-subject'].includes(action)) {
+			try {
+				await editSubject(pool!, action, form)
+				return redirect('/admin', 303)
+			} catch (issue) {
+				error = issue instanceof Error && !('code' in issue)
+					? issue.message : 'The subject could not be saved.'
+			}
+		} else if (
 			action === 'save-tutor' ||
 			action === 'archive-tutor' ||
 			action === 'restore-tutor'
@@ -98,7 +109,7 @@ if (Astro.request.method === 'POST') {
 							.getAll('subjects')
 							.filter(
 								(subject): subject is string =>
-									typeof subject === 'string' && SUBJECTS.includes(subject),
+									typeof subject === 'string' && subjectNames.includes(subject),
 							)
 					: existing?.subjects
 			if (!name || !subjects?.length)
@@ -251,7 +262,7 @@ const data = {
 			blocks(starts).map(block => ({ ...block, day })),
 		),
 	})),
-	subjects: SUBJECTS,
+	subjects: subjectNames,
 	bookings: bookings.map(booking => ({
 		id: booking.id,
 		name: booking.label ?? 'Contact unrecorded',

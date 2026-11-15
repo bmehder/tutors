@@ -75,6 +75,7 @@ let catalog = toList(
 	),
 )
 
+let subjectsCatalog = SUBJECTS
 let reservations = null
 let availabilitySignature
 
@@ -89,8 +90,8 @@ async function fetchTutorHours() {
 		signal: AbortSignal.timeout(8000),
 	})
 	if (!response.ok) throw new Error('Tutor schedules could not be loaded.')
-	const { tutors, reservations: slots } = await response.json()
-	const signature = JSON.stringify([tutors, slots])
+	const { tutors, reservations: slots, subjects = SUBJECTS } = await response.json()
+	const signature = JSON.stringify([tutors, slots, subjects])
 	if (signature === availabilitySignature) return false
 	const byTutor = slots === null ? null : Map.groupBy(slots, slot => slot.tutorId)
 
@@ -104,6 +105,7 @@ async function fetchTutorHours() {
 		),
 	)))
 	reservations = byTutor
+	subjectsCatalog = subjects
 	availabilitySignature = signature
 	return true
 }
@@ -210,7 +212,7 @@ export const tomorrow = zone =>
 
 // Keep browser-generated IDs and catalog conversion here.
 export const randomUuid = () => crypto.randomUUID()
-export const subjects = () => toList(SUBJECTS)
+export const subjects = () => toList(subjectsCatalog)
 export const allTutors = () => catalog
 
 // Match candidate Eastern instants to the family's local date and format the labels.

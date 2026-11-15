@@ -1,3 +1,5 @@
+import gleam/option.{type Option}
+
 // Identifiers and units shared by the admin screens.
 // Calendar dates and clock times are Eastern, formatted at the server boundary.
 pub type TutorId =
@@ -83,6 +85,7 @@ pub type Data {
 pub type Screen {
   Tutors
   AddTutor
+  Subjects
   Schedule(tutor: Tutor, blocks: List(Block), removed: List(Block))
   Bookings
   Reports
@@ -106,6 +109,7 @@ pub type Model {
     subject_filter: String,
     report_from: String,
     report_to: String,
+    failed_form: Option(String),
   )
 }
 

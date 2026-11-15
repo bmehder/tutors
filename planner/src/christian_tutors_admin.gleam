@@ -5,6 +5,7 @@ import admin/model.{
 import admin/view
 import gleam/int
 import gleam/list
+import gleam/option.{None, Some}
 import gleam/result
 import lustre
 import lustre/effect
@@ -28,6 +29,7 @@ pub fn init(_) {
       subject_filter: "",
       report_from: "",
       report_to: "",
+      failed_form: None,
     ),
     effect.none(),
   )
@@ -70,10 +72,14 @@ pub fn update(model: Model, msg: Msg) {
       )
     }
 
-    model.ServerRejected(message) -> #(
-      Model(..model, request: Ready, message:),
-      effect.none(),
-    )
+    model.ServerRejected(message) ->
+      case model.request {
+        Saving(form_id) -> #(
+          Model(..model, request: Ready, message:, failed_form: Some(form_id)),
+          effect.from(fn(_) { browser.reveal_form_error(form_id) }),
+        )
+        _ -> #(model, effect.none())
+      }
 
     model.UserClickedCancelConfirmation ->
       case model.request {
@@ -168,6 +174,7 @@ pub fn update(model: Model, msg: Msg) {
       Model(
         ..model,
         request: Saving(form_id),
+        failed_form: None,
         message: "",
         form_drafts: list.key_set(model.form_drafts, form_id, fields),
       ),

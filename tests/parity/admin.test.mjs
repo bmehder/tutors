@@ -1,3 +1,4 @@
+import { Option$None, Option$Some$0 } from '../../planner/build/dev/javascript/gleam_stdlib/gleam/option.mjs'
 import assert from 'node:assert/strict'
 import test from 'node:test'
 import * as model from '../../planner/build/dev/javascript/christian_tutors_planner/admin/model.mjs'
@@ -10,7 +11,7 @@ const empty = toList([])
 const block = model.Block$Block(0, 0, 900, 1080)
 const tutor = model.Tutor$Tutor('tutor-1', 'Test tutor', toList(['Biology']), false, toList([block]))
 const data = model.Data$Data(toList([tutor]), empty, toList(['Biology']))
-const state = () => model.Model$Model(data, empty, model.Screen$Schedule(tutor, tutor.blocks, empty), model.RequestState$Ready(), '', '', '', '')
+const state = () => model.Model$Model(data, empty, model.Screen$Schedule(tutor, tutor.blocks, empty), model.RequestState$Ready(), '', '', '', '', Option$None())
 const next = (state, message) => update(state, message)[0]
 
 test('removal is confirmed, undo restores the original block, and new IDs remain unique', () => {
@@ -43,6 +44,7 @@ test('saving blocks duplicate submissions; failure preserves the draft; success 
   assert.equal(next(saving, model.Msg$UserClickedScreen(model.Screen$Bookings())), saving)
   const failed = next(saving, model.Msg$ServerRejected('Try another time.'))
   assert.deepEqual(failed.screen, changed.screen)
+  assert.equal(Option$Some$0(failed.failed_form), 'weekly-hours')
   assert.equal(failed.message, 'Try another time.')
   const saved = next(saving, model.Msg$ServerSaved(data))
   assert.deepEqual(saved.screen.blocks, tutor.blocks)

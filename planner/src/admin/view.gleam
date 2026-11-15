@@ -1,12 +1,13 @@
 import admin/browser
 import admin/model.{
   type Booking, type Model, type Msg, type Session, type Tutor, AddTutor,
-  Bookings, Reports, Saving, Schedule, Tutors,
+  Bookings, Reports, Saving, Schedule, Subjects, Tutors,
 }
 import admin/reports as report
 import gleam/dynamic/decode
 import gleam/int
 import gleam/list
+import gleam/option.{Some}
 import gleam/order
 import gleam/result
 import gleam/string
@@ -82,6 +83,7 @@ pub fn render(model: Model) -> Element(Msg) {
                 #("Tutors", Tutors),
                 #("Bookings", Bookings),
                 #("Reports", Reports),
+                #("Subjects", Subjects),
               ],
               fn(item) {
                 h.button(
@@ -155,6 +157,7 @@ pub fn render(model: Model) -> Element(Msg) {
                         ),
                       ])
                     Reports -> reports(model)
+                    Subjects -> subject_catalog(model)
                   }),
                 ]),
               ],
@@ -327,35 +330,124 @@ fn tutor_list(model: Model) {
                   ],
                   [h.text("Edit weekly schedule")],
                 ),
-                tutor_form(model, tutor),
-                form(
-                  "archive-" <> tutor.id,
-                  case tutor.archived {
-                    True -> "restore-tutor"
-                    False -> "archive-tutor"
-                  },
-                  "",
-                  [
-                    hidden("tutor-id", tutor.id),
-                    submit(case tutor.archived {
-                      True -> "Restore tutor"
-                      False -> "Archive tutor"
-                    }),
-                  ],
-                ),
-                heading("Bookings"),
-                ..list.flat_map(model.data.bookings, fn(booking) {
-                  booking.sessions
-                  |> list.filter(fn(session) { session.tutor == tutor.id })
-                  |> list.map(fn(session) {
-                    session_view(model, booking.name, session)
-                  })
-                })
+                tutor_bookings(model, tutor),
+                tutor_profile(model, tutor),
               ]),
             ]),
           )
         }),
     ),
+  ])
+}
+
+fn subject_catalog(model: Model) {
+  let create_id = "create-subject"
+  h.div([a.class("space-y-4")], [
+    heading("Subjects"),
+    h.div([a.class(panel)], [
+      form(create_id, "create-subject", "", [
+        input(
+          form_fields(model, create_id),
+          "New subject",
+          "subject-name",
+          "",
+          "text",
+        ),
+        submit("Add subject"),
+        form_error(model, create_id),
+      ]),
+    ]),
+    empty_state(model.data.subjects == [], "No subjects yet."),
+    keyed.div(
+      [a.class("space-y-2")],
+      list.map(model.data.subjects, fn(subject) {
+        #(subject, subject_editor(model, subject))
+      }),
+    ),
+  ])
+}
+
+fn subject_editor(model: Model, subject: String) {
+  let rename_id = "rename-subject-" <> subject
+  h.details([a.class(panel)], [
+    h.summary([a.class("font-semibold marker:text-teal-700")], [h.text(subject)]),
+    form(rename_id, "rename-subject", "", [
+      hidden("original-subject", subject),
+      input(
+        form_fields(model, rename_id),
+        "Subject name",
+        "subject-name",
+        subject,
+        "text",
+      ),
+      submit("Save name"),
+      form_error(model, rename_id),
+    ]),
+    h.details([a.class("mt-3")], [
+      h.summary([a.class("text-rose-800")], [h.text("Delete subject")]),
+      form("delete-subject-" <> subject, "delete-subject", "", [
+        hidden("original-subject", subject),
+        h.p([], [
+          h.text("Subjects assigned to tutors or sessions can’t be deleted."),
+        ]),
+        submit("Confirm deletion"),
+        form_error(model, "delete-subject-" <> subject),
+      ]),
+    ]),
+  ])
+}
+
+fn tutor_bookings(model: Model, tutor: Tutor) {
+  let sessions =
+    list.flat_map(model.data.bookings, fn(booking) {
+      booking.sessions
+      |> list.filter(fn(session) { session.tutor == tutor.id })
+      |> list.map(fn(session) {
+        #(session.id, session_view(model, booking.name, session))
+      })
+    })
+  h.section([a.class("space-y-2")], [
+    h.h3([a.class("font-semibold")], [h.text("Bookings")]),
+    case sessions {
+      [] -> empty_state(True, "No bookings for this tutor.")
+      _ -> keyed.div([a.class("space-y-2")], sessions)
+    },
+  ])
+}
+
+fn tutor_profile(model: Model, tutor: Tutor) {
+  h.details([a.class("rounded-lg border border-slate-200 p-3")], [
+    h.summary([a.class("font-semibold text-teal-800 marker:text-teal-700")], [
+      h.text("Edit tutor profile"),
+    ]),
+    h.div([a.class("mt-3 space-y-3")], [
+      tutor_form(model, tutor),
+      form(
+        "archive-" <> tutor.id,
+        case tutor.archived {
+          True -> "restore-tutor"
+          False -> "archive-tutor"
+        },
+        "",
+        [
+          hidden("tutor-id", tutor.id),
+          h.button(
+            [
+              a.type_("submit"),
+              a.class(
+                "w-fit rounded-lg border border-slate-300 px-3 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-50",
+              ),
+            ],
+            [
+              h.text(case tutor.archived {
+                True -> "Restore tutor"
+                False -> "Archive tutor"
+              }),
+            ],
+          ),
+        ],
+      ),
+    ]),
   ])
 }
 
@@ -605,6 +697,7 @@ fn session_view(model: Model, name: String, session: Session) {
       input(fields, "Date (Eastern)", "date", session.date, "date"),
       input(fields, "Time (Eastern)", "time", session.time, "time"),
       submit("Save session"),
+      form_error(model, "session-" <> session.id),
     ]),
     form("subject-" <> session.id, "save-session-subject", "", [
       hidden("session", session.id),
@@ -616,8 +709,27 @@ fn session_view(model: Model, name: String, session: Session) {
         session.subject,
       ),
       submit("Save subject"),
+      form_error(model, "subject-" <> session.id),
     ]),
   ])
+}
+
+fn form_error(model: Model, form_id: String) {
+  case model.failed_form == Some(form_id) && model.message != "" {
+    True ->
+      h.p(
+        [
+          a.id(form_id <> "-error"),
+          a.attribute("role", "alert"),
+          a.attribute("tabindex", "-1"),
+          a.class(
+            "rounded-lg border border-rose-200 bg-rose-50 px-3 py-2 text-rose-900",
+          ),
+        ],
+        [h.text(model.message)],
+      )
+    False -> element.none()
+  }
 }
 
 fn booking_view(model: Model, booking: Booking) {
@@ -848,6 +960,7 @@ fn screen_key(screen: model.Screen) {
     Schedule(tutor, _, _) -> "schedule-" <> tutor.id
     Bookings -> "bookings"
     Reports -> "reports"
+    Subjects -> "subjects"
   }
 }
 

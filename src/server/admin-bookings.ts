@@ -1,6 +1,6 @@
 import type pg from 'pg'
 import { tutorHours } from './tutor-hours'
-import { SUBJECTS } from '../lib/tutoring-data'
+import { subjectCatalog } from './subjects'
 import { calendarWeekday, sessionInterval } from '../lib/session-time'
 
 export async function editBooking(pool: pg.Pool, form: FormData, action: string) {
@@ -11,7 +11,7 @@ export async function editBooking(pool: pg.Pool, form: FormData, action: string)
   }
   if (action === 'save-session-subject') {
     const subject = String(form.get('session-subject') ?? '')
-    if (!SUBJECTS.includes(subject)) throw new Error('Choose a subject.')
+    if (!(await subjectCatalog(pool)).some(item => item.name === subject)) throw new Error('Choose a subject.')
     const result = await pool.query(
       'UPDATE booking_sessions s SET subject = $2 FROM booking_reservations b WHERE s.id = $1 AND b.id = s.reservation_id AND b.confirmed_at IS NOT NULL',
       [form.get('session'), subject],
