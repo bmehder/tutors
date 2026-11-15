@@ -16,131 +16,158 @@ import lustre/element/html as h
 import lustre/element/keyed
 import lustre/event as e
 
-const field = "block min-w-0 w-full max-w-xs rounded-md border border-zinc-700 bg-zinc-950 px-3 py-2 text-sm"
+const field = "block min-w-0 w-full max-w-xs rounded-md border border-slate-300 bg-white px-3 py-2 text-sm"
 
-const panel = "min-w-0 rounded-xl border border-zinc-800 bg-zinc-900 p-4"
+const panel = "min-w-0 rounded-xl border border-slate-200 bg-white p-4 shadow-xs"
 
-const button = "w-fit rounded-md bg-stone-300 px-3 py-2 text-sm font-semibold text-zinc-950 hover:bg-stone-200"
+const button = "w-fit min-h-10 rounded-lg bg-teal-800 px-4 py-2 text-sm font-semibold text-white hover:bg-teal-900"
 
 pub fn render(model: Model) -> Element(Msg) {
   h.div(
     [
-      a.class(
-        "max-w-[104rem] mx-auto min-h-screen bg-zinc-950 text-zinc-200 font-sans text-sm p-4 lg:p-8",
-      ),
+      a.class("min-h-screen bg-slate-50 text-slate-900 font-sans text-sm"),
     ],
     [
       confirmation(model.request),
-      h.header([a.class("mb-6")], [
-        h.a([a.href("/"), a.class("text-stone-300")], [
-          h.text("MyChristianTutors"),
-        ]),
-        h.h1([a.class("text-2xl font-semibold mt-1")], [
-          h.text("Tutoring administration"),
-        ]),
-      ]),
-      h.div([a.class("grid gap-4 lg:grid-cols-[11rem_minmax(0,1fr)]")], [
-        h.nav(
+      h.header([a.class("border-b border-slate-200 bg-white")], [
+        h.div(
           [
-            a.attribute("aria-label", "Admin navigation"),
-            a.class("flex flex-wrap gap-2 lg:flex-col items-start"),
+            a.class(
+              "mx-auto flex max-w-[104rem] flex-wrap items-center justify-between gap-3 px-4 py-4 sm:px-8",
+            ),
           ],
-          list.map(
-            [
-              #("Tutors", Tutors),
-              #("Bookings", Bookings),
-              #("Reports", Reports),
-            ],
-            fn(item) {
-              h.button(
+          [
+            h.div([], [
+              h.a(
                 [
-                  a.type_("button"),
-                  a.disabled(model.request != model.Ready),
-                  a.attribute(
-                    "aria-current",
-                    case active_screen(model.screen) == item.1 {
-                      True -> "page"
-                      False -> "false"
-                    },
-                  ),
-                  a.class(
-                    "rounded-md px-3 py-2 hover:bg-zinc-800 aria-[current=page]:bg-stone-300 aria-[current=page]:text-zinc-950",
-                  ),
-                  e.on_click(model.UserClickedScreen(item.1)),
+                  a.href("/"),
+                  a.class("text-xs font-bold text-teal-800 hover:underline"),
                 ],
-                [h.text(item.0)],
-              )
-            },
-          )
-            |> list.append([
-              h.form([a.method("post"), a.action("/admin")], [
-                hidden("action", "sign-out"),
-                h.button([a.class("px-3 py-2 text-zinc-400")], [
-                  h.text("Sign out"),
-                ]),
+                [h.text("MyChristianTutors")],
+              ),
+              h.h1([a.class("text-lg font-bold")], [
+                h.text("Tutoring administration"),
               ]),
             ]),
+            h.form([a.method("post"), a.action("/admin")], [
+              hidden("action", "sign-out"),
+              h.button(
+                [
+                  a.class(
+                    "min-h-10 rounded-lg border border-slate-200 px-3 font-semibold text-slate-700 hover:bg-slate-50",
+                  ),
+                ],
+                [h.text("Sign out")],
+              ),
+            ]),
+          ],
         ),
-        h.main([a.class("min-w-0 space-y-4")], [
-          h.p(
-            [
-              a.attribute("role", "status"),
-              a.attribute("aria-live", "polite"),
-              a.class("empty:hidden text-amber-200"),
-            ],
-            [
-              h.text(case model.request {
-                Saving(_) -> "Saving…"
-                _ -> model.message
-              }),
-            ],
-          ),
-          h.fieldset(
-            [a.disabled(model.request != model.Ready), a.class("min-w-0")],
-            [
-              keyed.div([], [
-                #(screen_key(model.screen), case model.screen {
-                  Tutors -> tutor_list(model)
-                  AddTutor ->
-                    h.div([a.class(panel <> " space-y-4")], [
-                      heading("Add tutor"),
-                      tutor_form(model, model.Tutor("", "", [], False, [])),
-                    ])
-                  Schedule(tutor, blocks, removed) ->
-                    schedule(model, tutor, blocks, removed)
-                  Bookings ->
-                    h.div([a.class("space-y-3")], [
-                      heading("Bookings"),
-                      h.p([a.class("text-zinc-400")], [
-                        h.text(
-                          "Demo amounts in USD. Editing amounts does not charge or refund a payment.",
-                        ),
-                      ]),
-                      keyed.div(
-                        [a.class("space-y-3")],
-                        list.map(model.data.bookings, fn(booking) {
-                          #(booking.id, booking_view(model, booking))
-                        }),
-                      ),
-                      empty_state(
-                        model.data.bookings == [],
-                        "No confirmed bookings yet.",
-                      ),
-                      manual_booking(model),
-                    ])
-                  Reports -> reports(model)
-                }),
-              ]),
-            ],
-          ),
-        ]),
       ]),
+      h.div(
+        [
+          a.class(
+            "mx-auto grid max-w-[104rem] gap-5 px-4 py-5 sm:px-8 lg:grid-cols-[10rem_minmax(0,1fr)] lg:gap-8 lg:py-8",
+          ),
+        ],
+        [
+          h.nav(
+            [
+              a.attribute("aria-label", "Admin navigation"),
+              a.class(
+                "flex self-start gap-1 rounded-xl border border-slate-200 bg-white p-1.5 shadow-xs lg:sticky lg:top-6 lg:flex-col",
+              ),
+            ],
+            list.map(
+              [
+                #("Tutors", Tutors),
+                #("Bookings", Bookings),
+                #("Reports", Reports),
+              ],
+              fn(item) {
+                h.button(
+                  [
+                    a.type_("button"),
+                    a.disabled(model.request != model.Ready),
+                    a.attribute(
+                      "aria-current",
+                      case active_screen(model.screen) == item.1 {
+                        True -> "page"
+                        False -> "false"
+                      },
+                    ),
+                    a.class(
+                      "min-h-10 flex-1 rounded-lg px-2 py-2 font-semibold text-slate-600 hover:bg-slate-50 sm:px-3 lg:text-left aria-[current=page]:bg-teal-50 aria-[current=page]:text-teal-900",
+                    ),
+                    e.on_click(model.UserClickedScreen(item.1)),
+                  ],
+                  [h.text(item.0)],
+                )
+              },
+            ),
+          ),
+          h.main([a.class("min-w-0 space-y-4")], [
+            h.p(
+              [
+                a.attribute("role", "status"),
+                a.attribute("aria-live", "polite"),
+                a.class(
+                  "empty:hidden rounded-lg border border-teal-200 bg-teal-50 px-4 py-3 font-medium text-teal-950",
+                ),
+              ],
+              [
+                h.text(case model.request {
+                  Saving(_) -> "Saving…"
+                  _ -> model.message
+                }),
+              ],
+            ),
+            h.fieldset(
+              [a.disabled(model.request != model.Ready), a.class("min-w-0")],
+              [
+                keyed.div([], [
+                  #(screen_key(model.screen), case model.screen {
+                    Tutors -> tutor_list(model)
+                    AddTutor ->
+                      h.div([a.class(panel <> " space-y-4")], [
+                        heading("Add tutor"),
+                        tutor_form(model, model.Tutor("", "", [], False, [])),
+                      ])
+                    Schedule(tutor, blocks, removed) ->
+                      schedule(model, tutor, blocks, removed)
+                    Bookings ->
+                      h.div([a.class("space-y-3")], [
+                        heading("Bookings"),
+                        h.p([a.class("text-slate-600")], [
+                          h.text(
+                            "Demo amounts in USD. Editing amounts does not charge or refund a payment.",
+                          ),
+                        ]),
+                        manual_booking(model),
+                        keyed.div(
+                          [a.class("space-y-3")],
+                          list.map(model.data.bookings, fn(booking) {
+                            #(booking.id, booking_view(model, booking))
+                          }),
+                        ),
+                        empty_state(
+                          model.data.bookings == [],
+                          "No confirmed bookings yet.",
+                        ),
+                      ])
+                    Reports -> reports(model)
+                  }),
+                ]),
+              ],
+            ),
+          ]),
+        ],
+      ),
     ],
   )
 }
 
 fn heading(text: String) {
-  h.h2([a.attribute("tabindex", "-1"), a.class("text-xl font-semibold mb-3")], [
+  h.h2([a.attribute("tabindex", "-1"), a.class("text-2xl font-bold mb-2")], [
     h.text(text),
   ])
 }
@@ -237,8 +264,8 @@ fn tutor_list(model: Model) {
       || list.contains(tutor.subjects, model.subject_filter)
     })
   h.div([a.class("space-y-3")], [
-    heading("Tutors"),
-    h.div([], [
+    h.div([a.class("flex flex-wrap items-center justify-between gap-3")], [
+      heading("Tutors"),
       h.button(
         [a.class(button), e.on_click(model.UserClickedScreen(AddTutor))],
         [h.text("Add tutor")],
@@ -258,38 +285,41 @@ fn tutor_list(model: Model) {
     empty_state(matches == [], "No tutors match this subject."),
     keyed.div(
       [a.class("space-y-3")],
-      model.data.tutors
-        |> list.filter(fn(tutor) {
-          model.subject_filter == ""
-          || list.contains(tutor.subjects, model.subject_filter)
-        })
+      matches
         |> list.map(fn(tutor) {
           #(
             tutor.id,
             h.details([a.class(panel)], [
-              h.summary([a.class("cursor-pointer font-semibold")], [
-                h.text(
-                  tutor.name
-                  <> case tutor.archived {
-                    True -> " (archived)"
-                    False -> ""
-                  },
-                ),
-                h.span(
-                  [a.class("block text-xs text-zinc-400 font-normal mt-1")],
-                  [
-                    h.text(
-                      int.to_string(list.length(tutor.subjects))
-                      <> case list.length(tutor.subjects) {
-                        1 -> " subject · "
-                        _ -> " subjects · "
-                      }
-                      <> string.join(tutor.subjects, ", "),
-                    ),
-                  ],
-                ),
-              ]),
-              h.div([a.class("space-y-4 mt-3")], [
+              h.summary(
+                [
+                  a.class(
+                    "cursor-pointer font-semibold text-slate-900 marker:text-teal-700",
+                  ),
+                ],
+                [
+                  h.text(
+                    tutor.name
+                    <> case tutor.archived {
+                      True -> " (archived)"
+                      False -> ""
+                    },
+                  ),
+                  h.span(
+                    [a.class("block text-xs text-slate-600 font-normal mt-1")],
+                    [
+                      h.text(
+                        int.to_string(list.length(tutor.subjects))
+                        <> case list.length(tutor.subjects) {
+                          1 -> " subject · "
+                          _ -> " subjects · "
+                        }
+                        <> string.join(tutor.subjects, ", "),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+              h.div([a.class("space-y-4 mt-4 border-t border-slate-200 pt-4")], [
                 h.button(
                   [
                     a.class(button),
@@ -484,7 +514,7 @@ fn schedule(
                         [
                           a.id("block-" <> int.to_string(block.id)),
                           a.class(
-                            "border border-zinc-700 rounded-md p-2 mb-2 grid gap-2",
+                            "border border-slate-200 bg-slate-50 rounded-lg p-2 mb-2 grid gap-2",
                           ),
                         ],
                         [
@@ -508,7 +538,9 @@ fn schedule(
                                 "Remove " <> day <> " time block",
                               ),
                               e.on_click(model.UserClickedRemoveBlock(block)),
-                              a.class("justify-self-end p-2"),
+                              a.class(
+                                "justify-self-end rounded px-2 py-1 text-rose-700 hover:bg-rose-50",
+                              ),
                             ],
                             [h.text("× Remove")],
                           ),
@@ -521,7 +553,9 @@ fn schedule(
                 [
                   a.type_("button"),
                   a.attribute("aria-label", "Add hours for " <> day),
-                  a.class("border border-dashed border-zinc-600 rounded p-2"),
+                  a.class(
+                    "min-h-10 min-w-10 rounded-lg border border-dashed border-teal-300 bg-teal-50 font-bold text-teal-800 hover:bg-teal-100",
+                  ),
                   e.on_click(model.UserClickedAddBlock(index)),
                 ],
                 [h.text("+")],
@@ -541,7 +575,7 @@ fn session_view(model: Model, name: String, session: Session) {
   h.details([a.class(panel)], [
     h.summary([a.class("cursor-pointer")], [
       h.text(name <> " · " <> session.label),
-      h.span([a.class("block mt-1 text-zinc-400 text-xs")], [
+      h.span([a.class("block mt-1 text-slate-600 text-xs")], [
         h.text(
           tutor_name(model, session.tutor)
           <> " · "
@@ -590,51 +624,74 @@ fn booking_view(model: Model, booking: Booking) {
   let fields = form_fields(model, "booking-" <> booking.id)
 
   h.details([a.class(panel)], [
-    h.summary([a.class("cursor-pointer font-semibold")], [
-      h.text(
-        booking.name
-        <> " · Order #"
-        <> { string.slice(booking.id, 0, 8) |> string.uppercase }
-        <> " · "
-        <> booking.date
-        <> " · "
-        <> int.to_string(list.length(booking.sessions))
-        <> " sessions",
-      ),
-    ]),
-    h.div([a.class("space-y-3 mt-3")], [
-      h.p([], [
-        h.text(
-          "Paid "
-          <> format_money(report.amount_paid(booking))
-          <> " · Discount "
-          <> format_money(booking.discount),
+    h.summary(
+      [
+        a.class(
+          "cursor-pointer font-semibold text-slate-900 marker:text-teal-700",
         ),
-      ]),
+      ],
+      [
+        h.text(booking.name),
+        h.span([a.class("mt-1 block text-xs font-normal text-slate-600")], [
+          h.text(
+            "Order #"
+            <> string.uppercase(string.slice(booking.id, 0, 8))
+            <> " · "
+            <> booking.date
+            <> " · "
+            <> int.to_string(list.length(booking.sessions))
+            <> case list.length(booking.sessions) {
+              1 -> " session"
+              _ -> " sessions"
+            },
+          ),
+        ]),
+        h.span(
+          [
+            a.class(
+              "mt-2 inline-block rounded-md bg-teal-50 px-2 py-1 text-xs font-semibold text-teal-900",
+            ),
+          ],
+          [
+            h.text(
+              "Paid "
+              <> format_money(report.amount_paid(booking))
+              <> " · Discount "
+              <> format_money(booking.discount),
+            ),
+          ],
+        ),
+      ],
+    ),
+    h.div([a.class("mt-4 space-y-3 border-t border-slate-200 pt-4")], [
+      h.h3([a.class("font-semibold")], [h.text("Sessions")]),
       keyed.div(
         [a.class("space-y-2")],
         list.map(booking.sessions, fn(session) {
           #(session.id, session_view(model, booking.name, session))
         }),
       ),
-      form("booking-" <> booking.id, "edit-booking", "", [
-        hidden("booking", booking.id),
-        input(fields, "Family contact", "label", booking.name, "text"),
-        input(
-          fields,
-          "Subtotal in cents",
-          "subtotal",
-          money_input(booking.subtotal),
-          "number",
-        ),
-        input(
-          fields,
-          "Discount in cents",
-          "discount",
-          money_input(booking.discount),
-          "number",
-        ),
-        submit("Save booking"),
+      h.details([a.class("rounded-lg border border-slate-200 p-3")], [
+        h.summary([], [h.text("Edit order details")]),
+        form("booking-" <> booking.id, "edit-booking", "", [
+          hidden("booking", booking.id),
+          input(fields, "Family contact", "label", booking.name, "text"),
+          input(
+            fields,
+            "Subtotal in cents",
+            "subtotal",
+            money_input(booking.subtotal),
+            "number",
+          ),
+          input(
+            fields,
+            "Discount in cents",
+            "discount",
+            money_input(booking.discount),
+            "number",
+          ),
+          submit("Save booking"),
+        ]),
       ]),
       h.details([], [
         h.summary([], [h.text("Delete booking")]),
@@ -682,7 +739,7 @@ fn reports(model: Model) {
     })
   h.div([a.class(panel <> " space-y-4")], [
     heading("Reports"),
-    h.p([a.class("text-amber-200")], [
+    h.p([a.class("text-amber-900")], [
       h.text(
         case
           model.report_from != ""
@@ -720,44 +777,59 @@ fn reports(model: Model) {
       metric("Discounts", browser.money(report.discounts(bookings))),
       metric("Bookings", int.to_string(list.length(bookings))),
     ]),
-    h.p([], [
-      h.text(
-        int.to_string(list.length(bookings))
-        <> " bookings · "
-        <> int.to_string(list.length(bookings) - list.length(recorded))
-        <> " missing payment details",
+    empty_state(
+      list.length(bookings) != list.length(recorded),
+      int.to_string(list.length(bookings) - list.length(recorded))
+        <> " without payment details",
+    ),
+    h.div([a.class("grid items-start gap-4 md:grid-cols-2")], [
+      report_group(
+        "Packages",
+        list.map([5, 10, 20, 0], fn(hours) {
+          let label = case hours {
+            0 -> "Package unrecorded"
+            _ -> int.to_string(hours) <> "-hour package"
+          }
+          report_row(
+            label,
+            list.length(
+              list.filter(bookings, fn(booking) { booking.hours == hours }),
+            ),
+          )
+        }),
       ),
+      report_group("Booking contacts", case bookings {
+        [] -> [h.li([], [empty_state(True, "No contacts in this date range.")])]
+        _ ->
+          list.map(
+            list.unique(list.map(bookings, fn(booking) { booking.name })),
+            fn(name) {
+              report_row(
+                name,
+                list.length(
+                  list.filter(bookings, fn(booking) { booking.name == name }),
+                ),
+              )
+            },
+          )
+      }),
     ]),
-    element.fragment(
-      list.map([5, 10, 20, 0], fn(hours) {
-        h.p([], [
-          h.text(
-            case hours {
-              0 -> "Package unrecorded"
-              _ -> int.to_string(hours) <> "-hour packages"
-            }
-            <> " · "
-            <> int.to_string(
-              list.length(list.filter(bookings, fn(b) { b.hours == hours })),
-            ),
-          ),
-        ])
-      }),
-    ),
-    heading("Booking contacts"),
-    element.fragment(
-      list.map(list.unique(list.map(bookings, fn(b) { b.name })), fn(name) {
-        h.p([], [
-          h.text(
-            name
-            <> " · "
-            <> int.to_string(
-              list.length(list.filter(bookings, fn(b) { b.name == name })),
-            ),
-          ),
-        ])
-      }),
-    ),
+  ])
+}
+
+fn report_group(title: String, rows: List(Element(Msg))) {
+  h.section([a.class("rounded-xl border border-slate-200 bg-white px-4")], [
+    h.h3([a.class("py-3 font-semibold")], [h.text(title)]),
+    h.ul([a.class("divide-y divide-slate-100 border-t border-slate-100")], rows),
+  ])
+}
+
+fn report_row(label: String, count: Int) {
+  h.li([a.class("flex justify-between gap-4 py-2 text-slate-700")], [
+    h.span([], [h.text(label)]),
+    h.span([a.class("font-semibold tabular-nums")], [
+      h.text(int.to_string(count)),
+    ]),
   ])
 }
 
@@ -801,15 +873,15 @@ fn money_input(amount: model.Money) {
 }
 
 fn metric(label: String, value: String) {
-  h.div([a.class("rounded-lg border border-zinc-700 bg-zinc-950 p-4")], [
-    h.p([a.class("text-xs text-zinc-400")], [h.text(label)]),
+  h.div([a.class("rounded-xl border border-teal-100 bg-teal-50 p-4")], [
+    h.p([a.class("text-xs text-slate-600")], [h.text(label)]),
     h.p([a.class("text-2xl font-semibold mt-1")], [h.text(value)]),
   ])
 }
 
 fn empty_state(empty: Bool, message: String) {
   case empty {
-    True -> h.p([a.class("text-zinc-400 py-2")], [h.text(message)])
+    True -> h.p([a.class("text-slate-600 py-2")], [h.text(message)])
     False -> element.none()
   }
 }
@@ -849,7 +921,7 @@ fn confirmation_panel(
       a.attribute("aria-describedby", "confirmation-description"),
       a.class(
         panel
-        <> " m-auto max-w-sm text-zinc-200 shadow-xl space-y-4 backdrop:bg-black/70",
+        <> " m-auto max-w-sm text-slate-900 shadow-xl space-y-4 backdrop:bg-slate-950/30",
       ),
       e.on("cancel", decode.success(model.UserClickedCancelConfirmation))
         |> e.prevent_default,
@@ -858,14 +930,14 @@ fn confirmation_panel(
       h.h2([a.id("confirmation-title"), a.class("font-semibold text-lg")], [
         h.text(title),
       ]),
-      h.p([a.id("confirmation-description"), a.class("text-zinc-400")], [
+      h.p([a.id("confirmation-description"), a.class("text-slate-600")], [
         h.text(description),
       ]),
       h.div([a.class("flex gap-3")], [
         h.button(
           [
             a.type_("button"),
-            a.class("rounded border border-zinc-600 px-3 py-2"),
+            a.class("rounded border border-slate-300 px-3 py-2"),
             e.on_click(model.UserClickedCancelConfirmation),
           ],
           [h.text("Cancel")],
