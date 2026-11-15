@@ -17,7 +17,7 @@ pub fn main() {
     |> lustre.start("#tutoring-admin", Nil)
 }
 
-fn init(_) {
+pub fn init(_) {
   #(
     Model(
       data: browser.initial_data(),

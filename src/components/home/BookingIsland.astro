@@ -14,7 +14,19 @@ import './booking.css'
 <script>
   import { main } from '../../../planner/build/dev/javascript/christian_tutors_planner/christian_tutors_planner.mjs';
   import { loadTutorHours } from '../../../planner/build/dev/javascript/christian_tutors_planner/planner_ffi.mjs';
-  loadTutorHours().then(() => main()).catch(() => {
+  loadTutorHours().then(async () => {
+    const requested = import.meta.env.PUBLIC_TIMETRAVEL_DEMO
+      && new URLSearchParams(location.search).get('timetravel') === '1';
+    const tester = requested && await fetch('/admin?timetravel-access=1')
+      .then(response => response.status === 204)
+      .catch(() => false);
+    if (import.meta.env.DEV || tester) {
+      const debug = await import('../../../planner/build/dev/javascript/christian_tutors_planner/tutors_debug.mjs');
+      debug.start_planner();
+    } else {
+      main();
+    }
+  }).catch(() => {
     document.querySelector('#family-planner p')!.textContent = 'Tutor schedules could not be loaded. Please refresh to try again.';
   });
 </script>

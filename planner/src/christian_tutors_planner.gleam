@@ -31,17 +31,16 @@ import planner/view
 pub fn main() {
   let app = lustre.application(init, update, view.render)
   let assert Ok(runtime) = lustre.start(app, "#family-planner", Nil)
-  listen_for_tutor_card_clicks(
-    fn(message) { lustre.send(runtime, lustre.dispatch(message)) },
-    model.UserClickedTutorAvailability,
-  )
-  watch_tutor_hours(fn() {
-    lustre.send(runtime, lustre.dispatch(model.TutorAvailabilityRefreshed))
-  })
+  connect_browser(fn(message) { lustre.send(runtime, lustre.dispatch(message)) })
+}
+
+pub fn connect_browser(dispatch: fn(Msg) -> Nil) {
+  listen_for_tutor_card_clicks(dispatch, model.UserClickedTutorAvailability)
+  watch_tutor_hours(fn() { dispatch(model.TutorAvailabilityRefreshed) })
   install_input_masks()
 }
 
-fn init(_) {
+pub fn init(_) {
   #(
     Model(
       step: ChoosePackage,
@@ -63,7 +62,7 @@ fn init(_) {
 
 // Message handling
 
-fn update(model: Model, msg: Msg) -> #(Model, effect.Effect(Msg)) {
+pub fn update(model: Model, msg: Msg) -> #(Model, effect.Effect(Msg)) {
   let order_complete = case model.step {
     OrderComplete(_) -> True
     _ -> False

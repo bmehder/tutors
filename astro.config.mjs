@@ -3,9 +3,18 @@ import vercel from '@astrojs/vercel';
 import tailwindcss from '@tailwindcss/vite';
 import { fileURLToPath } from 'node:url';
 
+const timeTravelDemo = process.env.PUBLIC_TIMETRAVEL_DEMO === '1';
 const commit = process.env.VERCEL_GIT_COMMIT_SHA?.slice(0, 7)
-const builtAt = new Date().toISOString().slice(0, 16).replace('T', ' ')
-const buildLabel = `Build ${commit ? commit + ' · ' : ''}${builtAt} UTC`
+const builtAt = new Intl.DateTimeFormat('en-US', {
+  timeZone: 'America/New_York',
+  year: 'numeric',
+  month: 'short',
+  day: 'numeric',
+  hour: 'numeric',
+  minute: '2-digit',
+  timeZoneName: 'short',
+}).format(new Date());
+const buildLabel = `Build ${commit ? commit + ' · ' : ''}${builtAt}`;
 
 export default defineConfig({
   output: 'static',
@@ -16,7 +25,12 @@ export default defineConfig({
     },
   },
   vite: {
-    define: { 'import.meta.env.PUBLIC_BUILD_LABEL': JSON.stringify(buildLabel) },
+    define: {
+      'import.meta.env.PUBLIC_BUILD_LABEL': JSON.stringify(buildLabel),
+      'import.meta.env.PUBLIC_TIMETRAVEL_DEMO': JSON.stringify(timeTravelDemo),
+    },
+    // The inspector uses generated Gleam constructor names as timeline labels.
+    build: timeTravelDemo ? { minify: false } : undefined,
     plugins: [tailwindcss()],
     resolve: {
       alias: { '@booking': fileURLToPath(new URL('./src/lib', import.meta.url)) },

@@ -5,6 +5,9 @@ const adminHref = import.meta.env.DEV
   ? "/admin"
   : "https://tutors-admin-demo.vercel.app/admin";
 ---
+<p class='bg-cream px-4 py-1.5 text-center text-xs font-semibold text-ink'>
+  {import.meta.env.PUBLIC_BUILD_LABEL}
+</p>
 <div class='bg-ink text-white text-center px-4 py-2.5 text-xs tracking-wide'>
 				A little encouragement goes a long way.
 				<a href='#offer' class='font-bold underline underline-offset-4 ml-1'>
