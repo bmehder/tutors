@@ -80,8 +80,8 @@ pub fn render(model: Model) -> Element(Msg) {
             ],
             list.map(
               [
-                #("Tutors", Tutors),
                 #("Bookings", Bookings),
+                #("Tutors", Tutors),
                 #("Subjects", Subjects),
                 #("Reports", Reports),
               ],
