@@ -62,6 +62,8 @@ export async function sandboxBookingDetails(id: string) {
   const { rows } = await pool.query<{
     label: string | null
     package_hours: number
+    contact_email: string | null
+    contact_phone: string | null
     subtotal_cents: number
     discount_cents: number
     display_time_zone: string | null
@@ -72,7 +74,7 @@ export async function sandboxBookingDetails(id: string) {
     starts_at: Date
     ends_at: Date
   }>(
-    `SELECT r.label, r.package_hours, r.subtotal_cents, r.discount_cents, r.display_time_zone,
+    `SELECT r.label, r.package_hours, r.subtotal_cents, r.discount_cents, r.display_time_zone, r.contact_email, r.contact_phone,
             s.student_name, s.tutor_id, p.name AS tutor_name, s.subject,
             lower(s.slot) AS starts_at, upper(s.slot) AS ends_at
      FROM booking_reservations r

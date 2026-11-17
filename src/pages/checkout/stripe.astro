@@ -3,6 +3,7 @@ import SiteLayout from '../../layouts/SiteLayout.astro'
 import { confirmSandboxCheckout, sandboxBookingDetails, stripe } from '../../server/stripe-sandbox'
 
 import { tutors, money } from '../../lib/tutoring-data'
+import { orderEmails } from '../../server/order-email'
 import { viewSession } from '../../lib/session-time'
 
 export const prerender = false
@@ -22,13 +23,29 @@ if (stripe && /^cs_test_[A-Za-z0-9]+$/.test(sessionId)) {
 }
 const summary = sessions[0]
 const zone = summary?.display_time_zone ?? 'America/New_York'
+const emails = booking && summary?.contact_email && summary.contact_phone ? orderEmails({
+  id: booking,
+  familyName: summary.label ?? 'Family',
+  customerEmail: summary.contact_email,
+  customerPhone: summary.contact_phone,
+  packageHours: summary.package_hours,
+  totalCents: summary.subtotal_cents - summary.discount_cents,
+  timeZone: zone,
+  sessions: sessions.map(session => ({
+    student: session.student_name ?? 'Student',
+    subject: session.subject ?? 'Tutoring',
+    tutor: session.tutor_name ?? tutors.find(tutor => tutor.id === session.tutor_id)?.name ?? 'Tutor',
+    start: session.starts_at,
+    meetingInstructions: 'Sample meeting instructions. A meeting link will be provided for real bookings.',
+  })),
+}, 'admin@example.test') : []
 ---
 <SiteLayout title="Booking confirmation">
   <main class="mx-auto max-w-3xl px-6 py-16 print:max-w-none print:p-0">
     <h1 class="text-4xl font-semibold">{booking ? 'Booking confirmed' : cancelled ? 'Checkout canceled' : 'Booking confirmation unavailable'}</h1>
     <p class="mt-5 leading-7">
       {booking
-        ? `Your sessions are booked. Reference: ${booking.slice(0, 8).toUpperCase()}. No charge was made.`
+        ? `Your test order was recorded. Reference: ${booking.slice(0, 8).toUpperCase()}. No charge was made and no tutoring appointment was created.`
         : cancelled
           ? 'No payment was recorded. Your selected times will be released when the checkout hold expires.'
           : 'We could not verify a paid booking on this page. If you completed checkout, refresh before trying to book again.'}
@@ -50,6 +67,20 @@ const zone = summary?.display_time_zone ?? 'America/New_York'
           ))}
         </ul>
         <p class="mt-4 font-bold">Package total {money((summary.subtotal_cents - summary.discount_cents) / 100)}</p>
+      </section>
+    )}
+    {emails.length > 0 && (
+      <section class="mt-8 space-y-4 print:hidden" aria-labelledby="email-previews">
+        <h2 id="email-previews" class="text-2xl font-semibold">Order email previews</h2>
+        <p>These previews use the test order. No emails were sent.</p>
+        {emails.map((email, index) => (
+          <details class="rounded-lg border border-ink/15 p-4">
+            <summary class="font-bold">{index === 0 ? 'Customer email' : 'Admin email'}</summary>
+            <p class="mt-3 text-sm">To: {email.to}</p>
+            <p class="font-bold">{email.subject}</p>
+            <p class="mt-3 whitespace-pre-wrap text-sm leading-6">{email.text}</p>
+          </details>
+        ))}
       </section>
     )}
     {booking && !summary && <p class="mt-4">Session details are temporarily unavailable. Refresh to try again.</p>}

@@ -33,7 +33,7 @@ function validateSessions(input: unknown, tutors: Awaited<ReturnType<typeof tuto
 }
 
 export const POST: APIRoute = async ({ request }) => {
-  if (!import.meta.env.DEV) return reply(403, { error: 'Online bookings are currently closed.' })
+  if (!import.meta.env.DEV && !stripe) return reply(403, { error: 'Online bookings are currently closed.' })
   if (!pool) return reply(503, { error: 'Reservations are temporarily unavailable.' })
   const body = await request.json().catch(() => null)
   if (!body || typeof body !== 'object') return reply(400, { error: 'Invalid reservation request.' })

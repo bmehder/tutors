@@ -1372,7 +1372,7 @@ fn stripe_payment_view(order: Order, state: PaymentState) -> Element(Msg) {
   h.div([a.class("space-y-5")], [
     heading("Pay for your family’s package."),
     paragraph(
-      "You’ll enter a test card on Stripe’s sandbox checkout. No real money is charged.",
+      "On Stripe, use 4242 4242 4242 4242, a future expiration date, and any 3-digit security code. No real money is charged.",
     ),
     price_breakdown(order.package_hours, order.discount),
     h.button(
