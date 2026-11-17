@@ -4,7 +4,7 @@ import "../index.css";
 const siteName = "MyChristianTutors";
 const { title, description = 'One-on-one online tutoring with a Biblical worldview. Find caring teachers, flexible packages, and support for students in grades 4–12.' } = Astro.props;
 const siteTitle = title ? `${title} | ${siteName}` : `${siteName} | Grow in knowledge. Grounded in faith.`;
-const canonical = new URL(Astro.url.pathname, 'https://tutors-admin-demo.vercel.app');
+const canonical = new URL(Astro.url.pathname, 'https://www.mychristiantutors.com');
 ---
 <!doctype html>
 <html lang="en" prefix="og: https://ogp.me/ns#">
@@ -12,7 +12,7 @@ const canonical = new URL(Astro.url.pathname, 'https://tutors-admin-demo.vercel.
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>{siteTitle}</title>
-    <meta name="robots" content="noindex" />
+    <meta name="robots" content="noindex, nofollow, noarchive" />
     <meta name="description" content={description} />
     <link rel="canonical" href={canonical} />
     <meta name="theme-color" content="#143f3c" />
@@ -26,8 +26,8 @@ const canonical = new URL(Astro.url.pathname, 'https://tutors-admin-demo.vercel.
     <meta property="og:url" content={canonical.toString()} />
     <meta property="og:title" content={siteTitle} />
     <meta property="og:description" content={description} />
-    <meta property="og:image" content="https://tutors-three.vercel.app/images/my-christian-tutors-social.png" />
-    <meta property="og:image:secure_url" content="https://tutors-three.vercel.app/images/my-christian-tutors-social.png" />
+    <meta property="og:image" content="https://www.mychristiantutors.com/images/my-christian-tutors-social.png" />
+    <meta property="og:image:secure_url" content="https://www.mychristiantutors.com/images/my-christian-tutors-social.png" />
     <meta property="og:image:type" content="image/png" />
     <meta property="og:image:width" content="1200" />
     <meta property="og:image:height" content="630" />
@@ -36,7 +36,7 @@ const canonical = new URL(Astro.url.pathname, 'https://tutors-admin-demo.vercel.
     <meta name="twitter:card" content="summary_large_image" />
     <meta name="twitter:title" content={siteTitle} />
     <meta name="twitter:description" content={description} />
-    <meta name="twitter:image" content="https://tutors-three.vercel.app/images/my-christian-tutors-social.png" />
+    <meta name="twitter:image" content="https://www.mychristiantutors.com/images/my-christian-tutors-social.png" />
     <meta name="twitter:image:alt" content="MyChristianTutors. Grow in knowledge. Grounded in faith." />
   </head>
   <body>

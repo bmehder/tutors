@@ -10,23 +10,21 @@ import '../index.css'
 
 export const prerender = false
 Astro.response.headers.set('Cache-Control', 'no-store')
-const demo = getSecret('BOOKING_PUBLIC_ADMIN_DEMO') === '1'
-const email = demo ? 'demo@example.test' : getSecret('BOOKING_DEV_ADMIN_EMAIL')
-const password = demo ? 'tutor-demo' : getSecret('BOOKING_DEV_ADMIN_PASSWORD')
-const signingKey = demo ? getSecret('BOOKING_ADMIN_SIGNING_KEY') : password
-const enabled =
-	(import.meta.env.DEV || demo) && !!signingKey && !!email && !!password && !!pool
+const email = getSecret(import.meta.env.DEV ? 'BOOKING_DEV_ADMIN_EMAIL' : 'BOOKING_ADMIN_EMAIL')
+const password = getSecret(import.meta.env.DEV ? 'BOOKING_DEV_ADMIN_PASSWORD' : 'BOOKING_ADMIN_PASSWORD')
+const signingKey = getSecret('BOOKING_ADMIN_SIGNING_KEY') ?? (import.meta.env.DEV ? password : undefined)
+const enabled = !!signingKey && !!email && !!password && !!pool
 if (!enabled) return new Response('Not found', { status: 404 })
 
 const sign = (value: string) =>
-	createHmac('sha256', signingKey!).update(value).digest('hex')
+	createHmac('sha256', signingKey!).update('private-admin:' + value).digest('hex')
 const equal = (a: string, b: string) =>
 	timingSafeEqual(Buffer.from(sign(a), 'hex'), Buffer.from(sign(b), 'hex'))
 const cookie = 'booking_admin'
 const [expiry, signature] = (Astro.cookies.get(cookie)?.value ?? '').split('.')
 const signedIn =
 	!!signature && Number(expiry) > Date.now() && equal(signature, sign(expiry))
-const timeTravelDemo = demo && import.meta.env.PUBLIC_TIMETRAVEL_DEMO
+const timeTravelDemo = import.meta.env.DEV
 const days = [
 	'Monday',
 	'Tuesday',
@@ -69,7 +67,7 @@ if (Astro.request.method === 'POST') {
 			const expires = String(Date.now() + 3_600_000)
 			Astro.cookies.set(cookie, expires + '.' + sign(expires), {
 				httpOnly: true,
-				secure: demo,
+				secure: !import.meta.env.DEV,
 				sameSite: 'strict',
 				path: '/admin',
 				maxAge: 3600,
@@ -309,16 +307,8 @@ if (wantsJson) {
 		<p class='border-b border-slate-200 bg-white px-4 py-1.5 text-center text-xs font-semibold text-slate-700'>
 			{import.meta.env.PUBLIC_BUILD_LABEL}
 		</p>
-		{
-			demo && (
-				<p class='border-b border-amber-100 bg-amber-50 px-4 py-2 text-center text-xs text-amber-950'>
-					Shared demo · demo@example.test / tutor-demo · Changes are visible to other
-					testers.
-				</p>
-			)
-		}
 		{signedIn && timeTravelDemo && (
-			<nav aria-label="Demo debugging" class="flex flex-wrap justify-center gap-4 border-b border-slate-200 bg-white px-4 py-2 text-xs text-teal-800">
+			<nav aria-label="Debugging" class="flex flex-wrap justify-center gap-4 border-b border-slate-200 bg-white px-4 py-2 text-xs text-teal-800">
 				<a class="underline" href="/admin?timetravel=1">Debug admin</a>
 				<a class="underline" href="/?timetravel=1#booking">Debug planner</a>
 			</nav>
@@ -385,7 +375,7 @@ if (wantsJson) {
 			import { main } from '../../planner/build/dev/javascript/christian_tutors_planner/christian_tutors_admin.mjs'
 			const root = document.querySelector<HTMLElement>('#tutoring-admin')
 			if (root) {
-				if (import.meta.env.DEV || (import.meta.env.PUBLIC_TIMETRAVEL_DEMO && root.dataset.timetravel === '1')) {
+				if (import.meta.env.DEV) {
 					void import('../../planner/build/dev/javascript/christian_tutors_planner/tutors_debug.mjs')
 						.then(debug => debug.start_admin())
 				} else {

@@ -141,7 +141,7 @@ pub fn render(model: Model) -> Element(Msg) {
                         heading("Bookings"),
                         h.p([a.class("text-slate-600")], [
                           h.text(
-                            "Demo amounts in USD. Editing amounts does not charge or refund a payment.",
+                            "Amounts in USD. Editing amounts does not charge or refund a payment.",
                           ),
                         ]),
                         manual_booking(model),
@@ -776,7 +776,7 @@ fn schedule(
         ),
       ),
     ]),
-    form("reset-hours", "reset", tutor.id, [submit("Restore demo hours")]),
+    form("reset-hours", "reset", tutor.id, [submit("Restore default hours")]),
   ])
 }
 
@@ -1052,7 +1052,7 @@ fn reports(model: Model) {
         },
       ),
     ]),
-    h.p([], [h.text("Demo payments by confirmation date, Eastern time.")]),
+    h.p([], [h.text("Payments by confirmation date, Eastern time.")]),
     h.div([a.class("flex flex-wrap gap-3")], [
       h.label([a.class("block")], [
         h.text("From"),

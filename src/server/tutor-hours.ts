@@ -28,9 +28,11 @@ export async function tutorHours(
   }]))
   for (const profile of profiles?.rows ?? []) {
     const existing = catalog.get(profile.tutor_id)
+    const removed = profile.tutor_id === 'c75b9c47-16c3-45d5-80bb-e741c903c187' ||
+      profile.slug === 'brad-mehder' || /^brad(?:ley)? mehder$/i.test(profile.name.trim())
     catalog.set(profile.tutor_id, {
       id: profile.tutor_id, profileSlug: profile.slug, name: profile.name, subjects: profile.subjects.filter(name => activeNames.has(name)),
-      archived: profile.archived, days: existing?.days ?? [], times: existing?.times ?? [],
+      archived: profile.archived || removed, days: existing?.days ?? [], times: existing?.times ?? [],
     })
   }
   const result = await executor?.query<{ tutor_id: string; starts_by_day: number[][] }>(

@@ -15,7 +15,7 @@ import planner/allocation.{
 }
 import planner/browser.{
   all_tutors, booking_calendar, choices, format_money, instant_label,
-  matching_zones, now, session_label, stripe_sandbox_enabled, subjects, tomorrow,
+  checkout_open, matching_zones, now, session_label, stripe_sandbox_enabled, subjects, tomorrow,
   week_dates,
 }
 import planner/checkout.{
@@ -461,11 +461,15 @@ fn step_view(model: Model) -> Element(Msg) {
           UserClickedStep(AllocateHours),
           "planner-outline",
         ),
-        button(
-          "Next: contact details",
-          UserClickedStep(EnterContactInfo),
-          "btn w-full",
-        ),
+        case checkout_open() {
+          True ->
+            button(
+              "Next: contact details",
+              UserClickedStep(EnterContactInfo),
+              "btn w-full",
+            )
+          False -> paragraph("Online bookings will open at launch.")
+        },
       ])
     EnterContactInfo -> {
       let #(name, email, phone) = case model.contact {

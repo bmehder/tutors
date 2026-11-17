@@ -304,6 +304,9 @@ export function billingMonth() {
 
 // Keep browser effects here, including mock checkout, scrolling, printing,
 // Astro tutor-card events, and payment input masks.
+export const checkoutOpen = () =>
+	document.getElementById('family-planner')?.dataset.checkoutOpen === '1'
+
 export const stripeSandboxEnabled = () =>
 	document.getElementById('family-planner')?.dataset.stripeSandbox === '1'
 

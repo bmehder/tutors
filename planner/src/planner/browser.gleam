@@ -93,3 +93,6 @@ pub fn watch_tutor_hours(notify: fn() -> Nil) -> Nil
 
 @external(javascript, "../planner_ffi.mjs", "stripeSandboxEnabled")
 pub fn stripe_sandbox_enabled() -> Bool
+
+@external(javascript, "../planner_ffi.mjs", "checkoutOpen")
+pub fn checkout_open() -> Bool

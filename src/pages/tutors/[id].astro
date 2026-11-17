@@ -40,7 +40,7 @@ const availability = tutor?.startsByDay.flatMap((times, index) =>
             {tutor.subjects.map(subject => <li class="rounded-full bg-[#edf3ed] px-3 py-1 text-sm">{subject}</li>)}
           </ul>
         </header>
-        <div class="grid items-start gap-8 lg:grid-cols-[minmax(0,1fr)_minmax(18rem,25rem)]">
+        <div class:list={["grid items-start gap-8", import.meta.env.DEV && "lg:grid-cols-[minmax(0,1fr)_minmax(18rem,25rem)]"]}>
           <div class="min-w-0 space-y-8">
             <section aria-labelledby="about-tutor">
               <h2 id="about-tutor" class="text-2xl font-semibold">About {tutor.name}</h2>
@@ -70,10 +70,10 @@ const availability = tutor?.startsByDay.flatMap((times, index) =>
                   ))}
                 </dl>
               ) : <p class="mt-4 text-sm">No weekly hours are listed yet.</p>}
-              <a href={`/?tutor=${encodeURIComponent(tutor.id)}#booking`} class="btn mt-5">Check dates and book</a>
+              <a href={`/?tutor=${encodeURIComponent(tutor.id)}#booking`} class="btn mt-5">Check dates and plan</a>
             </section>
           </div>
-          <TutorContact tutorId={tutor.id} tutorName={tutor.name} />
+          {import.meta.env.DEV && <TutorContact tutorId={tutor.id} tutorName={tutor.name} />}
         </div>
       </>
     ) : (
