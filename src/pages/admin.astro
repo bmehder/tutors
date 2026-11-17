@@ -36,6 +36,9 @@ const days = [
 ]
 const subjects = signedIn ? await subjectCatalog(pool) : []
 const subjectNames = subjects.map(subject => subject.name)
+const instructions = new Map(signedIn ? (await pool!.query<{ tutor_id: string; meeting_instructions: string }>(
+	'SELECT tutor_id, meeting_instructions FROM tutor_profiles',
+)).rows.map(row => [row.tutor_id, row.meeting_instructions]) : [])
 const catalog = signedIn ? await tutorHours(true, pool, subjects) : []
 const selected =
 	catalog.find(t => t.id === Astro.url.searchParams.get('tutor')) ?? catalog[0]
@@ -110,18 +113,23 @@ if (Astro.request.method === 'POST') {
 									typeof subject === 'string' && subjectNames.includes(subject),
 							)
 					: existing?.subjects
-			if (!name || !subjects?.length)
+			const meetingInstructions = String(form.get('meeting-instructions') ?? '').trim()
+			if (action === 'save-tutor' && meetingInstructions.length > 4000)
+				error = 'Meeting instructions must be 4,000 characters or fewer.'
+			else if (!name || !subjects?.length)
 				error = 'Enter a tutor name and choose at least one subject.'
 			else {
 				const tutorId = existing?.id ?? randomUUID()
 				await pool!.query(
-					'INSERT INTO tutor_profiles VALUES ($1,$2,$3,$4) ON CONFLICT (tutor_id) DO UPDATE SET name=EXCLUDED.name, subjects=EXCLUDED.subjects, archived=EXCLUDED.archived',
+					'INSERT INTO tutor_profiles (tutor_id,name,subjects,archived,meeting_instructions) VALUES ($1,$2,$3,$4,$5) ON CONFLICT (tutor_id) DO UPDATE SET name=EXCLUDED.name, subjects=EXCLUDED.subjects, archived=EXCLUDED.archived, meeting_instructions=CASE WHEN $6 THEN EXCLUDED.meeting_instructions ELSE tutor_profiles.meeting_instructions END',
 					[
 						tutorId,
 						name,
 						subjects,
 						action === 'archive-tutor' ||
 							(action === 'save-tutor' && !!existing?.archived),
+						meetingInstructions,
+						action === 'save-tutor',
 					],
 				)
 				return redirect(
@@ -260,6 +268,7 @@ const eastern = new Intl.DateTimeFormat('en-US', {
 const data = {
 	tutors: catalog.map(tutor => ({
 		...tutor,
+		meetingInstructions: instructions.get(tutor.id) ?? '',
 		blocks: tutor.startsByDay.flatMap((starts, day) =>
 			blocks(starts).map(block => ({ ...block, day })),
 		),

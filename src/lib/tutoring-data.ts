@@ -183,7 +183,14 @@ export const tutors=[
     "degree": "Computer Science and Intro to Programming",
     "bio": "MyFunScience teacher · Tutoring availability shown is fictional.",
     "color": "#ece7cf"
-  }
+  },
+  {"id": "angie-baer", "name": "Angie Baer", "initials": "AB", "subjects": ["Science Lab Explorations", "Old Testament Survey"], "days": [] as number[], "times": [] as string[]},
+  {"id": "jana-bontrager", "name": "Jana Bontrager", "initials": "JB", "subjects": ["Introduction to Literary Analysis", "English I: Discovery"], "days": [] as number[], "times": [] as string[]},
+  {"id": "faith-cruz", "name": "Faith Cruz", "initials": "FC", "subjects": ["German 1", "German 2"], "days": [] as number[], "times": [] as string[]},
+  {"id": "christine-filipek", "name": "Christine Filipek", "initials": "CF", "subjects": ["Anatomy & Physiology", "High School Astronomy"], "days": [] as number[], "times": [] as string[]},
+  {"id": "claire-hamilton", "name": "Claire Hamilton", "initials": "CH", "subjects": ["Informal Logic"], "days": [] as number[], "times": [] as string[]},
+  {"id": "beth-swinderman", "name": "Beth Swinderman", "initials": "BS", "subjects": ["Upper Elementary Language Arts", "Upper Elementary US & World Geography"], "days": [] as number[], "times": [] as string[]},
+  {"id": "sarah-westcott", "name": "Sarah Westcott", "initials": "SW", "subjects": ["Consumer Math", "Economics"], "days": [] as number[], "times": [] as string[]}
 ];
 export const money=(n:number)=>new Intl.NumberFormat('en-US',{style:'currency',currency:'USD',minimumFractionDigits:0,maximumFractionDigits:2}).format(n);
 
@@ -203,4 +210,17 @@ export const SUBJECTS = [
 	'Computer Science and Intro to Programming',
 	'Spanish 1',
 	'Spanish 2',
+	'Science Lab Explorations',
+	'Old Testament Survey',
+	'Introduction to Literary Analysis',
+	'English I: Discovery',
+	'German 1',
+	'German 2',
+	'Anatomy & Physiology',
+	'High School Astronomy',
+	'Informal Logic',
+	'Upper Elementary Language Arts',
+	'Upper Elementary US & World Geography',
+	'Consumer Math',
+	'Economics',
 ]

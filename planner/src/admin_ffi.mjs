@@ -20,6 +20,7 @@ export function decodeData(data) {
 							model.Block$Block(id, block.day, block.start, block.end),
 						),
 					),
+					tutor.meetingInstructions ?? '',
 				),
 			),
 		),

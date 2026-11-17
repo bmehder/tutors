@@ -132,7 +132,10 @@ pub fn render(model: Model) -> Element(Msg) {
                     AddTutor ->
                       h.div([a.class(panel <> " space-y-4")], [
                         heading("Add tutor"),
-                        tutor_form(model, model.Tutor("", "", [], False, [])),
+                        tutor_form(
+                          model,
+                          model.Tutor("", "", [], False, [], ""),
+                        ),
                       ])
                     Schedule(tutor, blocks, removed) ->
                       schedule(model, tutor, blocks, removed)
@@ -494,6 +497,23 @@ fn tutor_form(model: Model, tutor: Tutor) {
   form("tutor-" <> tutor.id, "save-tutor", "", [
     hidden("tutor-id", tutor.id),
     input(fields, "Name", "name", tutor.name, "text"),
+    h.label([a.class("block")], [
+      h.text("Meeting instructions"),
+      h.textarea(
+        [
+          a.class(field),
+          a.name("meeting-instructions"),
+          a.attribute("rows", "4"),
+          a.attribute("maxlength", "4000"),
+        ],
+        field_value(fields, "meeting-instructions", tutor.meeting_instructions),
+      ),
+      h.p([a.class("mt-1 text-sm text-slate-600")], [
+        h.text(
+          "Include the meeting link and any steps families need to join. Shared in booking emails.",
+        ),
+      ]),
+    ]),
     h.details([a.open(tutor.id == "")], [
       h.summary([a.class("cursor-pointer")], [
         h.text(

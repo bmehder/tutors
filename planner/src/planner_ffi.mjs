@@ -10,6 +10,8 @@ import {
 	Student$Student$name,
 	Order$Order$contact,
 	ContactInfo$ContactInfo$name,
+	ContactInfo$ContactInfo$email,
+	ContactInfo$ContactInfo$phone,
 	Order$Order$package_hours,
 	Order$Order$discount,
 	ConfirmedSession$ConfirmedSession$session,
@@ -335,7 +337,16 @@ export function afterPayment(order, timeZone, dispatch, success, failed) {
 		if (!response.ok) throw new Error(result.error)
 		return result
 	}
-	reserve({ sessions, timeZone, familyName: ContactInfo$ContactInfo$name(Order$Order$contact(order)), packageHours: Order$Order$package_hours(order), demoDiscount: Option$isSome(Order$Order$discount(order)), checkout: stripeSandboxEnabled() ? 'stripe' : 'mock' })
+	const contact = Order$Order$contact(order)
+	reserve({
+		sessions, timeZone,
+		familyName: ContactInfo$ContactInfo$name(contact),
+		contactEmail: ContactInfo$ContactInfo$email(contact),
+		contactPhone: ContactInfo$ContactInfo$phone(contact),
+		packageHours: Order$Order$package_hours(order),
+		demoDiscount: Option$isSome(Order$Order$discount(order)),
+		checkout: stripeSandboxEnabled() ? 'stripe' : 'mock',
+	})
 		.then(async result => {
 			if (result.checkoutUrl) {
 				window.location.assign(result.checkoutUrl)

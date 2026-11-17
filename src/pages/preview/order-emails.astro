@@ -1,0 +1,45 @@
+---
+import SiteLayout from '../../layouts/SiteLayout.astro'
+import { orderEmails } from '../../server/order-email'
+
+export const prerender = false
+if (!import.meta.env.DEV) return new Response('Not found', { status: 404 })
+Astro.response.headers.set('Cache-Control', 'no-store')
+
+const emails = orderEmails({
+  id: '842e6b30-example',
+  familyName: 'Jordan Taylor',
+  customerEmail: 'jordan@example.test',
+  customerPhone: '(555) 010-1234',
+  packageHours: 5,
+  totalCents: 32000,
+  timeZone: 'America/New_York',
+  sessions: [5, 12, 19, 26, 33].map(day => ({
+    student: 'Emma', subject: 'Biology', tutor: 'Melissa Lopez',
+    meetingInstructions: 'Join at https://example.test/emmas-tutoring-room\nPlease bring your biology notebook.',
+    start: new Date(Date.UTC(2027, 0, day, 21)),
+  })),
+}, 'admin@example.test')
+---
+
+<SiteLayout title="Order email preview">
+  <main class="mx-auto max-w-5xl px-6 py-12">
+    <h1 class="text-4xl font-semibold">After a family pays</h1>
+    <p class="mt-4">This walkthrough uses a sample order. Email delivery is off.</p>
+    <ol class="my-8 list-decimal space-y-2 pl-6">
+      <li>The family completes payment through Stripe.</li>
+      <li>Stripe confirms the payment and the site confirms the booking.</li>
+      <li>The family sees their printable schedule. Once delivery is enabled, the family and admin each receive an email.</li>
+    </ol>
+    <div class="grid gap-5 lg:grid-cols-2">
+      {emails.map((email, index) => (
+        <article class="rounded-xl border border-ink/15 bg-white p-6">
+          <h2 class="text-2xl font-semibold">{index === 0 ? 'Customer email' : 'Admin email'}</h2>
+          <p class="mt-3 text-sm">To: {email.to}</p>
+          <p class="mt-1 text-sm font-bold">{email.subject}</p>
+          <p class="mt-4 whitespace-pre-wrap border-t border-ink/15 pt-4 text-sm leading-6">{email.text}</p>
+        </article>
+      ))}
+    </div>
+  </main>
+</SiteLayout>

@@ -56,6 +56,14 @@ export const POST: APIRoute = async ({ request }) => {
     const discount = body.demoDiscount === true ? subtotal / 5 : 0
     const familyName = typeof body.familyName === 'string' ? body.familyName.trim() : ''
     if (!familyName || familyName.length > 200) return reply(400, { error: 'Enter a valid family contact name.' })
+    const contactEmail = typeof body.contactEmail === 'string' ? body.contactEmail.trim() : ''
+    const contactPhone = typeof body.contactPhone === 'string' ? body.contactPhone.trim() : ''
+    const digits = contactPhone.replace(/\D/g, '')
+    if (stripeRequired && (
+      contactEmail.length > 254 || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(contactEmail) ||
+      contactPhone.length > 40 || !/^\+?[\d(). -]+$/.test(contactPhone) ||
+      digits.length < 7 || digits.length > 15
+    )) return reply(400, { error: 'Enter a valid email address and phone number.' })
     let timeZone = 'America/New_York'
     if (typeof body.timeZone === 'string' && body.timeZone.length <= 100) {
       try {
@@ -71,8 +79,8 @@ export const POST: APIRoute = async ({ request }) => {
       await client.query('DELETE FROM booking_reservations WHERE confirmed_at IS NULL AND expires_at <= now()')
       if (stripeRequired) {
         await client.query(
-          "INSERT INTO booking_reservations (id, expires_at, subtotal_cents, discount_cents, label, package_hours, stripe_checkout_required, display_time_zone) VALUES ($1, now() + interval '45 minutes', $2, $3, $4, $5, true, $6)",
-          [id, subtotal, discount, familyName, body.packageHours, timeZone],
+          "INSERT INTO booking_reservations (id, expires_at, subtotal_cents, discount_cents, label, package_hours, stripe_checkout_required, display_time_zone, contact_email, contact_phone, requires_contact) VALUES ($1, now() + interval '45 minutes', $2, $3, $4, $5, true, $6, $7, $8, true)",
+          [id, subtotal, discount, familyName, body.packageHours, timeZone, contactEmail, contactPhone],
         )
       } else {
         await client.query(

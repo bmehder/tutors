@@ -42,6 +42,7 @@ pub type Tutor {
     subjects: List(Subject),
     archived: Bool,
     blocks: List(Block),
+    meeting_instructions: String,
   )
 }
 
