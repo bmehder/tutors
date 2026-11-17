@@ -25,7 +25,7 @@ import Icon from "./Icon.astro";
 					<a href='/tutors'>Our tutors</a>
 					<a href='/#booking'>Plan tutoring</a>
 					<a href='/#contact'>Contact</a>
-					{import.meta.env.DEV && <a href='/admin'>Admin</a>}
+					<a href='/admin'>Admin</a>
 				</nav>
 				<a class='btn !py-3 hidden lg:inline-flex' href='/#booking'>
 					Find your tutor
@@ -51,7 +51,7 @@ import Icon from "./Icon.astro";
 							['/tutors', 'Our tutors'],
 							['/#booking', 'Plan tutoring'],
 							['/#contact', 'Contact'],
-							...(import.meta.env.DEV ? [['/admin', 'Admin']] : []),
+							['/admin', 'Admin'],
 						].map(([href, label]) => (
 							<a
 								href={href}
