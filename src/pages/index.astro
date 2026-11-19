@@ -7,7 +7,7 @@ import MyFunScienceSection from '../components/home/MyFunScienceSection.astro'
 import BookingIsland from '../components/home/BookingIsland.astro'
 import TutorsSection from '../components/home/TutorsSection.astro'
 import TestimonialsSection from '../components/home/TestimonialsSection.astro'
-import DemoSignup from '../components/home/DemoSignup.astro'
+// import DemoSignup from '../components/home/DemoSignup.astro'
 import FaqSection from '../components/home/FaqSection.astro'
 import ContactSection from '../components/home/ContactSection.astro'
 import { tutorHours } from '../server/tutor-hours'
@@ -23,11 +23,13 @@ const featuredTutors = await tutorHours()
 	<main>
 		<HeroSection />
 		<HowItWorksSection />
-		<MyFunScienceSection />
 		<BookingIsland />
 		<TutorsSection tutors={featuredTutors} />
 		<TestimonialsSection />
-		{import.meta.env.DEV && <DemoSignup />}
+		<MyFunScienceSection />
+		{/* Newsletter signup can be restored here.
+		<DemoSignup />
+		*/}
 		<FaqSection />
 		{(import.meta.env.DEV || emailDeliveryEnabled) ? <ContactSection /> : (
 			<section id="contact" class="mx-auto max-w-3xl px-6 pb-12 md:pb-16">
