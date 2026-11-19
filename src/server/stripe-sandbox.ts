@@ -1,5 +1,6 @@
 import { getSecret } from 'astro:env/server'
 import Stripe from 'stripe'
+import { queueOrderEmails, deliverQueuedEmails } from './email-delivery'
 import { pool } from './tutor-hours'
 
 const key = getSecret('STRIPE_TEST_SECRET_KEY')
@@ -46,7 +47,11 @@ export async function confirmSandboxCheckout(session: Stripe.Checkout.Session) {
       session.currency !== 'usd' || session.amount_total === null ||
       !session.client_reference_id) return null
 
-  const result = await pool.query<{ id: string }>(
+  const db = await pool.connect()
+  let bookingId: string | null = null
+  try {
+  await db.query('BEGIN')
+  const result = await db.query<{ id: string }>(
     `UPDATE booking_reservations
      SET confirmed_at = COALESCE(confirmed_at, now())
      WHERE id::text = $1 AND stripe_checkout_required AND stripe_checkout_id = $2
@@ -54,7 +59,16 @@ export async function confirmSandboxCheckout(session: Stripe.Checkout.Session) {
      RETURNING id`,
     [session.client_reference_id, session.id, session.amount_total],
   )
-  return result.rows[0]?.id ?? null
+  bookingId = result.rows[0]?.id ?? null
+  if (bookingId) await queueOrderEmails(db, bookingId, session.livemode)
+  await db.query('COMMIT')
+  } catch (error) {
+    await db.query('ROLLBACK')
+    throw error
+  } finally { db.release() }
+  // Email failures leave the confirmed order intact and queued for retry.
+  if (bookingId) await deliverQueuedEmails().catch(() => {})
+  return bookingId
 }
 
 export async function sandboxBookingDetails(id: string) {
@@ -70,12 +84,13 @@ export async function sandboxBookingDetails(id: string) {
     student_name: string | null
     tutor_id: string
     tutor_name: string | null
+    meeting_instructions: string | null
     subject: string | null
     starts_at: Date
     ends_at: Date
   }>(
     `SELECT r.label, r.package_hours, r.subtotal_cents, r.discount_cents, r.display_time_zone, r.contact_email, r.contact_phone,
-            s.student_name, s.tutor_id, p.name AS tutor_name, s.subject,
+            s.student_name, s.tutor_id, p.name AS tutor_name, p.meeting_instructions, s.subject,
             lower(s.slot) AS starts_at, upper(s.slot) AS ends_at
      FROM booking_reservations r
      JOIN booking_sessions s ON s.reservation_id = r.id

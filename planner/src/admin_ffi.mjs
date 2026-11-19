@@ -21,6 +21,7 @@ export function decodeData(data) {
 						),
 					),
 					tutor.meetingInstructions ?? '',
+					tutor.contactEmail ?? '',
 				),
 			),
 		),

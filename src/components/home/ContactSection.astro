@@ -1,9 +1,10 @@
 ---
+import { emailDeliveryEnabled } from "../../server/email-delivery"
 import ContactPreview from "../ContactPreview.astro"
 import Icon from '../Icon.astro'
 ---
 
-<section id='contact' class='border-t border-ink/10 bg-white py-20'>
+<section data-email-enabled={emailDeliveryEnabled ? '1' : '0'} id='contact' class='border-t border-ink/10 bg-white py-20'>
 	<div
 		class='max-w-7xl mx-auto px-6 md:px-12 grid lg:grid-cols-[.8fr_1.2fr] gap-10 lg:gap-20'
 	>
@@ -217,7 +218,7 @@ import Icon from '../Icon.astro'
 					isTutor = input.value === 'tutor'
 					tutorFields.hidden = tutorFields.disabled = !isTutor
 					familyFields.hidden = familyFields.disabled = isTutor
-					submit.textContent = isTutor
+					submit.textContent = section.dataset.emailEnabled === '1' ? (isTutor ? 'Send application' : 'Send inquiry') : isTutor
 						? 'Preview application confirmation'
 						: 'Preview inquiry confirmation'
 					form.reset()
@@ -227,12 +228,16 @@ import Icon from '../Icon.astro'
 		phone.addEventListener('input', () => {
 			phone.value = formatPhone(phone.value)
 		})
+		const live = section.dataset.emailEnabled === '1'
+		let requestId = crypto.randomUUID()
+		if (live) submit.textContent = 'Send inquiry'
 		const error = form.querySelector('[data-contact-error]')!
 		submit.disabled = false
 		form.addEventListener('submit', async event => {
 			event.preventDefault()
 			const application = isTutor
 			const fields = new FormData(form)
+			fields.set('request-id', requestId)
 			fields.set('contact-type', application ? 'tutor' : 'family')
 			error.textContent = ''
 			submit.disabled = true
@@ -242,7 +247,12 @@ import Icon from '../Icon.astro'
 					error.textContent = result.error.message
 					return
 				}
-				renderContactPreview(confirmation, result.data)
+				if (!result.data.queued) renderContactPreview(confirmation, result.data)
+				else {
+					confirmation.querySelector<HTMLDetailsElement>('[data-message-preview]')!.hidden = true
+					confirmation.querySelector('p')!.textContent = 'Your message is queued for delivery.'
+				}
+				requestId = crypto.randomUUID()
 				section.querySelector('[data-contact-heading]')!.textContent = application
 					? 'A thoughtful first step.'
 					: 'Thanks for reaching out.'

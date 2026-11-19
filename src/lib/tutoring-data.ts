@@ -116,8 +116,8 @@ export const tutors=[
   },
   {
     "id": "lisa-rainey",
-    "name": "Lisa Rainey",
-    "initials": "LR",
+    "name": "Elisabeth Rainey",
+    "initials": "ER",
     "subjects": [
       "Pre-Algebra",
       "Middle School Math"
@@ -137,7 +137,7 @@ export const tutors=[
   },
   {
     "id": "marji-mcilvaine",
-    "name": "Marji McIlvaine",
+    "name": "Marjorie McIlvaine",
     "initials": "MM",
     "subjects": [
       "Spanish 1",
@@ -180,8 +180,7 @@ export const tutors=[
   {"id": "jana-bontrager", "name": "Jana Bontrager", "initials": "JB", "subjects": ["Introduction to Literary Analysis", "English I: Discovery"], "days": [] as number[], "times": [] as string[]},
   {"id": "faith-cruz", "name": "Faith Cruz", "initials": "FC", "subjects": ["German 1", "German 2"], "days": [] as number[], "times": [] as string[]},
   {"id": "christine-filipek", "name": "Christine Filipek", "initials": "CF", "subjects": ["Anatomy & Physiology", "High School Astronomy"], "days": [] as number[], "times": [] as string[]},
-  {"id": "claire-hamilton", "name": "Claire Hamilton", "initials": "CH", "subjects": ["Informal Logic"], "days": [] as number[], "times": [] as string[]},
-  {"id": "beth-swinderman", "name": "Beth Swinderman", "initials": "BS", "subjects": ["Upper Elementary Language Arts", "Upper Elementary US & World Geography"], "days": [] as number[], "times": [] as string[]},
+  {"id": "haley-hill", "name": "Haley Hill", "initials": "HH", "subjects": ["Biology"], "days": [] as number[], "times": [] as string[]},
   {"id": "sarah-westcott", "name": "Sarah Westcott", "initials": "SW", "subjects": ["Consumer Math", "Economics"], "days": [] as number[], "times": [] as string[]}
 ];
 export const money=(n:number)=>new Intl.NumberFormat('en-US',{style:'currency',currency:'USD',minimumFractionDigits:0,maximumFractionDigits:2}).format(n);

@@ -1,8 +1,9 @@
 ---
+import { emailDeliveryEnabled } from "../../server/email-delivery"
 import ContactPreview from "../ContactPreview.astro"
 const { tutorId, tutorName } = Astro.props
 ---
-<section id="contact-tutor" aria-labelledby="contact-tutor-heading" class="scroll-mt-6 rounded-2xl border border-ink/15 bg-white p-5 md:p-7">
+<section data-email-enabled={emailDeliveryEnabled ? "1" : "0"} id="contact-tutor" aria-labelledby="contact-tutor-heading" class="scroll-mt-6 rounded-2xl border border-ink/15 bg-white p-5 md:p-7">
   <h2 id="contact-tutor-heading" class="text-2xl font-semibold">Ask {tutorName} a question</h2>
   <p class="mt-2 text-sm leading-6 text-ink/75">Ask about subjects, tutoring goals, and weekly availability.</p>
   <form method="post" data-tutor-inquiry class="mt-5 grid gap-4">
@@ -45,19 +46,29 @@ const { tutorId, tutorName } = Astro.props
     const button = form.querySelector('button')!
     const status = form.querySelector('[role="status"]')!
     const section = form.closest('section')!
+    let requestId = crypto.randomUUID()
+    if (section.dataset.emailEnabled === '1') button.textContent = 'Send inquiry'
     form.addEventListener('submit', async event => {
       event.preventDefault()
       button.disabled = true
       section.querySelector<HTMLDetailsElement>('[data-message-preview]')!.hidden = true
       status.textContent = 'Preparing preview…'
       try {
-        const result = await actions.previewContact(new FormData(form))
+        const fields = new FormData(form)
+        fields.set('request-id', requestId)
+        const result = await actions.previewContact(fields)
         if (result.error) {
           status.textContent = result.error.message
           return
         }
-        renderContactPreview(section, result.data)
-        status.textContent = 'Review your inquiry below.'
+        if (result.data.queued) {
+          status.textContent = 'Your message is queued for delivery.'
+          requestId = crypto.randomUUID()
+          form.reset()
+        } else {
+          renderContactPreview(section, result.data)
+          status.textContent = 'Review your inquiry below.'
+        }
       } catch {
         status.textContent = 'The preview could not be loaded. Please try again.'
       } finally {

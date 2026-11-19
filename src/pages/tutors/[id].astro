@@ -1,8 +1,7 @@
 ---
+import { emailDeliveryEnabled } from '../../server/email-delivery'
 import { tutorBiographies } from '../../lib/tutor-biographies'
-import SiteLayout from '../../layouts/SiteLayout.astro'
-import SiteHeader from '../../components/SiteHeader.astro'
-import SiteFooter from '../../components/SiteFooter.astro'
+import PublicLayout from '../../layouts/PublicLayout.astro'
 import TutorContact from '../../components/tutors/TutorContact.astro'
 import { formatTime } from '../../lib/session-time'
 import { tutorHours } from '../../server/tutor-hours'
@@ -29,8 +28,7 @@ const availability = tutor?.startsByDay.flatMap((times, index) =>
   times.length ? [{ day: days[index], ranges: startRanges(times) }] : [],
 ) ?? []
 ---
-<SiteLayout title={tutor?.name ?? 'Tutor not found'} description={tutor && `Find out what ${tutor.name} teaches and see their weekly tutoring hours.`}>
-  <SiteHeader />
+<PublicLayout title={tutor?.name ?? 'Tutor not found'} description={tutor && `Find out what ${tutor.name} teaches and see their weekly tutoring hours.`}>
   <main class="mx-auto max-w-7xl px-6 pb-20 pt-8 md:px-12">
     <a href="/tutors" class="text-sm font-bold underline underline-offset-4">Back to all tutors</a>
     {tutor ? (
@@ -42,7 +40,7 @@ const availability = tutor?.startsByDay.flatMap((times, index) =>
             {tutor.subjects.map(subject => <li class="rounded-full bg-[#edf3ed] px-3 py-1 text-sm">{subject}</li>)}
           </ul>
         </header>
-        <div class:list={["grid items-start gap-8", import.meta.env.DEV && "lg:grid-cols-[minmax(0,1fr)_minmax(18rem,25rem)]"]}>
+        <div class:list={["grid items-start gap-8", (import.meta.env.DEV || emailDeliveryEnabled) && "lg:grid-cols-[minmax(0,1fr)_minmax(18rem,25rem)]"]}>
           <div class="min-w-0 space-y-8">
             <section aria-labelledby="about-tutor">
               <h2 id="about-tutor" class="text-2xl font-semibold">About {tutor.name}</h2>
@@ -74,7 +72,7 @@ const availability = tutor?.startsByDay.flatMap((times, index) =>
               <a href={`/?tutor=${encodeURIComponent(tutor.id)}#booking`} class="btn mt-5">Check dates and plan</a>
             </section>
           </div>
-          {import.meta.env.DEV && <TutorContact tutorId={tutor.id} tutorName={tutor.name} />}
+          {(import.meta.env.DEV || emailDeliveryEnabled) && <TutorContact tutorId={tutor.id} tutorName={tutor.name} />}
         </div>
       </>
     ) : (
@@ -84,5 +82,4 @@ const availability = tutor?.startsByDay.flatMap((times, index) =>
       </div>
     )}
   </main>
-  <SiteFooter />
-</SiteLayout>
+</PublicLayout>

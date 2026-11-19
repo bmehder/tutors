@@ -1,0 +1,23 @@
+name: Retry queued email
+on:
+  schedule:
+    - cron: '*/5 * * * *'
+  workflow_dispatch:
+permissions: {}
+concurrency:
+  group: retry-queued-email
+  cancel-in-progress: false
+jobs:
+  deliver:
+    if: vars.EMAIL_RETRIES_ENABLED == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 2
+    steps:
+      - name: Process queued messages
+        env:
+          WORKER_SECRET: ${{ secrets.EMAIL_WORKER_SECRET }}
+        run: |
+          curl --fail-with-body --silent --show-error --max-time 45 \
+            --retry 2 --retry-delay 5 --retry-all-errors \
+            -H "Authorization: Bearer $WORKER_SECRET" \
+            -X POST https://tutors-admin-demo.vercel.app/api/deliver-emails

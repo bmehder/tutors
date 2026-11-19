@@ -47,9 +47,17 @@ export function orderEmails(order: ConfirmedOrderEmailDetails, adminEmail: strin
   ] as const
 }
 
+export type OutgoingEmail = {
+  to: string
+  subject: string
+  text: string
+  key: string
+  replyTo?: string
+}
+
 export async function sendWithResend(
   config: { apiKey: string; from: string; replyTo: string },
-  message: ReturnType<typeof orderEmails>[number],
+  message: OutgoingEmail,
   request: typeof fetch = fetch,
 ) {
   const response = await request('https://api.resend.com/emails', {
@@ -60,7 +68,7 @@ export async function sendWithResend(
       'Idempotency-Key': message.key,
     },
     body: JSON.stringify({
-      from: config.from, to: [message.to], reply_to: config.replyTo,
+      from: config.from, to: [message.to], reply_to: message.replyTo ?? config.replyTo,
       subject: message.subject, text: message.text,
     }),
     signal: AbortSignal.timeout(8_000),

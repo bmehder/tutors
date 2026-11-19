@@ -1,7 +1,5 @@
 ---
-import SiteLayout from '../../layouts/SiteLayout.astro'
-import SiteHeader from '../../components/SiteHeader.astro'
-import SiteFooter from '../../components/SiteFooter.astro'
+import PublicLayout from '../../layouts/PublicLayout.astro'
 import TutorCard from '../../components/tutors/TutorCard.astro'
 import { tutorHours } from '../../server/tutor-hours'
 
@@ -13,8 +11,7 @@ const subjects = [...new Set(tutors.flatMap(tutor => tutor.subjects))].sort((a, 
 const subject = Astro.url.searchParams.get('subject') ?? ''
 const matches = subject ? tutors.filter(tutor => tutor.subjects.includes(subject)) : tutors
 ---
-<SiteLayout title="Our tutors" description="Browse tutors by subject and see their weekly tutoring hours.">
-  <SiteHeader />
+<PublicLayout title="Our tutors" description="Browse tutors by subject and see their weekly tutoring hours.">
   <main class="mx-auto max-w-7xl px-6 pb-20 pt-8 md:px-12">
     <div class="max-w-2xl">
       <p class="eyebrow mb-3 text-ink/55">Our tutors</p>
@@ -38,5 +35,4 @@ const matches = subject ? tutors.filter(tutor => tutor.subjects.includes(subject
       {matches.map(tutor => <TutorCard tutor={tutor} />)}
     </ul>
   </main>
-  <SiteFooter />
-</SiteLayout>
+</PublicLayout>

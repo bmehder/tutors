@@ -3,6 +3,7 @@ import SiteLayout from '../../layouts/SiteLayout.astro'
 import { confirmSandboxCheckout, sandboxBookingDetails, stripe } from '../../server/stripe-sandbox'
 
 import { tutors, money } from '../../lib/tutoring-data'
+import { adminEmail } from '../../server/email-delivery'
 import { orderEmails } from '../../server/order-email'
 import { viewSession } from '../../lib/session-time'
 
@@ -36,9 +37,9 @@ const emails = booking && summary?.contact_email && summary.contact_phone ? orde
     subject: session.subject ?? 'Tutoring',
     tutor: session.tutor_name ?? tutors.find(tutor => tutor.id === session.tutor_id)?.name ?? 'Tutor',
     start: session.starts_at,
-    meetingInstructions: '',
+    meetingInstructions: session.meeting_instructions ?? '',
   })),
-}, 'admin@example.test') : []
+}, adminEmail) : []
 ---
 <SiteLayout title="Booking confirmation">
   <main class="mx-auto max-w-3xl px-6 py-16 print:max-w-none print:p-0">

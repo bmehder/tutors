@@ -43,6 +43,7 @@ pub type Tutor {
     archived: Bool,
     blocks: List(Block),
     meeting_instructions: String,
+    email: String,
   )
 }
 

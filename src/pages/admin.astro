@@ -36,9 +36,9 @@ const days = [
 ]
 const subjects = signedIn ? await subjectCatalog(pool) : []
 const subjectNames = subjects.map(subject => subject.name)
-const instructions = new Map(signedIn ? (await pool!.query<{ tutor_id: string; meeting_instructions: string }>(
-	'SELECT tutor_id, meeting_instructions FROM tutor_profiles',
-)).rows.map(row => [row.tutor_id, row.meeting_instructions]) : [])
+const instructions = new Map(signedIn ? (await pool!.query<{ tutor_id: string; meeting_instructions: string; contact_email: string | null }>(
+	'SELECT tutor_id, meeting_instructions, contact_email FROM tutor_profiles',
+)).rows.map(row => [row.tutor_id, row]) : [])
 const catalog = signedIn ? await tutorHours(true, pool, subjects) : []
 const selected =
 	catalog.find(t => t.id === Astro.url.searchParams.get('tutor')) ?? catalog[0]
@@ -113,15 +113,18 @@ if (Astro.request.method === 'POST') {
 									typeof subject === 'string' && subjectNames.includes(subject),
 							)
 					: existing?.subjects
+			const contactEmail = String(form.get('contact-email') ?? '').trim()
 			const meetingInstructions = String(form.get('meeting-instructions') ?? '').trim()
-			if (action === 'save-tutor' && meetingInstructions.length > 4000)
+			if (action === 'save-tutor' && contactEmail && (contactEmail.length > 254 || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(contactEmail)))
+				error = 'Enter a valid tutor email address.'
+			else if (action === 'save-tutor' && meetingInstructions.length > 4000)
 				error = 'Meeting instructions must be 4,000 characters or fewer.'
 			else if (!name || !subjects?.length)
 				error = 'Enter a tutor name and choose at least one subject.'
 			else {
 				const tutorId = existing?.id ?? randomUUID()
 				await pool!.query(
-					'INSERT INTO tutor_profiles (tutor_id,name,subjects,archived,meeting_instructions) VALUES ($1,$2,$3,$4,$5) ON CONFLICT (tutor_id) DO UPDATE SET name=EXCLUDED.name, subjects=EXCLUDED.subjects, archived=EXCLUDED.archived, meeting_instructions=CASE WHEN $6 THEN EXCLUDED.meeting_instructions ELSE tutor_profiles.meeting_instructions END',
+					'INSERT INTO tutor_profiles (tutor_id,name,subjects,archived,meeting_instructions,contact_email) VALUES ($1,$2,$3,$4,$5,$7) ON CONFLICT (tutor_id) DO UPDATE SET name=EXCLUDED.name, subjects=EXCLUDED.subjects, archived=EXCLUDED.archived, meeting_instructions=CASE WHEN $6 THEN EXCLUDED.meeting_instructions ELSE tutor_profiles.meeting_instructions END, contact_email=CASE WHEN $6 THEN EXCLUDED.contact_email ELSE tutor_profiles.contact_email END',
 					[
 						tutorId,
 						name,
@@ -130,6 +133,7 @@ if (Astro.request.method === 'POST') {
 							(action === 'save-tutor' && !!existing?.archived),
 						meetingInstructions,
 						action === 'save-tutor',
+						contactEmail || null,
 					],
 				)
 				return redirect(
@@ -268,7 +272,8 @@ const eastern = new Intl.DateTimeFormat('en-US', {
 const data = {
 	tutors: catalog.map(tutor => ({
 		...tutor,
-		meetingInstructions: instructions.get(tutor.id) ?? '',
+		contactEmail: instructions.get(tutor.id)?.contact_email ?? '',
+		meetingInstructions: instructions.get(tutor.id)?.meeting_instructions ?? '',
 		blocks: tutor.startsByDay.flatMap((starts, day) =>
 			blocks(starts).map(block => ({ ...block, day })),
 		),

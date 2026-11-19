@@ -1,5 +1,5 @@
 // Based on the linked MyFunScience teacher biographies.
-export const tutorBiographies: Record<string, { summary: string; paragraphs: string[]; source: string }> = {
+export const tutorBiographies: Record<string, { summary: string; paragraphs: string[]; source?: string }> = {
   "melissa-lopez": {
     "summary": "Melissa Lopez studied biology and chemistry at Baylor University before working in a medical research laboratory. She went on to teach in public schools for nine years and has also taught in a homeschool co-op.",
     "paragraphs": [
@@ -96,22 +96,6 @@ export const tutorBiographies: Record<string, { summary: string; paragraphs: str
     ],
     "source": "https://myfunscience.com/teachers/christine-filipek/"
   },
-  "claire-hamilton": {
-    "summary": "Claire Hamilton holds a degree in speech communication from Colorado State University and has taught adults and K–12 students in a variety of settings. She is passionate about helping students strengthen their critical thinking and communication skills.",
-    "paragraphs": [
-      "Claire Hamilton holds a degree in speech communication from Colorado State University and has taught adults and K–12 students in a variety of settings. She is passionate about helping students strengthen their critical thinking and communication skills.",
-      "Claire has contributed to MyFunScience’s marketing since 2017 and runs Hamilton Communications, offering marketing, photography, and graphic design services. She enjoys creative projects and time with her family in northern Colorado."
-    ],
-    "source": "https://myfunscience.com/teachers/claire-hamilton/"
-  },
-  "beth-swinderman": {
-    "summary": "Beth Swinderman earned an elementary education degree at Evangel University and has worked in both public and private education. Her teaching experience includes kindergarten through eighth grade.",
-    "paragraphs": [
-      "Beth Swinderman earned an elementary education degree at Evangel University and has worked in both public and private education. Her teaching experience includes kindergarten through eighth grade.",
-      "Beth enjoys helping students learn about God’s creation and grow in their faith. Outside the classroom, she spends time traveling with her family, participating in Soap Box Derby racing, gardening, and serving at church."
-    ],
-    "source": "https://myfunscience.com/teachers/beth-swinderman/"
-  },
   "sarah-westcott": {
     "summary": "Sarah Westcott is a homeschooling mother of four who enjoys making classroom concepts practical and relevant to everyday life. Her work spans technology consulting, corporate training, financial coaching, and education.",
     "paragraphs": [
@@ -119,5 +103,11 @@ export const tutorBiographies: Record<string, { summary: string; paragraphs: str
       "Sarah holds a political science degree from Wellesley College with a concentration in computer science. She also has financial-coaching certifications and brings a focus on practical learning, encouragement, and excellence to her teaching."
     ],
     "source": "https://myfunscience.com/teachers/sarah-westcott/"
+  },
+  "haley-hill": {
+    "summary": "Haley Hill offers one-on-one Biology tutoring.",
+    "paragraphs": [
+      "Haley Hill offers one-on-one Biology tutoring."
+    ]
   }
 }

@@ -134,7 +134,7 @@ pub fn render(model: Model) -> Element(Msg) {
                         heading("Add tutor"),
                         tutor_form(
                           model,
-                          model.Tutor("", "", [], False, [], ""),
+                          model.Tutor("", "", [], False, [], "", ""),
                         ),
                       ])
                     Schedule(tutor, blocks, removed) ->
@@ -497,6 +497,7 @@ fn tutor_form(model: Model, tutor: Tutor) {
   form("tutor-" <> tutor.id, "save-tutor", "", [
     hidden("tutor-id", tutor.id),
     input(fields, "Name", "name", tutor.name, "text"),
+    form_input(fields, "Tutor email", "contact-email", tutor.email, "email", False),
     h.label([a.class("block")], [
       h.text("Meeting instructions"),
       h.textarea(

@@ -34,3 +34,14 @@ test('prepares separate order emails and uses a stable Resend key per recipient'
   )
   assert.equal(id, 'fake-message-id')
 })
+
+test('provider rejection and missing message IDs fail explicitly', async () => {
+  const config = { apiKey: 'fake', from: 'admin@example.test', replyTo: 'admin@example.test' }
+  const message = { to: 'tutor@example.test', key: 'contact/one', subject: 'Inquiry', text: 'Question', replyTo: 'parent@example.test' }
+  await assert.rejects(sendWithResend(config, message, async () => new Response(null, { status: 429 })), /HTTP 429/)
+  await assert.rejects(sendWithResend(config, message, async () => Response.json({})), /email ID/)
+  await sendWithResend(config, message, async (_url, request) => {
+    assert.equal(JSON.parse(request.body).reply_to, 'parent@example.test')
+    return Response.json({ id: 'fake-id' })
+  })
+})

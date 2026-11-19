@@ -14,7 +14,8 @@
     "preview": "astro preview --host 127.0.0.1",
     "test": "node --experimental-strip-types --test tests/*.test.mjs temp-reference/typescript/tests/*.test.mjs",
     "build:planner": "node scripts/build-planner.mjs",
-    "test:parity": "npm run build:planner && node --experimental-strip-types --test tests/parity/*.test.mjs"
+    "test:parity": "npm run build:planner && node --experimental-strip-types --test tests/parity/*.test.mjs",
+    "test:email": "node --env-file=.env.local --experimental-strip-types tests/email-delivery.integration.mjs"
   },
   "dependencies": {
     "@astrojs/vercel": "^10.0.8",
@@ -29,6 +30,7 @@
     "@tailwindcss/vite": "^4.2.1",
     "@types/node": "22.19.19",
     "@types/pg": "^8.23.1",
+    "esbuild": "0.27.7",
     "tailwindcss": "4.2.1",
     "typescript": "5.9.3"
   },

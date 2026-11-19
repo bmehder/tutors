@@ -9,7 +9,7 @@ import { toList, toArray } from '../../planner/build/dev/javascript/christian_tu
 
 const empty = toList([])
 const block = model.Block$Block(0, 0, 900, 1080)
-const tutor = model.Tutor$Tutor('tutor-1', 'Test tutor', toList(['Biology']), false, toList([block]), '')
+const tutor = model.Tutor$Tutor('tutor-1', 'Test tutor', toList(['Biology']), false, toList([block]), '', '')
 const data = model.Data$Data(toList([tutor]), empty, toList(['Biology']))
 const state = () => model.Model$Model(data, empty, model.Screen$Schedule(tutor, tutor.blocks, empty), model.RequestState$Ready(), '', '', '', '', Option$None())
 const next = (state, message) => update(state, message)[0]
