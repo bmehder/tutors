@@ -4,7 +4,7 @@ const { tutorId, tutorName } = Astro.props
 ---
 <section id="contact-tutor" aria-labelledby="contact-tutor-heading" class="scroll-mt-6 rounded-2xl border border-ink/15 bg-white p-5 md:p-7">
   <h2 id="contact-tutor-heading" class="text-2xl font-semibold">Ask {tutorName} a question</h2>
-  <p class="mt-2 text-sm leading-6 text-ink/75">This is a demo form. Use fictional details. Our server validates the preview without sending an email or saving an inquiry.</p>
+  <p class="mt-2 text-sm leading-6 text-ink/75">Ask about subjects, tutoring goals, and weekly availability.</p>
   <form method="post" data-tutor-inquiry class="mt-5 grid gap-4">
     <input type="hidden" name="contact-type" value="tutor-inquiry" />
     <input type="hidden" name="tutor-id" value={tutorId} />
@@ -57,7 +57,7 @@ const { tutorId, tutorName } = Astro.props
           return
         }
         renderContactPreview(section, result.data)
-        status.textContent = 'Inquiry preview complete. No message was sent.'
+        status.textContent = 'Review your inquiry below.'
       } catch {
         status.textContent = 'The preview could not be loaded. Please try again.'
       } finally {

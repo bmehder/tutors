@@ -103,7 +103,7 @@ test('Gleam owns demo payment validation and package prices', () => {
   assert.match(payment_issue(details(undefined, '10 / 30'), 2030, 11), /expiry/)
   assert.match(payment_issue(details(undefined, '1 / 30'), 2030, 11), /expiry/)
   assert.match(payment_issue(details(undefined, undefined, '12'), 2030, 11), /security code/)
-  for (const [hours, rate, total] of [[5, 80, 400], [10, 75, 750], [20, 70, 1400]]) {
+  for (const [hours, rate, total] of [[5, 60, 300], [10, 55, 550], [20, 50, 1000]]) {
     assert.equal(hourly_rate(hours), rate)
     assert.equal(package_total(hours), total)
   }
@@ -112,8 +112,8 @@ test('Gleam owns demo payment validation and package prices', () => {
 
 test('demo discount reduces the order total and can be removed', () => {
   const order = discount => Order$Order(10, ContactInfo$ContactInfo('Parent', 'parent@example.com', '+44 20 7946 0958'), toList([]), toList([]), toList([]), discount)
-  assert.equal(order_total(order(Option$None())), 750)
-  assert.equal(order_total(order(Option$Some(demo_discount(10)))), 600)
+  assert.equal(order_total(order(Option$None())), 550)
+  assert.equal(order_total(order(Option$Some(demo_discount(10)))), 440)
   assert.equal(discount_amount(10, Option$Some(Discount$Discount(-10))), 0)
   assert.equal(order_total(order(Option$Some(Discount$Discount(800)))), 0)
 })

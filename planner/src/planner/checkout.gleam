@@ -213,9 +213,9 @@ pub fn revalidate(
 
 pub fn hourly_rate(hours: Hours) -> Int {
   case hours {
-    5 -> 80
-    10 -> 75
-    20 -> 70
+    5 -> 60
+    10 -> 55
+    20 -> 50
     _ -> 0
   }
 }

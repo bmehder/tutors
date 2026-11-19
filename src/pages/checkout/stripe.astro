@@ -36,7 +36,7 @@ const emails = booking && summary?.contact_email && summary.contact_phone ? orde
     subject: session.subject ?? 'Tutoring',
     tutor: session.tutor_name ?? tutors.find(tutor => tutor.id === session.tutor_id)?.name ?? 'Tutor',
     start: session.starts_at,
-    meetingInstructions: 'Sample meeting instructions. A meeting link will be provided for real bookings.',
+    meetingInstructions: '',
   })),
 }, 'admin@example.test') : []
 ---
@@ -45,7 +45,7 @@ const emails = booking && summary?.contact_email && summary.contact_phone ? orde
     <h1 class="text-4xl font-semibold">{booking ? 'Booking confirmed' : cancelled ? 'Checkout canceled' : 'Booking confirmation unavailable'}</h1>
     <p class="mt-5 leading-7">
       {booking
-        ? `Your test order was recorded. Reference: ${booking.slice(0, 8).toUpperCase()}. No charge was made and no tutoring appointment was created.`
+        ? `Your order was recorded. Reference: ${booking.slice(0, 8).toUpperCase()}. No charge was made.`
         : cancelled
           ? 'No payment was recorded. Your selected times will be released when the checkout hold expires.'
           : 'We could not verify a paid booking on this page. If you completed checkout, refresh before trying to book again.'}
@@ -72,7 +72,7 @@ const emails = booking && summary?.contact_email && summary.contact_phone ? orde
     {emails.length > 0 && (
       <section class="mt-8 space-y-4 print:hidden" aria-labelledby="email-previews">
         <h2 id="email-previews" class="text-2xl font-semibold">Order email previews</h2>
-        <p>These previews use the test order. No emails were sent.</p>
+        <p>Review the messages for this order.</p>
         {emails.map((email, index) => (
           <details class="rounded-lg border border-ink/15 p-4">
             <summary class="font-bold">{index === 0 ? 'Customer email' : 'Admin email'}</summary>

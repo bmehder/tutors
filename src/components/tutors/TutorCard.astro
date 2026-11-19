@@ -1,4 +1,5 @@
 ---
+import { tutorBiographies } from '../../lib/tutor-biographies'
 import Icon from '../Icon.astro'
 import { tutors as originalTutors } from '../../lib/tutoring-data'
 
@@ -10,6 +11,7 @@ interface Props {
 const { tutor, featured = false } = Astro.props
 const href = `/tutors/${encodeURIComponent(tutor.profileSlug)}`
 const original = originalTutors.find(item => item.id === tutor.id)
+const biography = tutorBiographies[tutor.id]
 const Heading = featured ? "h3" : "h2"
 const initials = tutor.name.trim().split(/\s+/).slice(0, 2).map(part => part[0]).join('')
 ---
@@ -20,6 +22,6 @@ const initials = tutor.name.trim().split(/\s+/).slice(0, 2).map(part => part[0])
     </div>
     <Heading class="mt-5 text-xl font-semibold"><a class="hover:underline" href={href}>{tutor.name}</a></Heading>
     <p class="mt-2 text-xs text-ink/65">{tutor.subjects.join(' · ')}</p>
-    {original && <p class="mt-4 text-sm leading-6 text-ink/70">{original.bio}</p>}
+    {biography && <p class="mt-4 text-sm leading-6 text-ink/70">{biography.summary}</p>}
     <a href={href} aria-label={`View ${tutor.name}'s profile and availability`} class="mt-auto w-fit pt-5 text-xs font-bold hover:underline">See profile and availability</a>
   </li>

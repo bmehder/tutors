@@ -12,7 +12,6 @@ export const tutors=[
       "Biology"
     ],
     "degree": "Algebra 1 · Algebra 2 · Geometry · Biology",
-    "bio": "MyFunScience teacher · Tutoring availability shown is fictional.",
     "color": "#e5d8ca",
     "days": [
       0,
@@ -40,7 +39,6 @@ export const tutors=[
       "Chemistry"
     ],
     "degree": "Biology · Chemistry",
-    "bio": "MyFunScience teacher · Tutoring availability shown is fictional.",
     "color": "#d4e1dc",
     "days": [
       1,
@@ -62,7 +60,6 @@ export const tutors=[
       "Intermediate Composition"
     ],
     "degree": "American Literature · Intermediate Composition",
-    "bio": "MyFunScience teacher · Tutoring availability shown is fictional.",
     "color": "#f2d9d2",
     "days": [
       0,
@@ -84,7 +81,6 @@ export const tutors=[
       "World History"
     ],
     "degree": "United States History · World History",
-    "bio": "MyFunScience teacher · Tutoring availability shown is fictional.",
     "color": "#e4e2ca",
     "days": [
       1,
@@ -116,7 +112,6 @@ export const tutors=[
       "1:00 PM"
     ],
     "degree": "Physics · Chemistry",
-    "bio": "MyFunScience teacher · Tutoring availability shown is fictional.",
     "color": "#dfe6f1"
   },
   {
@@ -138,7 +133,6 @@ export const tutors=[
       "2:00 PM"
     ],
     "degree": "Pre-Algebra · Middle School Math",
-    "bio": "MyFunScience teacher · Tutoring availability shown is fictional.",
     "color": "#ebe2ee"
   },
   {
@@ -160,7 +154,6 @@ export const tutors=[
       "3:00 PM"
     ],
     "degree": "Spanish 1 · Spanish 2",
-    "bio": "MyFunScience teacher · Tutoring availability shown is fictional.",
     "color": "#dce9df"
   },
   {
@@ -181,7 +174,6 @@ export const tutors=[
       "4:00 PM"
     ],
     "degree": "Computer Science and Intro to Programming",
-    "bio": "MyFunScience teacher · Tutoring availability shown is fictional.",
     "color": "#ece7cf"
   },
   {"id": "angie-baer", "name": "Angie Baer", "initials": "AB", "subjects": ["Science Lab Explorations", "Old Testament Survey"], "days": [] as number[], "times": [] as string[]},

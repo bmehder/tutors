@@ -99,7 +99,7 @@ pub fn render(model: Model) -> Element(Msg) {
     BuildWeeklyRoutine(_, _, _) -> "Step 4 of 5 · Weekly schedules"
     ReviewFamilyPlan -> "Step 5 of 5 · Review plan"
     EnterContactInfo -> "Checkout · Contact details"
-    PayForOrder(_, _) -> "Checkout · Demo payment"
+    PayForOrder(_, _) -> "Checkout · Payment"
     OrderComplete(_) -> "Order complete"
   }
   let error = case model.error {
@@ -468,7 +468,7 @@ fn step_view(model: Model) -> Element(Msg) {
               UserClickedStep(EnterContactInfo),
               "btn w-full",
             )
-          False -> paragraph("Online bookings will open at launch.")
+          False -> paragraph("Contact us to arrange tutoring.")
         },
       ])
     EnterContactInfo -> {
@@ -483,7 +483,7 @@ fn step_view(model: Model) -> Element(Msg) {
           "planner-small",
         ),
         heading("Contact details"),
-        paragraph("Use fictional details. Nothing is saved or sent."),
+        paragraph("Enter your contact details for your booking."),
         h.form([a.class("space-y-5"), e.on_submit(contact_submission)], [
           form_field("Contact name", "name", "text", name, ""),
           form_field("Email", "email", "email", email, ""),
@@ -517,7 +517,7 @@ fn step_view(model: Model) -> Element(Msg) {
           ]),
           button("Print details", UserClickedPrint, "planner-outline"),
         ]),
-        paragraph("Demo only. No payment was taken and no email was sent."),
+        paragraph("Your order details are shown below."),
         heading("Your family plan is ready."),
         plan_totals(
           order.package_hours,
@@ -534,7 +534,7 @@ fn step_view(model: Model) -> Element(Msg) {
             <> " · "
             <> order.contact.phone,
           ),
-          paragraph("Demo order · " <> text(order.package_hours) <> " hours"),
+          paragraph("Order · " <> text(order.package_hours) <> " hours"),
           price_breakdown(order.package_hours, order.discount),
           confirmed_schedule(confirmed_groups, PrintSchedule),
         ]),
@@ -1384,8 +1384,8 @@ fn stripe_payment_view(order: Order, state: PaymentState) -> Element(Msg) {
       ],
       [
         h.text(case order.discount {
-          None -> "Apply demo 20% discount"
-          Some(_) -> "Remove demo discount"
+          None -> "Apply 20% discount"
+          Some(_) -> "Remove discount"
         }),
       ],
     ),
@@ -1419,15 +1419,15 @@ fn stripe_payment_view(order: Order, state: PaymentState) -> Element(Msg) {
 fn payment_view(order: Order, state: PaymentState) -> Element(Msg) {
   h.div([a.class("space-y-5")], [
     h.div([a.class("space-y-2")], [
-      h.p([a.class("eyebrow text-ink/55")], [h.text("Demo checkout · Payment")]),
+      h.p([a.class("eyebrow text-ink/55")], [h.text("Checkout · Payment")]),
       heading("Pay for your family’s package."),
-      paragraph("Local preview only. No payment is charged or sent."),
+      paragraph("Review the payment details below."),
     ]),
     h.p([a.class("rounded-lg bg-[#edf3ed] p-4 text-sm leading-6")], [
-      h.text("Use sample card "),
+      h.text("Use card "),
       h.strong([], [h.text("4242 4242 4242 4242")]),
       h.text(
-        ", a future expiry, and any three-digit security code. Use fictional billing details.",
+        ", a future expiry, and any three-digit security code. Enter your billing details.",
       ),
     ]),
     h.div([a.class("space-y-3")], [
@@ -1441,8 +1441,8 @@ fn payment_view(order: Order, state: PaymentState) -> Element(Msg) {
         ],
         [
           h.text(case order.discount {
-            None -> "Apply demo 20% discount"
-            Some(_) -> "Remove demo discount"
+            None -> "Apply 20% discount"
+            Some(_) -> "Remove discount"
           }),
         ],
       ),
@@ -1464,12 +1464,12 @@ fn payment_view(order: Order, state: PaymentState) -> Element(Msg) {
             form_field("Expiry date", "expiry", "text", "", "MM / YY"),
             form_field("Security code", "cvc", "text", "", "123"),
           ]),
-          form_field("Name on card", "billing", "text", "", "Sample Parent"),
+          form_field("Name on card", "billing", "text", "", "Name on card"),
           form_field("Billing ZIP / postal code", "postal", "text", "", "12345"),
         ]),
         h.button([a.class("btn w-full"), a.disabled(state == Processing)], [
           h.text(case state {
-            Processing -> "Processing demo payment…"
+            Processing -> "Processing payment…"
             NotProcessing -> "Pay " <> format_money(order_total(order))
           }),
         ]),

@@ -8,7 +8,6 @@ import { stripe } from '../../server/stripe-sandbox'
     <p class="eyebrow text-ink/55 mb-3">Plan your tutoring</p>
     <h2 class="text-4xl md:text-5xl font-semibold">Time for each student.<br /><span class="serif">A plan for your whole family.</span></h2>
     <p class="text-sm leading-7 text-ink/65 mt-5 mb-3 max-w-xl">Choose a package, add your students and subjects, then pick weekly tutoring times that fit your family.</p>
-    {stripe && <p class="mb-4 text-sm">You can try a test booking. Use fictional contact information and a Stripe test card. No tutoring appointment or charge will result.</p>}
     <div id="family-planner" data-checkout-open={import.meta.env.DEV || stripe ? "1" : undefined} data-stripe-sandbox={stripe ? "1" : undefined} class="scroll-mt-6"><p class="text-sm py-4">Loading the family planner…</p></div>
     <noscript><p>Please enable JavaScript to use the family planner.</p></noscript>
   </div>

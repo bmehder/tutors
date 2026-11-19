@@ -50,7 +50,7 @@ export const POST: APIRoute = async ({ request }) => {
       return reply(503, { error: 'Stripe sandbox checkout is temporarily unavailable.' })
     const sessions = validateSessions(body.sessions, await tutorHours())
     if (!sessions) return reply(400, { error: 'Some sessions are no longer valid. Please review your schedule.' })
-    const subtotal = new Map([[5, 40000], [10, 75000], [20, 140000]]).get(body.packageHours)
+    const subtotal = new Map([[5, 30000], [10, 55000], [20, 100000]]).get(body.packageHours)
     if (!subtotal || sessions.length > body.packageHours)
       return reply(400, { error: 'Invalid package.' })
     const discount = body.demoDiscount === true ? subtotal / 5 : 0
