@@ -2,7 +2,9 @@
 
 All sender addresses, default reply-to addresses, and admin notifications use admin@mychristiantutors.com. The private tutor email field controls tutor inquiries and booking notifications. It is never returned in the public tutor API.
 
-Apply db/013-email-delivery.sql before deploying this implementation. Contact email submission is enabled only when both RESEND_API_KEY and EMAIL_DELIVERY_ENABLED=1 are set on the server. Until then, the local contact forms retain their review behavior and hosted forms remain hidden.
+Apply db/013-email-delivery.sql before deploying this implementation. Contact email submission is enabled only when both RESEND_API_KEY and EMAIL_DELIVERY_ENABLED=1 are set on the server. Until then, contact forms show a message preview in both local and hosted environments.
+
+Tutor email delivery is separately controlled by TUTOR_EMAIL_DELIVERY_ENABLED=1 and is off by default. While off, tutor inquiries route to admin. The delivery worker holds messages addressed to stored tutor email addresses and all tutor booking notification keys, including previously queued messages. Customer and admin messages can still send. Keep this switch off during testing; enabling it later also releases eligible held messages.
 
 Paid Stripe confirmations enqueue immutable customer, admin, and available tutor messages in the same transaction that confirms the reservation. Sandbox payments create drafts with delivery_allowed=false. They never send to customers or tutors. Live payments need a live Stripe integration before the live delivery path is used.
 

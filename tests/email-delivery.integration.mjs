@@ -39,6 +39,7 @@ try {
   process.env.BOOKING_DATABASE_URL = url.toString()
   process.env.EMAIL_DELIVERY_ENABLED = '1'
   process.env.RESEND_API_KEY = 'fake-key-for-simulated-email-tests'
+  process.env.TUTOR_EMAIL_DELIVERY_ENABLED = '1'
   testDb = new pg.Client({ connectionString: url.toString() })
   await testDb.connect()
   await build({
@@ -82,6 +83,20 @@ try {
   assert.deepEqual(calls[2].to, ['admin@mychristiantutors.com'])
   await assert.rejects(() => submit({ ...base, 'contact-type': 'family', website: 'spam' }))
   console.log('PASS — contact, tutor inquiry and application routing; duplicate submission; spam field')
+
+  process.env.TUTOR_EMAIL_DELIVERY_ENABLED = '0'
+  const beforeTutorPause = calls.length
+  await submit({ ...base, 'contact-type': 'tutor-inquiry', 'tutor-id': 'heather-barrieau',
+    'request-id': randomUUID() })
+  assert.equal(calls.length, beforeTutorPause + 1)
+  assert.deepEqual(calls.at(-1).to, ['admin@mychristiantutors.com'])
+  await queueEmail(testDb, { key: 'paused-tutor-inquiry', to: 'tutor@example.test', subject: 'Held inquiry', text: 'Example' })
+  await queueEmail(testDb, { key: 'order-confirmation/example/tutor/example', to: 'old-tutor@example.test', subject: 'Held booking', text: 'Example' })
+  const beforeHeldMessages = calls.length
+  await deliverQueuedEmails()
+  assert.equal(calls.length, beforeHeldMessages, 'Tutor messages must remain held while customer/admin mail can send')
+  assert.equal((await testDb.query("SELECT count(*)::int AS count FROM outgoing_emails WHERE message_key IN ('paused-tutor-inquiry','order-confirmation/example/tutor/example') AND attempted_at IS NULL")).rows[0].count, 2)
+  console.log('PASS — tutor inquiries route to admin; tutor recipients and booking notifications remain held')
 
   const key = 'retry/' + randomUUID()
   rejectNext = true

@@ -7,6 +7,8 @@ import { tutors } from '../lib/tutoring-data'
 export const adminEmail = 'admin@mychristiantutors.com'
 export const emailDeliveryEnabled = getSecret('EMAIL_DELIVERY_ENABLED') === '1' &&
   Boolean(getSecret('RESEND_API_KEY'))
+// Tutor messages remain held until they are explicitly enabled separately.
+export const tutorEmailDeliveryEnabled = () => getSecret('TUTOR_EMAIL_DELIVERY_ENABLED') === '1'
 const from = `MyChristianTutors <${adminEmail}>`
 
 export async function queueEmail(
@@ -81,10 +83,14 @@ export async function deliverQueuedEmails(limit = 3) {
       await db.query('BEGIN')
       const result = await db.query<{
         id: string; message_key: string; recipient: string; reply_to: string; subject: string; body: string;
-      }>(`SELECT * FROM outgoing_emails WHERE sent_at IS NULL AND delivery_allowed
+      }>(`SELECT * FROM outgoing_emails e WHERE sent_at IS NULL AND delivery_allowed
+         AND ($1::boolean OR (message_key NOT LIKE 'order-confirmation/%/tutor/%'
+           AND NOT EXISTS (SELECT 1 FROM tutor_profiles p
+             WHERE lower(p.contact_email)=lower(e.recipient)
+             AND lower(e.recipient)<>lower($2))))
          AND (attempted_at IS NULL OR attempted_at < now()-interval '5 minutes')
          AND (first_attempt_at IS NULL OR first_attempt_at > now()-interval '23 hours')
-         ORDER BY created_at FOR UPDATE SKIP LOCKED LIMIT 1`)
+         ORDER BY created_at FOR UPDATE SKIP LOCKED LIMIT 1`, [tutorEmailDeliveryEnabled(), adminEmail])
       const row = result.rows[0]
       if (!row) { await db.query('COMMIT'); break }
       await db.query(

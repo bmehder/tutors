@@ -2,7 +2,7 @@
 import { ActionError, defineAction } from 'astro:actions'
 import { z } from 'astro/zod'
 import { randomUUID } from 'node:crypto'
-import { adminEmail, emailDeliveryEnabled, queueEmail, deliverQueuedEmails } from '../server/email-delivery'
+import { adminEmail, emailDeliveryEnabled, tutorEmailDeliveryEnabled, queueEmail, deliverQueuedEmails } from '../server/email-delivery'
 import { pool } from '../server/tutor-hours'
 import { tutorHours } from '../server/tutor-hours'
 
@@ -64,7 +64,7 @@ export const server = {
           const tutor = (await tutorHours()).find(item => item.id === input['tutor-id'])
           if (!tutor)
             throw new ActionError({ code: 'NOT_FOUND', message: 'This tutor is no longer available. Choose another tutor.' })
-          if (emailDeliveryEnabled) {
+          if (emailDeliveryEnabled && tutorEmailDeliveryEnabled()) {
             const result = await pool?.query<{ contact_email: string | null }>(
               'SELECT contact_email FROM tutor_profiles WHERE tutor_id=$1', [tutor.id],
             )
@@ -72,7 +72,7 @@ export const server = {
             if (!address) throw new ActionError({ code: 'BAD_REQUEST', message: 'Please use the main contact form to reach this tutor.' })
             recipientEmail = address
           }
-          recipient = tutor.name
+          recipient = tutorEmailDeliveryEnabled() ? tutor.name : `Admin inbox (for ${tutor.name})`
           subject = `Tutoring inquiry for ${tutor.name.replace(/\s+/g, ' ')}`
         } else {
           subject = `Tutoring inquiry from ${name}`
