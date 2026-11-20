@@ -7,6 +7,7 @@ test('prepares separate order emails and uses a stable Resend key per recipient'
     id: 'test-reference', familyName: 'Example Parent', customerEmail: 'parent@example.test',
     customerPhone: '(555) 010-1234', packageHours: 5, totalCents: 32000,
     timeZone: 'Europe/Amsterdam',
+    paymentMode: 'live',
     sessions: [{ student: 'Emma', subject: 'Biology', tutor: 'Example Tutor',
       meetingInstructions: 'Join https://example.test/room\nBring a notebook.',
       start: new Date('2027-01-05T18:00:00Z') }],
@@ -33,6 +34,20 @@ test('prepares separate order emails and uses a stable Resend key per recipient'
     },
   )
   assert.equal(id, 'fake-message-id')
+})
+
+test('sandbox receipts clearly identify test payments without claiming money was charged', () => {
+  const messages = orderEmails({
+    id: 'sandbox-reference', familyName: 'Example Parent', customerEmail: 'parent@example.test',
+    customerPhone: '(555) 010-1234', packageHours: 5, totalCents: 30000,
+    timeZone: 'America/New_York', paymentMode: 'sandbox', sessions: [],
+  }, 'admin@example.test')
+  for (const message of messages) {
+    assert.match(message.subject, /^\[Test booking\]/)
+    assert.match(message.text, /No money was charged/)
+    assert.match(message.text, /\$300\.00 test payment/)
+    assert.doesNotMatch(message.text, /\$300\.00 paid/)
+  }
 })
 
 test('provider rejection and missing message IDs fail explicitly', async () => {

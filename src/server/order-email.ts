@@ -5,12 +5,16 @@ export type ConfirmedOrderEmailDetails = {
   customerPhone: string
   packageHours: number
   totalCents: number
+  paymentMode: 'sandbox' | 'live'
   timeZone: string
   sessions: readonly { student: string; subject: string; tutor: string; start: Date; meetingInstructions?: string }[]
 }
 
 export function orderEmails(order: ConfirmedOrderEmailDetails, adminEmail: string) {
   const reference = order.id.slice(0, 8).toUpperCase()
+  const sandbox = order.paymentMode === 'sandbox'
+  const subjectPrefix = sandbox ? '[Test booking] ' : ''
+  const paymentNotice = sandbox ? ['Stripe test payment only. No money was charged.', ''] : []
   const payment = new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' })
     .format(order.totalCents / 100)
   const date = new Intl.DateTimeFormat('en-US', {
@@ -22,7 +26,7 @@ export function orderEmails(order: ConfirmedOrderEmailDetails, adminEmail: strin
   }))]
   const summary = [
     `Order #${reference}`,
-    `${order.packageHours}-hour tutoring package · ${payment} paid`,
+    `${order.packageHours}-hour tutoring package · ${payment} ${sandbox ? 'test payment' : 'paid'}`,
     '',
     `Scheduled sessions (${order.timeZone.replaceAll('_', ' ')})`,
     ...order.sessions.map(session =>
@@ -32,15 +36,15 @@ export function orderEmails(order: ConfirmedOrderEmailDetails, adminEmail: strin
   return [
     {
       to: order.customerEmail,
-      subject: `Your MyChristianTutors booking #${reference}`,
-      text: [`Hi ${order.familyName},`, '', 'Your tutoring sessions are booked.', '', ...summary,
+      subject: `${subjectPrefix}Your MyChristianTutors booking #${reference}`,
+      text: [...paymentNotice, `Hi ${order.familyName},`, '', sandbox ? 'Your test tutoring order was recorded.' : 'Your tutoring sessions are booked.', '', ...summary,
         '', 'Reply to this email if you have questions about your schedule.'].join('\n'),
       key: `order-confirmation/${order.id}/customer`,
     },
     {
       to: adminEmail,
-      subject: `New paid tutoring order #${reference}`,
-      text: [`Family contact: ${order.familyName}`, `Email: ${order.customerEmail}`,
+      subject: `${subjectPrefix}New ${sandbox ? 'test' : 'paid'} tutoring order #${reference}`,
+      text: [...paymentNotice, `Family contact: ${order.familyName}`, `Email: ${order.customerEmail}`,
         `Phone: ${order.customerPhone}`, '', ...summary].join('\n'),
       key: `order-confirmation/${order.id}/admin`,
     },

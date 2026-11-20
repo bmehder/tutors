@@ -31,6 +31,7 @@ const emails = booking && summary?.contact_email && summary.contact_phone ? orde
   customerPhone: summary.contact_phone,
   packageHours: summary.package_hours,
   totalCents: summary.subtotal_cents - summary.discount_cents,
+  paymentMode: 'sandbox',
   timeZone: zone,
   sessions: sessions.map(session => ({
     student: session.student_name ?? 'Student',

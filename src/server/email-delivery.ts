@@ -24,7 +24,12 @@ export async function queueEmail(
   )
 }
 
-export async function queueOrderEmails(db: pg.PoolClient, id: string, deliveryAllowed: boolean) {
+export async function queueOrderEmails(
+  db: pg.PoolClient,
+  id: string,
+  options: { deliveryAllowed: boolean; paymentMode: 'sandbox' | 'live' },
+) {
+  const { deliveryAllowed, paymentMode } = options
   const result = await db.query<{
     label: string; contact_email: string; contact_phone: string; package_hours: number;
     subtotal_cents: number; discount_cents: number; display_time_zone: string | null;
@@ -43,6 +48,7 @@ export async function queueOrderEmails(db: pg.PoolClient, id: string, deliveryAl
     id, familyName: first.label, customerEmail: first.contact_email,
     customerPhone: first.contact_phone, packageHours: first.package_hours,
     totalCents: first.subtotal_cents - first.discount_cents,
+    paymentMode,
     timeZone: first.display_time_zone ?? 'America/New_York',
     sessions: result.rows.map(row => ({
       student: row.student_name ?? 'Student', subject: row.subject ?? 'Tutoring',
@@ -67,7 +73,7 @@ export async function queueOrderEmails(db: pg.PoolClient, id: string, deliveryAl
         ...rows.map(row => `${formatter.format(row.start)} · ${row.student_name ?? 'Student'} · ${row.subject ?? 'Tutoring'}`),
         '', 'Reply to this email to contact administration.',
       ].join('\n'),
-    }, id, deliveryAllowed)
+    }, id, deliveryAllowed && paymentMode === 'live')
   }
 }
 

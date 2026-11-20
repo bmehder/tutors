@@ -60,7 +60,10 @@ export async function confirmSandboxCheckout(session: Stripe.Checkout.Session) {
     [session.client_reference_id, session.id, session.amount_total],
   )
   bookingId = result.rows[0]?.id ?? null
-  if (bookingId) await queueOrderEmails(db, bookingId, session.livemode)
+  if (bookingId) await queueOrderEmails(db, bookingId, {
+    paymentMode: 'sandbox',
+    deliveryAllowed: getSecret('SANDBOX_ORDER_EMAIL_DELIVERY_ENABLED') === '1',
+  })
   await db.query('COMMIT')
   } catch (error) {
     await db.query('ROLLBACK')

@@ -138,6 +138,29 @@ try {
   assert.match(messages.find(message => message.recipient === 'tutor@example.test').body, /Emma/)
   assert.equal(await confirmSandboxCheckout({ ...paid, amount_total: 1 }), null)
   console.log('PASS — paid-order customer/admin/tutor drafts, meeting instructions and payment validation')
+
+  process.env.SANDBOX_ORDER_EMAIL_DELIVERY_ENABLED = '1'
+  const deliverableId = randomUUID()
+  const deliverableSession = 'cs_test_' + randomUUID().replaceAll('-', '')
+  await testDb.query(`INSERT INTO booking_reservations
+    (id,expires_at,package_hours,label,subtotal_cents,discount_cents,stripe_checkout_required,
+     stripe_checkout_id,contact_email,contact_phone,requires_contact,display_time_zone)
+    VALUES($1,now()+interval '5 minutes',5,'Example Parent',30000,0,true,$2,
+      'parent@example.test','5550101234',true,'Europe/Amsterdam')`, [deliverableId, deliverableSession])
+  await testDb.query(`INSERT INTO booking_sessions(reservation_id,tutor_id,slot,subject,student_name)
+    VALUES($1,'heather-barrieau',tstzrange('2091-01-03T18:00:00Z','2091-01-03T19:00:00Z','[)'),'Biology','Emma')`, [deliverableId])
+  const beforeSandboxDelivery = calls.length
+  const deliverablePayment = { ...paid, id: deliverableSession, client_reference_id: deliverableId }
+  await confirmSandboxCheckout(deliverablePayment)
+  await confirmSandboxCheckout(deliverablePayment)
+  const delivered = calls.slice(beforeSandboxDelivery)
+  assert.equal(delivered.length, 2, 'Sandbox receipts send once each to customer and admin')
+  assert.deepEqual(delivered.map(message => message.to[0]).sort(), ['admin@mychristiantutors.com', parentEmail].sort())
+  assert.ok(delivered.every(message => message.subject.startsWith('[Test booking]') && message.text.includes('No money was charged')))
+  const tutorDraft = (await testDb.query('SELECT delivery_allowed FROM outgoing_emails WHERE reservation_id=$1 AND recipient=$2', [deliverableId, 'tutor@example.test'])).rows[0]
+  assert.equal(tutorDraft.delivery_allowed, false, 'Sandbox tutor notifications never become deliverable')
+  assert.equal((await testDb.query('SELECT count(*)::int AS count FROM outgoing_emails WHERE reservation_id=$1 AND sent_at IS NOT NULL', [id])).rows[0].count, 0, 'Enabling sandbox mail does not release old draft orders')
+  console.log('PASS — opt-in sandbox customer/admin receipts; repeated confirmation; tutor and old draft protection')
   console.log('All email transport was simulated. No emails were sent.')
 } finally {
   globalThis.fetch = originalFetch
