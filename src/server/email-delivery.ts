@@ -11,6 +11,26 @@ export const emailDeliveryEnabled = getSecret('EMAIL_DELIVERY_ENABLED') === '1' 
 export const tutorEmailDeliveryEnabled = () => getSecret('TUTOR_EMAIL_DELIVERY_ENABLED') === '1'
 const from = `MyChristianTutors <${adminEmail}>`
 
+export async function emailQueueStatus() {
+  if (!pool) throw new Error('Email storage is unavailable.')
+  const result = await pool.query<{
+    delivered: number; pending: number; failed: number; held: number; drafts: number;
+  }>(`WITH queue AS (
+      SELECT sent_at,last_error,delivery_allowed,
+        ($1::boolean OR (message_key NOT LIKE 'order-confirmation/%/tutor/%'
+          AND NOT EXISTS (SELECT 1 FROM tutor_profiles p
+            WHERE lower(p.contact_email)=lower(e.recipient) AND lower(e.recipient)<>lower($2)))) AS recipient_allowed
+      FROM outgoing_emails e
+    ) SELECT
+      count(*) FILTER (WHERE sent_at IS NOT NULL)::int AS delivered,
+      count(*) FILTER (WHERE sent_at IS NULL AND delivery_allowed AND recipient_allowed)::int AS pending,
+      count(*) FILTER (WHERE sent_at IS NULL AND delivery_allowed AND recipient_allowed AND last_error IS NOT NULL)::int AS failed,
+      count(*) FILTER (WHERE sent_at IS NULL AND delivery_allowed AND NOT recipient_allowed)::int AS held,
+      count(*) FILTER (WHERE sent_at IS NULL AND NOT delivery_allowed)::int AS drafts
+    FROM queue`, [tutorEmailDeliveryEnabled(), adminEmail])
+  return result.rows[0]
+}
+
 export async function queueEmail(
   db: pg.Pool | pg.PoolClient,
   message: OutgoingEmail,

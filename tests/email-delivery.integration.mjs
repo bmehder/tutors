@@ -40,6 +40,7 @@ try {
   process.env.EMAIL_DELIVERY_ENABLED = '1'
   process.env.RESEND_API_KEY = 'fake-key-for-simulated-email-tests'
   process.env.TUTOR_EMAIL_DELIVERY_ENABLED = '1'
+  process.env.SANDBOX_ORDER_EMAIL_DELIVERY_ENABLED = '0'
   testDb = new pg.Client({ connectionString: url.toString() })
   await testDb.connect()
   await build({
@@ -60,7 +61,7 @@ try {
   }
   await testDb.query("UPDATE tutor_profiles SET contact_email='tutor@example.test' WHERE tutor_id='heather-barrieau'")
   const { server } = await import(directory + '/actions.mjs')
-  const { deliverQueuedEmails, queueEmail } = await import(directory + '/delivery.mjs')
+  const { deliverQueuedEmails, queueEmail, emailQueueStatus } = await import(directory + '/delivery.mjs')
   const { confirmSandboxCheckout } = await import(directory + '/confirmation.mjs')
   pool = (await import(directory + '/database.mjs')).pool
   const action = server.previewContact
@@ -160,6 +161,12 @@ try {
   const tutorDraft = (await testDb.query('SELECT delivery_allowed FROM outgoing_emails WHERE reservation_id=$1 AND recipient=$2', [deliverableId, 'tutor@example.test'])).rows[0]
   assert.equal(tutorDraft.delivery_allowed, false, 'Sandbox tutor notifications never become deliverable')
   assert.equal((await testDb.query('SELECT count(*)::int AS count FROM outgoing_emails WHERE reservation_id=$1 AND sent_at IS NOT NULL', [id])).rows[0].count, 0, 'Enabling sandbox mail does not release old draft orders')
+  const status = await emailQueueStatus()
+  assert.equal(status.held, 2)
+  assert.equal(status.drafts, 4)
+  // One transport failed; the expiry fixture deliberately cleared one sent timestamp.
+  assert.equal(status.delivered, calls.length - 2)
+  assert.equal(status.failed, 0)
   console.log('PASS — opt-in sandbox customer/admin receipts; repeated confirmation; tutor and old draft protection')
   console.log('All email transport was simulated. No emails were sent.')
 } finally {

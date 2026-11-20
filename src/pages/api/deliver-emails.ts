@@ -1,7 +1,7 @@
 import type { APIRoute } from 'astro'
 import { getSecret } from 'astro:env/server'
 import { timingSafeEqual } from 'node:crypto'
-import { deliverQueuedEmails } from '../../server/email-delivery'
+import { deliverQueuedEmails, emailQueueStatus, emailDeliveryEnabled, tutorEmailDeliveryEnabled } from '../../server/email-delivery'
 
 export const prerender = false
 export const POST: APIRoute = async ({ request }) => {
@@ -13,7 +13,8 @@ export const POST: APIRoute = async ({ request }) => {
     return new Response(null, { status: 401 })
   }
   try {
-    return Response.json({ sent: await deliverQueuedEmails() }, { headers: { 'Cache-Control': 'no-store' } })
+    const sent = await deliverQueuedEmails()
+    return Response.json({ sent, ...await emailQueueStatus(), deliveryEnabled: emailDeliveryEnabled, tutorDeliveryEnabled: tutorEmailDeliveryEnabled() }, { headers: { 'Cache-Control': 'no-store' } })
   } catch {
     return new Response(null, { status: 503 })
   }
