@@ -36,7 +36,6 @@ export const server = {
       approach: optionalText(3000),
     }),
     async handler(input) {
-      if (!import.meta.env.DEV && !emailDeliveryEnabled) throw new ActionError({ code: 'NOT_FOUND' })
       const name = (input['first-name'] + ' ' + input['last-name']).replace(/\s+/g, ' ')
       const kind = input['contact-type']
       const phone = input.phone ?? ''
