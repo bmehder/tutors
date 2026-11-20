@@ -3,6 +3,7 @@ import TutoringHelp from '../../components/TutoringHelp.astro'
 import PublicLayout from '../../layouts/PublicLayout.astro'
 import TutorCard from '../../components/tutors/TutorCard.astro'
 import { tutorHours } from '../../server/tutor-hours'
+import { siteUrl } from '../../lib/seo'
 
 export const prerender = false
 Astro.response.headers.set('Cache-Control', 'no-store')
@@ -12,7 +13,13 @@ const subjects = [...new Set(tutors.flatMap(tutor => tutor.subjects))].sort((a, 
 const subject = Astro.url.searchParams.get('subject') ?? ''
 const matches = subject ? tutors.filter(tutor => tutor.subjects.includes(subject)) : tutors
 ---
-<PublicLayout title="Our tutors" description="Browse tutors by subject and see their weekly tutoring hours.">
+<PublicLayout title="Find a Christian Online Tutor" description="Meet Christian tutors for math, science, writing, languages, and more. Browse by subject, read tutor profiles, and plan online tutoring for your homeschool family." structuredData={[{
+  '@type': 'BreadcrumbList',
+  itemListElement: [
+    { '@type': 'ListItem', position: 1, name: 'Home', item: siteUrl + '/' },
+    { '@type': 'ListItem', position: 2, name: 'Tutors', item: siteUrl + '/tutors' },
+  ],
+}]}>
   <main class="mx-auto max-w-7xl px-6 pb-20 pt-8 md:px-12">
     <div class="max-w-2xl">
       <p class="eyebrow mb-3 text-ink/55">Our tutors</p>

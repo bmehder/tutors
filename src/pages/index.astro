@@ -10,6 +10,7 @@ import NewsletterSignup from '../components/home/NewsletterSignup.astro'
 import FaqSection from '../components/home/FaqSection.astro'
 import ContactSection from '../components/home/ContactSection.astro'
 import { tutorHours } from '../server/tutor-hours'
+import { siteUrl } from '../lib/seo'
 
 export const prerender = false
 Astro.response.headers.set('Cache-Control', 'no-store')
@@ -18,7 +19,15 @@ const featuredTutors = await tutorHours()
 	.catch(() => [])
 ---
 
-<PublicLayout>
+<PublicLayout structuredData={[{
+  '@type': 'Service',
+  '@id': `${siteUrl}/#tutoring`,
+  name: 'Christian online tutoring for homeschool families',
+  serviceType: 'One-on-one online tutoring',
+  description: 'Families choose a 5-, 10-, or 20-hour package and plan one-hour weekly tutoring sessions. The 10- and 20-hour packages can be shared across students and subjects.',
+  url: `${siteUrl}/#booking`,
+  provider: { '@id': `${siteUrl}/#organization` },
+}]}>
 	<main>
 		<HeroSection />
 		<HowItWorksSection />

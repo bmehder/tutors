@@ -1,10 +1,11 @@
 ---
 import "../index.css";
+import { canonicalUrl, structuredDataJson } from '../lib/seo';
 
 const siteName = "MyChristianTutors";
-const { title, description = 'One-on-one online tutoring with a Biblical worldview. Find caring teachers, flexible packages, and support for students in grades 4–12.' } = Astro.props;
-const siteTitle = title ? `${title} | ${siteName}` : `${siteName} | Grow in knowledge. Grounded in faith.`;
-const canonical = new URL(Astro.url.pathname, 'https://www.mychristiantutors.com');
+const { title, description = 'One-on-one Christian online tutoring for homeschool families. Choose subjects and tutors, share package hours across your family, and plan weekly sessions.', structuredData = [] } = Astro.props;
+const siteTitle = title ? `${title} | ${siteName}` : `Christian Online Tutoring for Homeschool Families | ${siteName}`;
+const canonical = canonicalUrl(Astro.url.pathname);
 ---
 <!doctype html>
 <html lang="en" prefix="og: https://ogp.me/ns#">
@@ -15,6 +16,7 @@ const canonical = new URL(Astro.url.pathname, 'https://www.mychristiantutors.com
     <title>{siteTitle}</title>
     <meta name="robots" content="noindex, nofollow, noarchive" />
     <meta name="description" content={description} />
+    {structuredData.length > 0 && <script type="application/ld+json" set:html={structuredDataJson({ '@context': 'https://schema.org', '@graph': structuredData })} />}
     <link rel="canonical" href={canonical} />
     <meta name="theme-color" content="#143f3c" />
     <link rel="preconnect" href="https://fonts.googleapis.com" />

@@ -6,6 +6,7 @@ import PublicLayout from '../../layouts/PublicLayout.astro'
 import TutorContact from '../../components/tutors/TutorContact.astro'
 import { formatTime } from '../../lib/session-time'
 import { tutorHours } from '../../server/tutor-hours'
+import { siteUrl } from '../../lib/seo'
 
 export const prerender = false
 Astro.response.headers.set('Cache-Control', 'no-store')
@@ -13,6 +14,28 @@ const tutor = (await tutorHours())
   .find(item => item.profileSlug === Astro.params.id)
 if (!tutor) Astro.response.status = 404
 const biography = tutor ? tutorBiographies[tutor.id] : undefined
+const profileUrl = tutor ? `${siteUrl}/tutors/${encodeURIComponent(tutor.profileSlug)}` : undefined
+const tutorSubjects = tutor?.subjects.slice(0, 2).join(' & ')
+const searchTitle = tutor ? `${tutor.name} — ${tutorSubjects ? tutorSubjects + ' Tutor' : 'Christian Online Tutor'}` : 'Tutor not found'
+const description = tutor ? `${tutor.name} offers Christian online tutoring${tutorSubjects ? ' in ' + tutorSubjects : ''}. Read their background, check weekly times, and ask a question before booking.` : undefined
+const structuredData = tutor ? [{
+  '@type': 'ProfilePage',
+  '@id': profileUrl,
+  url: profileUrl,
+  mainEntity: {
+    '@type': 'Person', name: tutor.name, url: profileUrl, jobTitle: 'Online tutor',
+    knowsAbout: tutor.subjects,
+    ...(biography ? { description: biography.summary } : {}),
+    ...(biography?.source ? { sameAs: [biography.source] } : {}),
+  },
+}, {
+  '@type': 'BreadcrumbList',
+  itemListElement: [
+    { '@type': 'ListItem', position: 1, name: 'Home', item: siteUrl + '/' },
+    { '@type': 'ListItem', position: 2, name: 'Tutors', item: siteUrl + '/tutors' },
+    { '@type': 'ListItem', position: 3, name: tutor.name, item: profileUrl },
+  ],
+}] : []
 const days = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday']
 function startRanges(times: number[]) {
   const ranges: { first: number; last: number }[] = []
@@ -29,7 +52,7 @@ const availability = tutor?.startsByDay.flatMap((times, index) =>
   times.length ? [{ day: days[index], ranges: startRanges(times) }] : [],
 ) ?? []
 ---
-<PublicLayout title={tutor?.name ?? 'Tutor not found'} description={tutor && `Find out what ${tutor.name} teaches and see their weekly tutoring hours.`}>
+<PublicLayout title={searchTitle} description={description} structuredData={structuredData}>
   <main class="mx-auto max-w-7xl px-6 pb-20 pt-8 md:px-12">
     <a href="/tutors" class="text-sm font-bold underline underline-offset-4">Back to all tutors</a>
     {tutor ? (
