@@ -1,16 +1,18 @@
 ---
+import TutoringHelp from '../TutoringHelp.astro'
 import TutorCard from '../tutors/TutorCard.astro'
 const { tutors } = Astro.props
 ---
-<section id="tutors" class="border-y border-ink/10 bg-[#f0f2eb] py-20">
+<section id="tutors" class="bg-cream py-14 md:py-20">
   <div class="mx-auto max-w-7xl px-6 md:px-12">
     <div class="flex flex-wrap items-end justify-between gap-6">
       <div class="max-w-xl">
         <p class="eyebrow mb-3 text-ink/55">One-on-one online tutoring</p>
-        <h2 class="text-4xl font-semibold">Tutors who know their subjects.<br /><span class="serif">And share your faith.</span></h2>
+        <h2 class="text-3xl font-semibold">Tutors who know their subjects.<br /><span class="serif">And share your faith.</span></h2>
       </div>
-      <a class="btn" href="/tutors">Explore all tutors</a>
+      <a class="inline-flex min-h-11 items-center font-bold underline underline-offset-4 hover:text-ink/75" href="/tutors">Explore all tutors</a>
     </div>
+    <TutoringHelp />
     {tutors.length > 0 && (
       <ul class="mt-10 grid gap-5 sm:grid-cols-2 lg:grid-cols-4">
         {tutors.map((tutor: { id: string; name: string; subjects: string[]; profileSlug: string }) => <TutorCard tutor={tutor} featured />)}

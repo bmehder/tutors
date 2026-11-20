@@ -57,7 +57,7 @@ test('Gleam checkout matches TypeScript for skipped weeks, validation, and expir
     first = calendarAddDays(first, 7)
   }
   const now = easternInstant(calendarAddDays(first, -7), 900).instant
-  const clock = { now, noticeMs: 86_400_000 }
+  const clock = { now, noticeMs: 259_200_000 }
   const subject = { id: 'bio', subject: 'Biology', hours: 3 }
   const parent = { name: ' Sample Parent ', email: ' parent@example.com ', phone: ' +44 20 7946 0958 ' }
   const sourceStudent = { id: 'emma', name: 'Emma', hours: 3, subjects: [subject] }

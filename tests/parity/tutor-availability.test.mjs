@@ -5,7 +5,7 @@ import { Option$None, Option$Some } from '../../planner/build/dev/javascript/gle
 import { TutorAvailability$TutorAvailability } from '../../planner/build/dev/javascript/christian_tutors_planner/planner/model.mjs'
 import { BookingInterval$BookingInterval, booking_notice_satisfied, conflict_issue, tutor_hours_issue } from '../../planner/build/dev/javascript/christian_tutors_planner/planner/scheduling.mjs'
 import { conflictReason, parseTime, tutorHoursIssue } from '../../temp-reference/typescript/family-planner-model.ts'
-import { calendarAddDays, calendarWeekday, easternInstant, noticeSatisfied, sessionInterval } from '../../src/lib/session-time.ts'
+import { calendarAddDays, calendarWeekday, easternInstant, bookingClock, noticeSatisfied, sessionInterval } from '../../src/lib/session-time.ts'
 
 test('Gleam tutor hours agree with TypeScript for closed days, exact starts, and elapsed ends', () => {
   const scenarios = [
@@ -36,8 +36,9 @@ test('Gleam tutor hours agree with TypeScript for closed days, exact starts, and
   }
 })
 
-test('Gleam booking notice matches TypeScript at the deadline', () => {
-  const clock = { now: 1_800_000_000_000, noticeMs: 86_400_000 }
+test('Gleam booking notice matches the 72-hour server cutoff at the deadline', () => {
+  const clock = bookingClock()
+  assert.equal(clock.noticeMs, 72 * 60 * 60 * 1000)
   const deadline = clock.now + clock.noticeMs
   for (const start of [deadline - 1, deadline, deadline + 1]) {
     assert.equal(booking_notice_satisfied(start, clock.now, clock.noticeMs), noticeSatisfied(start, clock))

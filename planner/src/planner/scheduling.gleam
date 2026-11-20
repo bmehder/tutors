@@ -314,13 +314,13 @@ fn resolved_session_issue(
   start: Int,
   end: Int,
 ) -> String {
-  let notice_ms = 24 * 60 * 60 * 1000
+  let notice_ms = 72 * 60 * 60 * 1000
   case
     booking_notice_satisfied(start, now, notice_ms),
     list.contains(tutor.subjects, session.subject)
   {
     False, _ ->
-      "Choose a future date and time outside the 24-hour booking notice."
+      "Choose a future date and time outside the 72-hour booking notice."
     True, False -> "This tutor does not teach this subject for this subject."
     True, True -> {
       let hours_issue =

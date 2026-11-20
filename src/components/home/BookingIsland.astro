@@ -1,20 +1,33 @@
 ---
 import './booking.css'
+import { init } from '../../../planner/build/dev/javascript/christian_tutors_planner/christian_tutors_planner.mjs'
+import { render } from '../../../planner/build/dev/javascript/christian_tutors_planner/planner/view.mjs'
+import { to_string } from '../../../planner/build/dev/javascript/lustre/lustre/element.mjs'
 import { stripe } from '../../server/stripe-sandbox'
+
+// Render the same initial model and view that Lustre uses in the browser.
+const packageScreen = to_string(render(init(undefined)[0]))
 ---
 
-<section id="booking" class="bg-[#f0f2eb] border-y border-ink/10 py-14 md:py-20">
+<section id="booking" class="bg-[#e7eee8] border-y border-ink/15 py-14 md:py-20">
   <div class="max-w-3xl mx-auto px-4 sm:px-8">
     <p class="eyebrow text-ink/55 mb-3">Plan your tutoring</p>
     <h2 class="text-4xl md:text-5xl font-semibold">Time for each student.<br /><span class="serif">A plan for your whole family.</span></h2>
     <p class="text-sm leading-7 text-ink/65 mt-5 mb-3 max-w-xl">Choose a package, add your students and subjects, then pick weekly tutoring times that fit your family.</p>
-    <div id="family-planner" data-checkout-open={import.meta.env.DEV || stripe ? "1" : undefined} data-stripe-sandbox={stripe ? "1" : undefined} class="scroll-mt-6"><p class="text-sm py-4">Loading the family planner…</p></div>
-    <noscript><p>Please enable JavaScript to use the family planner.</p></noscript>
+    <div id="family-planner" data-checkout-open={import.meta.env.DEV || stripe ? "1" : undefined} data-stripe-sandbox={stripe ? "1" : undefined} class="scroll-mt-6">
+      <fieldset disabled aria-label="Tutoring packages" class="m-0 min-w-0 border-0 p-0" set:html={packageScreen} />
+    </div>
+    <p data-planner-status hidden role="status" class="mt-3 text-sm text-ink/65">Preparing your planner…</p>
+    <noscript><p class="mt-3 text-sm">You can review packages above. Enable JavaScript to select a package and plan your sessions.</p></noscript>
   </div>
 </section>
 <script>
   import { main } from '../../../planner/build/dev/javascript/christian_tutors_planner/christian_tutors_planner.mjs';
   import { loadTutorHours } from '../../../planner/build/dev/javascript/christian_tutors_planner/planner_ffi.mjs';
+  const root = document.getElementById('family-planner')!
+  const status = document.querySelector<HTMLElement>('[data-planner-status]')!
+  root.setAttribute('aria-busy', 'true')
+  status.hidden = false
   loadTutorHours().then(async () => {
     if (import.meta.env.DEV) {
       const debug = await import('../../../planner/build/dev/javascript/christian_tutors_planner/tutors_debug.mjs');
@@ -22,7 +35,10 @@ import { stripe } from '../../server/stripe-sandbox'
     } else {
       main();
     }
+    root.setAttribute('aria-busy', 'false')
+    status.hidden = true
   }).catch(() => {
-    document.querySelector('#family-planner p')!.textContent = 'Tutor schedules could not be loaded. Please refresh to try again.';
+    root.setAttribute('aria-busy', 'false')
+    status.textContent = 'Tutor schedules could not be loaded. Please refresh to try again.'
   });
 </script>

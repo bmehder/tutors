@@ -328,7 +328,10 @@ fn step_view(model: Model) -> Element(Msg) {
       h.div([a.class("space-y-5")], [
         heading("Start with your package."),
         paragraph(
-          "More hours, a lower hourly rate. You’ll divide the time next.",
+          "Choose the hours your family needs. Larger packages have lower hourly rates.",
+        ),
+        paragraph(
+          "Each hour is one online session. You’ll divide the hours across students and subjects, then choose weekly tutoring times.",
         ),
         h.div(
           [a.class("space-y-3")],
@@ -864,6 +867,13 @@ fn schedule_view(
     ]),
     day_cards_view(day_cards),
     time_cards_view(time_cards),
+    h.p([a.class("text-sm leading-6 text-ink/75")], [
+      h.text("Can’t find the tutor, subject, day, or time you’re looking for? "),
+      h.a([a.href("#contact"), a.class("font-semibold underline underline-offset-4")], [
+        h.text("Contact us"),
+      ]),
+      h.text(". We reply to all emails within 24 hours."),
+    ]),
     routine_preview_view(preview),
   ])
 }

@@ -96,7 +96,7 @@ export function availabilityReason(
 	if (interval.kind !== 'resolved')
 		return 'Choose a valid date and quarter-hour time.'
 	if (!noticeSatisfied(interval.start, normalizeClock(clock)))
-		return 'Choose a future date and time outside the 24-hour booking notice.'
+		return `Choose a future date and time outside the ${normalizeClock(clock).noticeMs / 3_600_000}-hour booking notice.`
 	if (!supports(tutor, candidate.subject))
 		return 'This tutor does not teach this subject for this subject.'
 	const weekday = calendarWeekday(candidate.date)

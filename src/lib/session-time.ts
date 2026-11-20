@@ -14,7 +14,7 @@ export type BookingClock = Readonly<{ now: number; noticeMs: number }>
 
 export const bookingClock = (): BookingClock => ({
 	now: Temporal.Now.instant().epochMilliseconds,
-	noticeMs: 24 * 60 * MINUTE_MS,
+	noticeMs: 72 * 60 * MINUTE_MS,
 })
 
 export function calendarDate(value: string): Temporal.PlainDate {
@@ -150,7 +150,7 @@ export function normalizeClock(input: BookingClock | string): BookingClock {
 	if (typeof input !== 'string') return input
 	const instant = localInstant(input, 0)
 	if (instant.kind !== 'resolved') return { now: NaN, noticeMs: NaN }
-	return { now: instant.instant, noticeMs: 24 * 60 * MINUTE_MS }
+	return { now: instant.instant, noticeMs: 72 * 60 * MINUTE_MS }
 }
 
 export function formatDate(date: string, long = false): string {

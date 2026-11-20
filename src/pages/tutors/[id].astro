@@ -1,4 +1,5 @@
 ---
+import TutoringHelp from '../../components/TutoringHelp.astro'
 import { emailDeliveryEnabled } from '../../server/email-delivery'
 import { tutorBiographies } from '../../lib/tutor-biographies'
 import PublicLayout from '../../layouts/PublicLayout.astro'
@@ -68,7 +69,8 @@ const availability = tutor?.startsByDay.flatMap((times, index) =>
                     </div>
                   ))}
                 </dl>
-              ) : <p class="mt-4 text-sm">Contact us to discuss a tutoring time.</p>}
+              ) : <p class="mt-4 text-sm">No weekly times are currently listed.</p>}
+              <TutoringHelp />
               <a href={`/?tutor=${encodeURIComponent(tutor.id)}#booking`} class="btn mt-5">Check dates and plan</a>
             </section>
           </div>
