@@ -20,4 +20,5 @@ jobs:
           curl --fail-with-body --silent --show-error --max-time 45 \
             --retry 2 --retry-delay 5 --retry-all-errors \
             -H "Authorization: Bearer $WORKER_SECRET" \
+            -H "Content-Type: application/json" --data '{}' \
             -X POST https://tutors-admin-demo.vercel.app/api/deliver-emails
