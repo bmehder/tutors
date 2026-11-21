@@ -14,9 +14,9 @@ import planner/allocation.{
   total_allocated_hours,
 }
 import planner/browser.{
-  all_tutors, booking_calendar, choices, format_money, instant_label,
-  checkout_open, matching_zones, now, session_label, stripe_sandbox_enabled, subjects, tomorrow,
-  week_dates,
+  all_tutors, booking_calendar, checkout_open, choices, format_money,
+  instant_label, matching_zones, now, sandbox_discounts_enabled, session_label,
+  stripe_sandbox_enabled, subjects, tomorrow, week_dates,
 }
 import planner/checkout.{
   discount_amount, hourly_rate, order_total, package_total,
@@ -486,11 +486,14 @@ fn step_view(model: Model) -> Element(Msg) {
           "planner-small",
         ),
         heading("Contact details"),
-        paragraph("Enter your contact details for your booking."),
+        paragraph(
+          "A parent, guardian or adult student should enter their contact details for this booking.",
+        ),
         h.form([a.class("space-y-5"), e.on_submit(contact_submission)], [
           form_field("Contact name", "name", "text", name, ""),
           form_field("Email", "email", "email", email, ""),
           form_field("Phone number", "phone", "tel", phone, "(555) 123-4567"),
+          privacy_notice(),
           h.button([a.class("btn w-full")], [h.text("Next: payment")]),
         ]),
       ])
@@ -869,9 +872,15 @@ fn schedule_view(
     time_cards_view(time_cards),
     h.p([a.class("text-sm leading-6 text-ink/75")], [
       h.text("Can’t find the tutor, subject, day, or time you’re looking for? "),
-      h.a([a.href("#contact"), a.class("font-semibold underline underline-offset-4")], [
-        h.text("Contact us"),
-      ]),
+      h.a(
+        [
+          a.href("#contact"),
+          a.class("font-semibold underline underline-offset-4"),
+        ],
+        [
+          h.text("Contact us"),
+        ],
+      ),
       h.text(". We reply to all emails within 24 hours."),
     ]),
     routine_preview_view(preview),
@@ -1038,7 +1047,7 @@ fn routine_preview_view(preview: RoutinePreview) -> Element(Msg) {
               h.text("Weekly session dates"),
             ]),
             paragraph(
-              "Skip a week to add a replacement at the end. Contact support for other adjustments.",
+              "Skip a week to add a replacement at the end. After booking, arrange changes with your tutor and admin.",
             ),
             session_rows(rows),
           ],
@@ -1106,11 +1115,21 @@ fn schedule_summary(model: Model, editable: Bool) -> Element(Msg) {
   h.div([a.class("space-y-4")], [
     plan_totals(model.package_hours, scheduled_hours(model), None),
     h.p([a.class("text-xs leading-6 text-ink/65")], [
-      h.text("Need a different day or time without skipping a week? "),
-      h.a([a.href("#contact"), a.class("underline underline-offset-4")], [
-        h.text("Contact support"),
-      ]),
-      h.text(" and we’ll help."),
+      h.text(
+        "After booking, agree schedule changes with your tutor and have admin update the booking. ",
+      ),
+      h.a(
+        [
+          a.href("/booking-policy"),
+          a.class("underline underline-offset-4"),
+          a.attribute("target", "_blank"),
+          a.attribute("rel", "noopener noreferrer"),
+          a.attribute("title", "Opens in a new tab so your plan stays here"),
+        ],
+        [
+          h.text("Booking policy"),
+        ],
+      ),
     ]),
     empty_message,
     ..student_cards
@@ -1160,11 +1179,15 @@ fn draft_subject_schedule(
     )
     False -> #(None, None)
   }
+  let first_session = case routine.sessions {
+    [first, ..] -> first
+    [] -> routine.first_planned_session
+  }
   ScheduledSubject(
     subject: allocation.subject,
     session_summary: session_summary(routine.tutor.name, allocation.hours),
     routine_label: Some(
-      "Weekly routine · " <> session_label(routine.first_planned_session, zone),
+      "Weekly routine · " <> session_label(first_session, zone),
     ),
     rows: draft_session_rows(routine.sessions, zone, skip),
     edit:,
@@ -1378,6 +1401,27 @@ fn form_field(
   ])
 }
 
+fn discount_button(order: Order, state: PaymentState) -> Element(Msg) {
+  case sandbox_discounts_enabled() || order.discount != None {
+    False -> h.text("")
+    True ->
+      h.button(
+        [
+          a.type_("button"),
+          a.class("planner-outline"),
+          a.disabled(state == Processing),
+          e.on_click(UserToggledDemoDiscount),
+        ],
+        [
+          h.text(case order.discount {
+            None -> "Apply test discount (20%)"
+            Some(_) -> "Remove discount"
+          }),
+        ],
+      )
+  }
+}
+
 fn stripe_payment_view(order: Order, state: PaymentState) -> Element(Msg) {
   h.div([a.class("space-y-5")], [
     heading("Pay for your family’s package."),
@@ -1385,20 +1429,8 @@ fn stripe_payment_view(order: Order, state: PaymentState) -> Element(Msg) {
       "On Stripe, use 4242 4242 4242 4242, a future expiration date, and any 3-digit security code. No real money is charged.",
     ),
     price_breakdown(order.package_hours, order.discount),
-    h.button(
-      [
-        a.type_("button"),
-        a.class("planner-outline"),
-        a.disabled(state == Processing),
-        e.on_click(UserToggledDemoDiscount),
-      ],
-      [
-        h.text(case order.discount {
-          None -> "Apply 20% discount"
-          Some(_) -> "Remove discount"
-        }),
-      ],
-    ),
+    discount_button(order, state),
+    checkout_policy_notice(),
     h.button(
       [
         a.type_("button"),
@@ -1442,20 +1474,7 @@ fn payment_view(order: Order, state: PaymentState) -> Element(Msg) {
     ]),
     h.div([a.class("space-y-3")], [
       price_breakdown(order.package_hours, order.discount),
-      h.button(
-        [
-          a.type_("button"),
-          a.class("planner-outline"),
-          a.disabled(state == Processing),
-          e.on_click(UserToggledDemoDiscount),
-        ],
-        [
-          h.text(case order.discount {
-            None -> "Apply 20% discount"
-            Some(_) -> "Remove discount"
-          }),
-        ],
-      ),
+      discount_button(order, state),
     ]),
     h.form(
       [
@@ -1477,6 +1496,7 @@ fn payment_view(order: Order, state: PaymentState) -> Element(Msg) {
           form_field("Name on card", "billing", "text", "", "Name on card"),
           form_field("Billing ZIP / postal code", "postal", "text", "", "12345"),
         ]),
+        checkout_policy_notice(),
         h.button([a.class("btn w-full"), a.disabled(state == Processing)], [
           h.text(case state {
             Processing -> "Processing payment…"
@@ -1494,6 +1514,66 @@ fn payment_view(order: Order, state: PaymentState) -> Element(Msg) {
       ],
       [h.text("Back to contact details")],
     ),
+  ])
+}
+
+// Policy notices are shared by both payment views.
+
+fn privacy_notice() -> Element(Msg) {
+  h.p([a.class("text-xs leading-6 text-ink/65")], [
+    h.text("We use your details to arrange tutoring. Read our "),
+    h.a(
+      [
+        a.href("/privacy"),
+        a.class("underline underline-offset-4"),
+        a.attribute("target", "_blank"),
+        a.attribute("rel", "noopener noreferrer"),
+        a.attribute("title", "Opens in a new tab so your details stay here"),
+      ],
+      [
+        h.text("Privacy policy"),
+      ],
+    ),
+    h.text("."),
+  ])
+}
+
+fn checkout_policy_notice() -> Element(Msg) {
+  h.div([a.class("rounded-lg border border-ink/15 p-4 text-xs leading-6")], [
+    h.p([a.class("font-semibold")], [
+      h.text("Packages are non-refundable, except where required by law."),
+    ]),
+    h.p([], [
+      h.text("By continuing, you agree to our "),
+      h.a(
+        [
+          a.href("/booking-policy"),
+          a.class("underline underline-offset-4"),
+          a.attribute("target", "_blank"),
+          a.attribute("rel", "noopener noreferrer"),
+          a.attribute("title", "Opens in a new tab so your plan stays here"),
+        ],
+        [
+          h.text("Booking & refund policy"),
+        ],
+      ),
+      h.text(" and acknowledge our "),
+      h.a(
+        [
+          a.href("/privacy"),
+          a.class("underline underline-offset-4"),
+          a.attribute("target", "_blank"),
+          a.attribute("rel", "noopener noreferrer"),
+          a.attribute("title", "Opens in a new tab so your details stay here"),
+        ],
+        [
+          h.text("Privacy policy"),
+        ],
+      ),
+      h.text(
+        ". Arrange later schedule changes with your tutor, who will notify admin.",
+      ),
+    ]),
   ])
 }
 

@@ -5,6 +5,7 @@ import { randomUUID } from 'node:crypto'
 import { adminEmail, emailDeliveryEnabled, tutorEmailDeliveryEnabled, queueEmail, deliverQueuedEmails } from '../server/email-delivery'
 import { pool } from '../server/tutor-hours'
 import { tutorHours } from '../server/tutor-hours'
+import { enforceRequestLimit, requestAddress, RequestLimitError } from '../server/request-limits'
 
 const shortName = z.string().trim().min(1).max(120)
 const optionalText = (max: number) => z.string().trim().max(max).optional()
@@ -35,7 +36,7 @@ export const server = {
       availability: optionalText(1000),
       approach: optionalText(3000),
     }),
-    async handler(input) {
+    async handler(input, context) {
       const name = (input['first-name'] + ' ' + input['last-name']).replace(/\s+/g, ' ')
       const kind = input['contact-type']
       const phone = input.phone ?? ''
@@ -45,6 +46,16 @@ export const server = {
         const digits = phone.replace(/\D/g, '')
         if (!/^\+?[\d(). -]+$/.test(phone) || digits.length < 7 || digits.length > 15)
           throw new ActionError({ code: 'BAD_REQUEST', message: 'Enter a valid phone number or leave it blank.' })
+      }
+      if (emailDeliveryEnabled && pool) {
+        try {
+          await enforceRequestLimit(pool, 'contact', requestAddress(context))
+        } catch (error) {
+          throw new ActionError({
+            code: error instanceof RequestLimitError ? 'TOO_MANY_REQUESTS' : 'SERVICE_UNAVAILABLE',
+            message: error instanceof RequestLimitError ? error.message : 'Contact submission is temporarily unavailable. Please try again shortly.',
+          })
+        }
       }
 
       let recipient = 'Admin inbox'

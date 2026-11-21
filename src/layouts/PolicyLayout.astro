@@ -1,0 +1,21 @@
+---
+import PublicLayout from './PublicLayout.astro'
+interface Props { title: string; description: string }
+const { title, description } = Astro.props
+---
+<PublicLayout title={title} description={description}>
+  <main class="mx-auto max-w-3xl px-6 py-12 md:py-16">
+    <h1 class="text-4xl font-semibold leading-tight">{title}</h1>
+    <p class="mt-4 text-sm text-ink/65">Last updated November 21, 2026</p>
+    <article class="policy-copy mt-8 text-sm leading-7 text-ink/80">
+      <slot />
+    </article>
+  </main>
+</PublicLayout>
+<style>
+  .policy-copy :global(h2) { margin-top: 2rem; margin-bottom: .75rem; font-size: 1.5rem; line-height: 1.3; color: #143f3c; }
+  .policy-copy :global(p), .policy-copy :global(ul) { margin-bottom: 1rem; }
+  .policy-copy :global(ul) { padding-left: 1.25rem; list-style: disc; }
+  .policy-copy :global(li) { margin-bottom: .5rem; }
+  .policy-copy :global(a) { text-decoration: underline; text-underline-offset: 3px; }
+</style>

@@ -353,7 +353,11 @@ pub fn update(model: Model, msg: Msg) -> #(Model, effect.Effect(Msg)) {
       case model.step {
         PayForOrder(order, NotProcessing) -> {
           let discount = case order.discount {
-            None -> Some(checkout.demo_discount(order.package_hours))
+            None ->
+              case browser.sandbox_discounts_enabled() {
+                True -> Some(checkout.demo_discount(order.package_hours))
+                False -> None
+              }
             Some(_) -> None
           }
           #(
@@ -382,6 +386,19 @@ pub fn update(model: Model, msg: Msg) -> #(Model, effect.Effect(Msg)) {
     )
 
     model.DemoPaymentFinished(order) -> finish_payment(model, order)
+
+    model.CheckoutTemporarilyUnavailable(issue) ->
+      case model.step {
+        PayForOrder(order, Processing) -> #(
+          Model(
+            ..model,
+            step: PayForOrder(order, NotProcessing),
+            error: Some(issue),
+          ),
+          effect.none(),
+        )
+        _ -> #(model, effect.none())
+      }
 
     model.DemoReservationFailed(issue) ->
       case model.step {
@@ -713,6 +730,7 @@ fn start_payment(model: Model, order: Order) {
         dispatch,
         model.DemoPaymentFinished(order),
         model.DemoReservationFailed,
+        model.CheckoutTemporarilyUnavailable,
       )
     }),
   )

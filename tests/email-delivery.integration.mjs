@@ -1,7 +1,7 @@
 // Run with npm run test:email. Uses an isolated schema and replaces email transport.
 import assert from 'node:assert/strict'
 import { randomUUID } from 'node:crypto'
-import { mkdir, writeFile } from 'node:fs/promises'
+import { mkdir, writeFile, readFile } from 'node:fs/promises'
 import { resolve } from 'node:path'
 import pg from 'pg'
 import { build } from 'esbuild'
@@ -29,8 +29,13 @@ let rejectNext = false
 const originalFetch = globalThis.fetch
 try {
   await admin.query('CREATE SCHEMA ' + schema)
+  await admin.query((await readFile('db/014-request-limits.sql', 'utf8')).replace(/\brequest_limits\b/g, schema + '.request_limits'))
   for (const table of tables)
     await admin.query(`CREATE TABLE ${schema}.${table} (LIKE public.${table} INCLUDING ALL)`)
+  const migrated = (await admin.query(`SELECT 1 FROM information_schema.columns WHERE table_schema=$1
+    AND table_name='booking_reservations' AND column_name='checkout_request_id'`, [schema])).rowCount
+  if (!migrated) await admin.query((await readFile('db/015-checkout-reliability.sql', 'utf8'))
+    .replace(/\bbooking_reservations\b/g, schema + '.booking_reservations'))
   for (const table of tables.slice(0, 4))
     await admin.query(`INSERT INTO ${schema}.${table} SELECT * FROM public.${table}`)
 
@@ -41,6 +46,8 @@ try {
   process.env.RESEND_API_KEY = 'fake-key-for-simulated-email-tests'
   process.env.TUTOR_EMAIL_DELIVERY_ENABLED = '1'
   process.env.SANDBOX_ORDER_EMAIL_DELIVERY_ENABLED = '0'
+  process.env.REQUEST_LIMIT_SIGNING_KEY = 'fake-request-limit-test-key'
+  process.env.REQUEST_LIMITS_ENABLED = '1'
   testDb = new pg.Client({ connectionString: url.toString() })
   await testDb.connect()
   await build({
@@ -65,7 +72,7 @@ try {
   const { confirmSandboxCheckout } = await import(directory + '/confirmation.mjs')
   pool = (await import(directory + '/database.mjs')).pool
   const action = server.previewContact
-  const submit = async input => action.handler(action.input.parse(input))
+  const submit = async input => action.handler(action.input.parse(input), { clientAddress: '192.0.2.10' })
   const parentEmail = 'parent@example.test'
   const base = { 'first-name': 'Example', 'last-name': 'Parent', email: parentEmail,
     phone: '(555) 010-1234', message: 'Example question' }

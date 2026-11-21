@@ -2,6 +2,7 @@
 import { emailDeliveryEnabled } from "../../server/email-delivery"
 import ContactPreview from "../ContactPreview.astro"
 import Icon from '../Icon.astro'
+import PrivacyNotice from '../PrivacyNotice.astro'
 ---
 
 <section data-email-enabled={emailDeliveryEnabled ? '1' : '0'} id='contact' class='border-t border-ink/10 bg-white py-20'>
@@ -181,6 +182,7 @@ import Icon from '../Icon.astro'
 				<p class='text-xs text-ink/60'>
 					Review your details before continuing.
 				</p>
+				<PrivacyNotice />
 				<p role='alert' data-contact-error class='empty:hidden text-sm text-rose-800'></p>
 				<button type='submit' disabled data-contact-submit class='btn w-full sm:w-auto'
 					>Preview inquiry confirmation</button

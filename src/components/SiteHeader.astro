@@ -20,14 +20,14 @@ import Icon from "./Icon.astro";
 						</div>
 					</div>
 				</a>
-				<nav class='hidden lg:flex items-center gap-8 text-sm'>
+				<nav class='hidden xl:flex items-center gap-6 text-sm'>
 					<a href='/#how'>How it works</a>
+					<a href='/subjects'>Subjects</a>
 					<a href='/tutors'>Our tutors</a>
 					<a href='/#booking'>Plan tutoring</a>
 					<a href='/#contact'>Contact</a>
-					<a href='/admin'>Admin</a>
 				</nav>
-				<a class='btn !py-3 hidden lg:inline-flex' href='/#booking'>
+				<a class='btn !py-3 !hidden xl:!inline-flex' href='/#booking'>
 					Choose your package
 				</a>
 				<button
@@ -36,7 +36,7 @@ import Icon from "./Icon.astro";
 					aria-expanded="false" data-menu-button
 					aria-controls='mobile-navigation'
 
-					class='lg:hidden min-w-11 min-h-11 flex items-center justify-center border border-ink/20 rounded-lg'
+					class='xl:hidden min-w-11 min-h-11 flex items-center justify-center border border-ink/20 rounded-lg'
 				>
 					<Icon name="Menu" size={23} />
 				</button>
@@ -44,14 +44,14 @@ import Icon from "./Icon.astro";
 					<nav
 						id='mobile-navigation' hidden
 						aria-label='Mobile navigation'
-						class='absolute top-full inset-x-4 z-40 bg-white border border-ink/15 rounded-xl shadow-lg p-3 lg:hidden'
+						class='absolute top-full inset-x-4 z-40 bg-white border border-ink/15 rounded-xl shadow-lg p-3 xl:hidden'
 					>
 						{[
 							['/#how', 'How it works'],
+							['/subjects', 'Subjects'],
 							['/tutors', 'Our tutors'],
 							['/#booking', 'Plan tutoring'],
 							['/#contact', 'Contact'],
-							['/admin', 'Admin'],
 						].map(([href, label]) => (
 							<a
 								href={href}

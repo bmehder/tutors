@@ -8,37 +8,54 @@ export const stripe = key && /^(sk|rk|rkcs)_test_/.test(key)
   ? new Stripe(key, { timeout: 8_000, maxNetworkRetries: 0 })
   : undefined
 
-export async function createSandboxCheckout(
-  reservationId: string,
-  packageHours: number,
-  amount: number,
-  origin: string,
-) {
+// A creation attempt is recorded before contacting Stripe. A lost response must
+// be recovered with the same idempotency key, never treated as an unpaid checkout.
+export async function sandboxCheckoutSession(reservationId: string, reconcile = false) {
   if (!stripe || !pool) throw new Error('Stripe sandbox is unavailable.')
-  const session = await stripe.checkout.sessions.create({
-    mode: 'payment',
-    allowed_payment_method_types: ['card'],
-    client_reference_id: reservationId,
-    expires_at: Math.floor(Date.now() / 1000) + 31 * 60,
-    success_url: origin + '/checkout/stripe?session_id={CHECKOUT_SESSION_ID}',
-    cancel_url: origin + '/checkout/stripe?cancelled=1',
-    line_items: [{
-      quantity: 1,
-      price_data: {
-        currency: 'usd',
-        unit_amount: amount,
-        product_data: { name: `MyChristianTutors · ${packageHours}-hour tutoring package` },
-      },
-    }],
-  }, { idempotencyKey: 'tutoring-checkout-' + reservationId })
-
-  if (session.livemode || !session.url) throw new Error('Stripe did not return a sandbox payment page.')
-  const saved = await pool.query(
-    'UPDATE booking_reservations SET stripe_checkout_id=$2 WHERE id=$1 AND stripe_checkout_required',
-    [reservationId, session.id],
-  )
-  if (!saved.rowCount) throw new Error('The reservation could not be linked to checkout.')
-  return session.url
+  if (!reconcile) await pool.query(`UPDATE booking_reservations SET checkout_creation_at=COALESCE(checkout_creation_at,now())
+    WHERE id=$1 AND stripe_checkout_required AND checkout_released_at IS NULL AND expires_at>now()`, [reservationId])
+  const db = await pool.connect()
+  try {
+    await db.query('BEGIN')
+    const reservation = (await db.query<{
+      stripe_checkout_id: string | null; checkout_origin: string | null;
+      subtotal_cents: number; discount_cents: number; package_hours: number;
+      checkout_released_at: Date | null; checkout_creation_started: boolean; active: boolean; recoverable: boolean;
+    }>(`SELECT stripe_checkout_id,checkout_origin,subtotal_cents,discount_cents,package_hours,
+       checkout_released_at,checkout_creation_at IS NOT NULL AS checkout_creation_started,expires_at>now() AS active,
+       checkout_creation_at>now()-interval '23 hours' AS recoverable
+       FROM booking_reservations WHERE id=$1 AND stripe_checkout_required FOR UPDATE`, [reservationId])).rows[0]
+    if (!reservation || reservation.checkout_released_at ||
+        (!reconcile && !reservation.active) || !reservation.checkout_creation_started && !reservation.stripe_checkout_id)
+      throw new Error('This checkout is no longer available.')
+    let session: Stripe.Checkout.Session
+    if (reservation.stripe_checkout_id) {
+      session = await stripe.checkout.sessions.retrieve(reservation.stripe_checkout_id)
+    } else {
+      if (!reservation.recoverable) throw new Error('This unresolved payment needs manual review before its times can be released.')
+      if (!reservation.checkout_origin) throw new Error('The checkout origin is missing.')
+      // All parameters come from the accepted reservation and stay identical on retries.
+      session = await stripe.checkout.sessions.create({
+        mode: 'payment',
+        allowed_payment_method_types: ['card'],
+        client_reference_id: reservationId,
+        success_url: reservation.checkout_origin + '/checkout/stripe?session_id={CHECKOUT_SESSION_ID}',
+        cancel_url: reservation.checkout_origin + '/checkout/stripe?cancelled=1',
+        line_items: [{ quantity: 1, price_data: {
+          currency: 'usd', unit_amount: reservation.subtotal_cents - reservation.discount_cents,
+          product_data: { name: `MyChristianTutors · ${reservation.package_hours}-hour tutoring package` },
+        } }],
+      }, { idempotencyKey: 'tutoring-checkout-' + reservationId })
+      if (session.livemode) throw new Error('Stripe returned a live checkout.')
+      await db.query('UPDATE booking_reservations SET stripe_checkout_id=$2 WHERE id=$1', [reservationId, session.id])
+    }
+    if (session.livemode) throw new Error('Stripe returned a live checkout.')
+    await db.query('COMMIT')
+    return session
+  } catch (error) {
+    await db.query('ROLLBACK')
+    throw error
+  } finally { db.release() }
 }
 
 export async function confirmSandboxCheckout(session: Stripe.Checkout.Session) {
@@ -55,6 +72,7 @@ export async function confirmSandboxCheckout(session: Stripe.Checkout.Session) {
     `UPDATE booking_reservations
      SET confirmed_at = COALESCE(confirmed_at, now())
      WHERE id::text = $1 AND stripe_checkout_required AND stripe_checkout_id = $2
+       AND checkout_released_at IS NULL
        AND subtotal_cents - discount_cents = $3
      RETURNING id`,
     [session.client_reference_id, session.id, session.amount_total],

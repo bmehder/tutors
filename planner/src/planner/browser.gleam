@@ -47,6 +47,7 @@ pub fn after_payment(
   dispatch: fn(Msg) -> Nil,
   success: Msg,
   failed: fn(ErrorMessage) -> Msg,
+  retry: fn(ErrorMessage) -> Msg,
 ) -> Nil
 
 @external(javascript, "../planner_ffi.mjs", "scroll")
@@ -93,6 +94,9 @@ pub fn watch_tutor_hours(notify: fn() -> Nil) -> Nil
 
 @external(javascript, "../planner_ffi.mjs", "stripeSandboxEnabled")
 pub fn stripe_sandbox_enabled() -> Bool
+
+@external(javascript, "../planner_ffi.mjs", "sandboxDiscountsEnabled")
+pub fn sandbox_discounts_enabled() -> Bool
 
 @external(javascript, "../planner_ffi.mjs", "checkoutOpen")
 pub fn checkout_open() -> Bool

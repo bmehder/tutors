@@ -6,7 +6,7 @@ import MyFunScienceSection from '../components/home/MyFunScienceSection.astro'
 import BookingIsland from '../components/home/BookingIsland.astro'
 import TutorsSection from '../components/home/TutorsSection.astro'
 import TestimonialsSection from '../components/home/TestimonialsSection.astro'
-import NewsletterSignup from '../components/home/NewsletterSignup.astro'
+// import NewsletterSignup from '../components/home/NewsletterSignup.astro'
 import FaqSection from '../components/home/FaqSection.astro'
 import ContactSection from '../components/home/ContactSection.astro'
 import { tutorHours } from '../server/tutor-hours'
@@ -34,7 +34,9 @@ const featuredTutors = await tutorHours()
 		<BookingIsland />
 		<TutorsSection tutors={featuredTutors} />
 		<TestimonialsSection />
+		<!-- Newsletter signup is paused; restore this component when ready.
 		<NewsletterSignup />
+		-->
 		<FaqSection />
 		<ContactSection />
 		<MyFunScienceSection />

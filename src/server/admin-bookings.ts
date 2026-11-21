@@ -1,4 +1,5 @@
 import type pg from 'pg'
+import { reconcileExpiredHolds } from './checkout-holds'
 import { tutorHours } from './tutor-hours'
 import { subjectCatalog } from './subjects'
 import { instantParts, sessionInterval, TUTOR_ZONE } from '../lib/session-time'
@@ -60,10 +61,10 @@ export async function editBooking(pool: pg.Pool, form: FormData, action: string)
   }
   if (action === 'move-session') {
     const slot = submittedSlot(form)
+    await reconcileExpiredHolds()
     const client = await pool.connect()
     try {
       await client.query('BEGIN')
-      await client.query('DELETE FROM booking_reservations WHERE confirmed_at IS NULL AND expires_at <= now()')
       const replacement = String(form.get('replacement-tutor') ?? '')
       if (replacement) {
         const current = await client.query<{ subject: string | null }>(
@@ -110,10 +111,10 @@ export async function editBooking(pool: pg.Pool, form: FormData, action: string)
   if (contact.kind === 'missing') throw new Error('Enter the family’s email address and phone number.')
   const tutor = String(form.get('booking-tutor'))
   const slot = submittedSlot(form)
+  await reconcileExpiredHolds([tutor])
   const client = await pool.connect()
   try {
     await client.query('BEGIN')
-    await client.query('DELETE FROM booking_reservations WHERE confirmed_at IS NULL AND expires_at <= now()')
     const result = await client.query<{id: string}>(
       'INSERT INTO booking_reservations (id, expires_at, confirmed_at, label, subtotal_cents, discount_cents, payment_pending, contact_email, contact_phone, requires_contact) VALUES (gen_random_uuid(), now(), now(), $1, $2, $3, true, $4, $5, true) RETURNING id',
       [contact.name, subtotal, discount, contact.email, contact.phone],

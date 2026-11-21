@@ -91,7 +91,8 @@ export async function queueOrderEmails(
         `Family: ${first.label}`, `Email: ${first.contact_email}`, `Phone: ${first.contact_phone}`,
         '', 'Your sessions (Eastern time)',
         ...rows.map(row => `${formatter.format(row.start)} · ${row.student_name ?? 'Student'} · ${row.subject ?? 'Tutoring'}`),
-        '', 'Reply to this email to contact administration.',
+        '', 'Agree any schedule changes with the family, then notify administration so the booking and reserved time can be updated.',
+        'Reply to this email to contact administration.',
       ].join('\n'),
     }, id, deliveryAllowed && paymentMode === 'live')
   }

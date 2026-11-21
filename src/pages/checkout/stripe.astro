@@ -86,6 +86,7 @@ const emails = booking && summary?.contact_email && summary.contact_phone ? orde
       </section>
     )}
     {booking && !summary && <p class="mt-4">Session details are temporarily unavailable. Refresh to try again.</p>}
+    {summary && <p class="mt-6 text-sm leading-7 print:hidden">To change a session, agree a new time with your tutor, who will notify admin to update the booking. Read our <a href="/booking-policy" class="underline underline-offset-4">Booking & refund policy</a>.</p>}
     <div class="mt-6 flex flex-wrap gap-3 print:hidden">
       {summary && <button type="button" class="btn" data-print-booking>Print details</button>}
       {booking && <a class="btn" href="/#contact">Contact support</a>}

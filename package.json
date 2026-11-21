@@ -15,7 +15,11 @@
     "test": "node --experimental-strip-types --test tests/*.test.mjs temp-reference/typescript/tests/*.test.mjs",
     "build:planner": "node scripts/build-planner.mjs",
     "test:parity": "npm run build:planner && node --experimental-strip-types --test tests/parity/*.test.mjs",
-    "test:email": "node --env-file=.env.local --experimental-strip-types tests/email-delivery.integration.mjs"
+    "test:email": "node --env-file=.env.local --experimental-strip-types tests/email-delivery.integration.mjs",
+    "test:limits": "node --env-file=.env.local --experimental-strip-types tests/request-limits.integration.mjs",
+    "test:site": "node --experimental-strip-types scripts/check-public-pages.mjs",
+    "test:checkout": "node --env-file=.env.local --experimental-strip-types tests/checkout.integration.mjs",
+    "test:browser": "npm run build:planner && node --env-file=.env.local --experimental-strip-types tests/browser/walkthrough.mjs"
   },
   "dependencies": {
     "@astrojs/vercel": "^10.0.8",
@@ -31,6 +35,7 @@
     "@types/node": "22.19.19",
     "@types/pg": "^8.23.1",
     "esbuild": "0.27.7",
+    "playwright": "^1.65.1",
     "tailwindcss": "4.2.1",
     "typescript": "5.9.3"
   },

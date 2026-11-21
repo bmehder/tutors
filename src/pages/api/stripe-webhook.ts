@@ -1,5 +1,6 @@
 /// <reference types="astro/client" />
 import type { APIRoute } from 'astro'
+import { releaseExpiredSandboxCheckout } from '../../server/checkout-holds'
 import { getSecret } from 'astro:env/server'
 import { confirmSandboxCheckout, stripe } from '../../server/stripe-sandbox'
 
@@ -23,5 +24,6 @@ export const POST: APIRoute = async ({ request }) => {
     if (session.payment_status === 'paid' && !(await confirmSandboxCheckout(session)))
       return new Response(null, { status: 503 })
   }
+  if (event.type === 'checkout.session.expired') await releaseExpiredSandboxCheckout(event.data.object)
   return new Response(null, { status: 204 })
 }

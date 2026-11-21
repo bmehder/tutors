@@ -1,6 +1,6 @@
 # SEO and AI search plan
 
-Recovered from the November 19, 2026 discussion. Local first pass prepared November 20.
+Recovered from the November 19, 2026 discussion. First pass committed as 33026f5 on November 20. Follow-up subject pages remain local until reviewed.
 
 ## Current work
 
@@ -12,7 +12,7 @@ Recovered from the November 19, 2026 discussion. Local first pass prepared Novem
 
 ## Next content work
 
-1. Select a small set of useful subject pages, such as Algebra, Biology, and Writing. Explain the help available, show tutors using the actual catalog, answer subject-specific questions, and link into planning. Avoid thin pages for every possible search phrase.
+1. Local subject pages now cover Algebra, Biology, and Writing & English, with a subject directory, practical session information, questions, current tutors, and links into planning. Subject names follow catalog renames via catalog_name. These are editorial landing pages, not new categories in the booking model. Review the copy before publishing.
 2. Ask tutors to confirm their teaching approaches and the problems they help students solve. Keep MyFunScience classroom experience distinct from this tutoring service. Do not invent credentials or tutor-specific claims.
 3. Replace the two temporary testimonials with real statements before indexing. Confirm tutor profiles, pricing, the free-session offer terms, cancellation/rescheduling policies, and contact information. Keep the relationship with MyFunScience clear.
 
@@ -26,7 +26,13 @@ Recovered from the November 19, 2026 discussion. Local first pass prepared Novem
 
 ## Verification
 
-Local checks confirm the homepage/directory/profile metadata, parseable JSON-LD, package prices in the initial HTML, and 16 unique public sitemap URLs. Both prelaunch indexing protections remain intact. Further subject/content work requires editorial review.
+Local checks confirm the homepage/directory/profile metadata, parseable JSON-LD, package prices in the initial HTML, and public-only sitemap URLs. The first pass contained 16 URLs; the subject directory and 3 subject pages bring it to 20. Both prelaunch indexing protections remain intact. Further subject/content work requires editorial review.
+
+## Search Console setup now
+
+Open [Google Search Console](https://search.google.com/search-console/welcome) using the Google account that should own the property. Choose Domain and enter `mychristiantutors.com` without a protocol, path, or www. This covers the domain's protocol and subdomain variations. Give Shawn the DNS verification record Google supplies; preserve existing DNS records. Complete verification after the record is visible. Keep that record afterward.
+
+Ownership verification does not require removing the site's noindex protection. Wait to submit `/sitemap.xml` and request indexing until the launch decision. Google supplies the real verification token; none has been invented or added to the application.
 
 ## Guidance
 

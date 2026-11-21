@@ -65,6 +65,7 @@ pub type Msg {
   UserClickedStripeCheckout
   DemoPaymentFinished(Order)
   DemoReservationFailed(ErrorMessage)
+  CheckoutTemporarilyUnavailable(ErrorMessage)
   TutorAvailabilityRefreshed
   UserClickedPrint
 }

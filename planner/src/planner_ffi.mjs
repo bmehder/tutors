@@ -1,3 +1,4 @@
+import { checkoutAttempts } from './checkout_request.mjs'
 // Browser, catalog, and calendar adapters for the Gleam planner.
 import { toArray, toList } from './gleam_lists.mjs'
 import { Option$None, Option$Some, Option$isSome } from '../gleam_stdlib/gleam/option.mjs'
@@ -312,7 +313,16 @@ export const checkoutOpen = () =>
 export const stripeSandboxEnabled = () =>
 	document.getElementById('family-planner')?.dataset.stripeSandbox === '1'
 
-export function afterPayment(order, timeZone, dispatch, success, failed) {
+export const sandboxDiscountsEnabled = () =>
+	typeof document !== 'undefined' && document.getElementById('family-planner')?.dataset.sandboxDiscounts === '1'
+
+const checkoutRequests = checkoutAttempts(undefined, {
+	getItem: key => window.sessionStorage.getItem(key),
+	setItem: (key, value) => window.sessionStorage.setItem(key, value),
+	removeItem: key => window.sessionStorage.removeItem(key),
+})
+
+export function afterPayment(order, timeZone, dispatch, success, failed, retry) {
 	const studentNames = new Map(toArray(Order$Order$students(order)).map(student =>
 		[Student$Student$id(student), Student$Student$name(student)],
 	))
@@ -334,11 +344,16 @@ export function afterPayment(order, timeZone, dispatch, success, failed) {
 			body: JSON.stringify(body),
 		})
 		const result = await response.json()
-		if (!response.ok) throw new Error(result.error)
+		if (!response.ok) {
+			if (result.code === 'checkout_expired') checkoutRequests.expired(body.requestId)
+			throw Object.assign(new Error(result.error), {
+				requiresReview: response.status < 500 && response.status !== 429 && result.code !== 'checkout_pending',
+			})
+		}
 		return result
 	}
 	const contact = Order$Order$contact(order)
-	reserve({
+	checkoutRequests.forPlan({
 		sessions, timeZone,
 		familyName: ContactInfo$ContactInfo$name(contact),
 		contactEmail: ContactInfo$ContactInfo$email(contact),
@@ -347,6 +362,7 @@ export function afterPayment(order, timeZone, dispatch, success, failed) {
 		demoDiscount: Option$isSome(Order$Order$discount(order)),
 		checkout: stripeSandboxEnabled() ? 'stripe' : 'mock',
 	})
+		.then(reserve)
 		.then(async result => {
 			if (result.checkoutUrl) {
 				window.location.assign(result.checkoutUrl)
@@ -356,8 +372,12 @@ export function afterPayment(order, timeZone, dispatch, success, failed) {
 			dispatch(success)
 		})
 		.catch(async error => {
-			await loadTutorHours().catch(() => {})
-			dispatch(failed(error.message || 'Could not reserve your sessions.'))
+			if (error.requiresReview) {
+				await loadTutorHours().catch(() => {})
+				dispatch(failed(error.message || 'Please review the available tutor times.'))
+			} else {
+				dispatch(retry(error.message || 'Checkout could not start. Please try again; your existing checkout will be reused.'))
+			}
 		})
 }
 

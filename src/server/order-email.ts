@@ -1,3 +1,5 @@
+import { siteUrl } from '../lib/seo.ts'
+
 export type ConfirmedOrderEmailDetails = {
   id: string
   familyName: string
@@ -38,7 +40,10 @@ export function orderEmails(order: ConfirmedOrderEmailDetails, adminEmail: strin
       to: order.customerEmail,
       subject: `${subjectPrefix}Your MyChristianTutors booking #${reference}`,
       text: [...paymentNotice, `Hi ${order.familyName},`, '', sandbox ? 'Your test tutoring order was recorded.' : 'Your tutoring sessions are booked.', '', ...summary,
-        '', 'Reply to this email if you have questions about your schedule.'].join('\n'),
+        '', 'To change a session, agree a new time with your tutor, who will notify admin to update the booking.',
+        'Packages are non-refundable, except where required by law.',
+        `Booking policy: ${siteUrl}/booking-policy`, `Privacy policy: ${siteUrl}/privacy`,
+        'Reply to this email if you have questions about your schedule.'].join('\n'),
       key: `order-confirmation/${order.id}/customer`,
     },
     {

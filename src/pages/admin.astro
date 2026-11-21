@@ -6,6 +6,7 @@ import { editBooking } from '../server/admin-bookings'
 import { editSubject } from '../server/admin-subjects'
 import { subjectCatalog } from '../server/subjects'
 import { randomUUID } from 'node:crypto'
+import { enforceRequestLimit, requestAddress, RequestLimitError } from '../server/request-limits'
 import '../index.css'
 
 export const prerender = false
@@ -63,7 +64,17 @@ if (Astro.request.method === 'POST') {
 	const form = await Astro.request.formData()
 	const action = form.get('action')
 	if (action === 'sign-in') {
+		let permitted = true
+		try {
+			await enforceRequestLimit(pool!, 'admin-login', requestAddress(Astro))
+		} catch (issue) {
+			permitted = false
+			Astro.response.status = issue instanceof RequestLimitError ? 429 : 503
+			if (issue instanceof RequestLimitError) Astro.response.headers.set('Retry-After', String(issue.retryAfterSeconds))
+			error = issue instanceof RequestLimitError ? issue.message : 'Sign-in is temporarily unavailable. Please try again shortly.'
+		}
 		if (
+			permitted &&
 			equal(String(form.get('email')), email!) &&
 			equal(String(form.get('password')), password!)
 		) {
@@ -77,7 +88,7 @@ if (Astro.request.method === 'POST') {
 			})
 			return redirect('/admin', 303)
 		}
-		error = 'The email or password did not match.'
+		if (permitted) error = 'The email or password did not match.'
 	} else {
 		if (!signedIn) return new Response('Forbidden', { status: 403 })
 		if (action === 'sign-out') {
@@ -299,6 +310,8 @@ const data = {
 	})),
 }
 if (wantsJson) {
+	if (error && (Astro.response.status === 429 || Astro.response.status === 503))
+		return Response.json({ error }, { status: Astro.response.status, headers: Astro.response.headers })
 	if (!signedIn)
 		return Response.json(
 			{ error: 'Your session expired. Sign in again to continue.' },
