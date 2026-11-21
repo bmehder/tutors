@@ -1,7 +1,9 @@
 export const siteUrl = 'https://www.mychristiantutors.com'
 
 export function canonicalUrl(path: string) {
-  return new URL(path, siteUrl).toString()
+  const url = new URL(path, siteUrl)
+  url.pathname = url.pathname.replace(/\/+$/, '') || '/'
+  return url.toString()
 }
 
 export const organization = {
