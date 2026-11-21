@@ -10,31 +10,26 @@ Brad approved keeping GitHub retries for the low-volume soft launch, accepting p
 - Test order: `680a007f-f13b-4fe0-a3a0-31f35e2259c5`; label **Prelaunch Checkout Check**. This is a test payment, not real revenue.
 - Real Stripe sandbox checkout completed with a test card for **$300 USD**, five sessions. Stripe event: `evt_1UeHpe2ccqfNWXKkKkSUjzbJ`.
 - The browser's customer-return URL was blocked until the database showed confirmation. This verifies that the real signed webhook confirmed the order independently of the return-page fallback.
-- The private production admin lists the paid order, correct total and five sessions.
+- At verification time, the private production admin listed the paid order, correct total and five sessions. The test order was subsequently removed in the approved cleanup below.
 - Hosted confirmation lists the sessions and price; customer/admin email previews, print button and PDF output worked.
 - Resend accepted two messages, both deliberately addressed to `admin@mychristiantutors.com` for the customer/admin check. The sending-only key cannot inspect final mailbox-delivery status; Anna can inspect those receipts in Resend. No tutor email was sent. The third tutor message remains blocked.
-- Existing orders were not deleted or edited. The new test order is retained for inspection and must be included in the approved prelaunch cleanup.
+- Existing orders were not changed during the checkout test. Brad subsequently approved removing all eight test orders without an archive; that cleanup is complete below.
 
 Public availability stayed cleared throughout. To test hosted payment without opening public bookings, a private accepted test hold was prepared directly in the database for five dates in May/June 2030. The actual production reservation retry route created its Stripe checkout. This did **not** exercise initial public availability selection against production; the separate production-build browser walkthrough exercises that full planner journey with isolated availability and simulated providers.
 
-## Existing-order audit and cleanup proposal
+## Test-order cleanup: complete
 
-Before this check, production held **7 confirmed test-era orders**, **60 sessions**, including **41 future sessions**, and **$4,025 in recorded order totals**:
+Brad confirmed that all eight orders, including the manual Luigi Hamiltoni order, were disposable records from earlier development/testing. He explicitly declined retaining a database archive.
 
-| Category | Orders | Recorded totals | Confidence |
-|---|---:|---:|---|
-| Labels suggesting seeded/manual tests | 5 | $3,305 | Candidate test records; labels alone are not proof. |
-| Other manual order | 1 | $320 | Needs Brad's classification before cleanup. |
-| Stripe sandbox order | 1 | $400 | Definitely sandbox; preserve its historical price rather than rewriting it. |
+Removed from the hosted application database on November 21, 2026:
 
-The new controlled test adds 1 sandbox order, 5 future sessions and $300. All 8 orders currently appear in the admin's order/revenue totals; those are not established live-sales figures. Test reservations will continue to block matching tutor times when real availability is published unless they are released.
+- **8 test orders** (five Demo families, one manual test and two verified Stripe sandbox orders).
+- **65 reserved sessions**, releasing all test booking blocks.
+- **4 test email records**: three associated order messages and the separately identified earlier contact-delivery test. No emails were sent during cleanup.
 
-Proposed cleanup, **not performed**:
+Only the reviewed order IDs and specifically identified test email were removed. The deletion was rehearsed in an isolated temporary branch; that branch was deleted. No permanent archive was created. Existing tutor profiles, subjects and weekly availability settings were retained.
 
-1. Brad identifies the unclassified manual order and confirms exactly which seeded/manual orders are disposable tests.
-2. Preserve a reference copy of approved test records, for example in a dedicated Neon branch, before removing them from the live booking database. Keep private contact data out of Git.
-3. Remove only explicitly approved test-order IDs and their session blocks. Do not blanket-delete orders, rewrite historical prices, or release unresolved Stripe holds.
-4. Recheck counts, tutor availability, retained customer/payment records and reports before enabling live bookings. Stripe's sandbox history and Resend history remain separate from database cleanup.
+Production verification passed: **0 orders, 0 reserved sessions, 0 app email records and $0 recorded revenue**. Tutor delivery remains disabled and public availability remains cleared. Stripe and Resend retain their own provider-side test history; those external histories were not modified. No cleanup/rehearsal database branches remain. The existing application, development and original project branches were not removed.
 
 ## Admin scenarios: tested locally
 

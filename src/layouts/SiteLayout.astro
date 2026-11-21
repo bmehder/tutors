@@ -1,12 +1,14 @@
 ---
 import "../index.css";
-import { canonicalUrl, structuredDataJson } from '../lib/seo';
+import { canonicalUrl, siteUrl, structuredDataJson } from '../lib/seo';
 import { robotsDirective } from '../lib/search-indexing';
 
 const siteName = "MyChristianTutors";
 const { title, description = 'One-on-one Christian online tutoring for homeschool families. Choose subjects and tutors, share package hours across your family, and plan weekly sessions.', structuredData = [], indexable = true } = Astro.props;
 const siteTitle = title ? `${title} | ${siteName}` : `Christian Online Tutoring for Homeschool Families | ${siteName}`;
 const canonical = canonicalUrl(Astro.url.pathname);
+// A new image URL lets sharing services refresh their cached preview image.
+const socialImage = `${siteUrl}/images/my-christian-tutors-social.png?v=2`;
 ---
 <!doctype html>
 <html lang="en" prefix="og: https://ogp.me/ns#">
@@ -31,8 +33,8 @@ const canonical = canonicalUrl(Astro.url.pathname);
     <meta property="og:url" content={canonical.toString()} />
     <meta property="og:title" content={siteTitle} />
     <meta property="og:description" content={description} />
-    <meta property="og:image" content="https://www.mychristiantutors.com/images/my-christian-tutors-social.png" />
-    <meta property="og:image:secure_url" content="https://www.mychristiantutors.com/images/my-christian-tutors-social.png" />
+    <meta property="og:image" content={socialImage} />
+    <meta property="og:image:secure_url" content={socialImage} />
     <meta property="og:image:type" content="image/png" />
     <meta property="og:image:width" content="1200" />
     <meta property="og:image:height" content="630" />
@@ -41,7 +43,7 @@ const canonical = canonicalUrl(Astro.url.pathname);
     <meta name="twitter:card" content="summary_large_image" />
     <meta name="twitter:title" content={siteTitle} />
     <meta name="twitter:description" content={description} />
-    <meta name="twitter:image" content="https://www.mychristiantutors.com/images/my-christian-tutors-social.png" />
+    <meta name="twitter:image" content={socialImage} />
     <meta name="twitter:image:alt" content="MyChristianTutors. Grow in knowledge. Grounded in faith." />
   </head>
   <body>

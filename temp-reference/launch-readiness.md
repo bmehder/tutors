@@ -32,8 +32,8 @@ Implementation is complete for this prelaunch pass. Anna’s operational checks 
 - [x] Validate and apply migration 015 to production before the code push; preserve booking/tutor data and include the expired-checkout webhook event. Temporary protected maintenance deployment removed afterward.
 - [x] Anna confirms each tutor's subjects, private email address, and meeting instructions.
 - [ ] Anna prepares and reviews real availability; publish it only at the final launch gate.
-- [ ] Review sandbox/seed orders so test records do not affect real availability or reports. Agree on cleanup or separation before changing existing records; no blanket deletion.
-- [x] Audit existing hosted orders and prepare a scoped cleanup proposal. See [remaining technical checks](prelaunch-verification.md). Existing records remain intact; cleanup approval is still needed.
+- [x] Brad confirmed all eight hosted orders were tests and approved removing them without an archive. Removed the eight reviewed orders, 65 reserved sessions and four identified test email records. Production admin shows zero orders and $0 revenue; tutor/subject/availability data retained, public availability still cleared. No temporary or archive branches remain.
+- [x] Audit existing hosted orders and complete the approved scoped cleanup. See [remaining technical checks](prelaunch-verification.md).
 - [ ] Confirm the admin workflow for rescheduling, tutor changes, pending invoices, cancellations, and payment/refund records.
 - [x] Test those admin workflows in isolated server/browser checks and prepare fixes for required manual subjects, retained cancellation history and external refund records. Migration 017 passed on a production copy and is applied to development and production; publishing it remains separate from Anna's operational review.
 - [x] Apply migration 017 to production after isolated validation; all 8 orders and their confirmation state were retained.

@@ -26,6 +26,13 @@ import Icon from "./Icon.astro";
 					<a href='/tutors'>Our tutors</a>
 					<a href='/#booking'>Plan tutoring</a>
 					<a href='/#contact'>Contact</a>
+					{import.meta.env.DEV && (
+						<a href='https://github.com/bmehder/tutors' target='_blank' rel='noopener noreferrer'
+							aria-label='GitHub repository (opens in a new tab)' title='Open GitHub repository'
+							class='inline-flex min-h-11 min-w-11 items-center justify-center rounded-lg hover:bg-ink/5 focus-visible:outline-2 focus-visible:outline-ink'>
+							<Icon name="Github" size={22} />
+						</a>
+					)}
 				</nav>
 				<a class='btn !py-3 !hidden xl:!inline-flex' href='/#booking'>
 					Choose your package
@@ -61,6 +68,13 @@ import Icon from "./Icon.astro";
 								{label}
 							</a>
 						))}
+						{import.meta.env.DEV && (
+							<a href='https://github.com/bmehder/tutors' target='_blank' rel='noopener noreferrer'
+								class='flex items-center gap-2 rounded-lg px-4 py-4 text-sm font-semibold hover:bg-[#edf3ed] focus:bg-[#edf3ed]'>
+								<Icon name="Github" size={22} />
+								GitHub
+							</a>
+						)}
 					</nav>
 </header>
 <script>

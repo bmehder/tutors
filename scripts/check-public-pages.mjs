@@ -25,6 +25,14 @@ async function checkPages() {
     assert.equal((html.match(/<h1(?:\s|>)/g) || []).length, 1, canonical.pathname + ' main heading')
     assert.ok(html.includes(`href="${location}"`), canonical.pathname + ' canonical')
     assert.ok(html.includes(`name="robots" content="${robotsDirective()}"`), canonical.pathname + ' indexing setting')
+    const shareImage = html.match(/property="og:image" content="([^"]+)"/)?.[1]
+    assert.ok(shareImage, canonical.pathname + ' sharing image')
+    const imageUrl = new URL(shareImage)
+    assert.equal(imageUrl.origin, siteUrl, canonical.pathname + ' sharing image domain')
+    assert.ok(imageUrl.searchParams.get('v'), canonical.pathname + ' versioned sharing image')
+    assert.ok(html.includes(`name="twitter:image" content="${shareImage}"`), canonical.pathname + ' matching social images')
+    if (base.hostname !== '127.0.0.1' && base.hostname !== 'localhost')
+      assert.ok(!html.includes('https://github.com/bmehder/tutors'), canonical.pathname + ' excludes development navigation')
     const data = [...html.matchAll(/<script type="application\/ld\+json">([\s\S]*?)<\/script>/g)]
     assert.ok(data.length, canonical.pathname + ' structured data')
     data.forEach(match => JSON.parse(match[1]))

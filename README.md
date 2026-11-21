@@ -1,62 +1,76 @@
 # MyChristianTutors
 
-Astro site styled with Tailwind CSS. The family booking flow and admin dashboard run as separate Gleam/Lustre islands. Server routes handle authentication and database operations.
+Astro and Tailwind website with separate Gleam/Lustre islands for the family booking planner and private administration. Astro server routes handle authentication, reservations, Stripe Checkout and Resend email delivery. Neon PostgreSQL stores tutor information, availability, orders and queued emails.
 
 ## Run locally
 
-Use Node 22.12 or later and Gleam 1.18.1.
+Use Node 22 and Gleam 1.18.1.
 
 ```sh
 npm install
 npm run dev
 ```
 
-Open http://127.0.0.1:5200 in your browser. After editing Gleam, run `npm run build:planner` to refresh the compiled island while Astro is running.
+The development server uses http://127.0.0.1:5200. After changing Gleam, run `npm run build:planner` to refresh its compiled JavaScript while Astro is running.
 
-## Build
+Private settings belong in the ignored `.env.local`; see `.env.example` for the variable names. Local administration uses `BOOKING_DEV_ADMIN_EMAIL` and `BOOKING_DEV_ADMIN_PASSWORD`. The local and hosted apps use separate Neon branches; do not substitute one database connection for the other. Keep credentials out of Git.
+
+## Build and verify
 
 ```sh
 npm run build
-npm run preview
+npm test
+npm run test:parity
 ```
 
-The build uses the Vercel adapter: public pages are static, while authenticated administration and reservation routes run on the server.
+The build compiles Gleam, checks TypeScript and produces Vercel output. On Linux x64 or ARM64 without Gleam installed, it downloads and verifies the pinned compiler release.
 
-## Family planner demo
+Additional checks:
 
-Choose a package, allocate hours by student and subject, then pick a tutor and a recurring weekly time for each subject. Families can skip a week before checkout and move that session to the next available week at the end. Tutor and student overlaps are blocked.
+| Command | What it checks |
+|---|---|
+| `npm run test:checkout` | Checkout retries, competing reservations, expiry and payment confirmation. |
+| `npm run test:admin` | Manual bookings, tutor changes, payment/refund records and retained cancellation history. |
+| `npm run test:email` | Contact routing, order receipts and duplicate/retry protection. |
+| `npm run test:operations` | Email queue status and worker monitoring. |
+| `npm run test:limits` | Shared request limits. |
+| `npm run test:browser` | Astro/Lustre customer and admin journeys at desktop and phone sizes. Temporarily uses port 5200 and restores the normal dev server afterward. |
+| `npm run test:site` | Read-only public-page audit against the running local site. Accepts a site URL as an argument. |
 
-The 5-hour package covers one student, the 10-hour package covers up to three, and the 20-hour package covers up to five. Teacher names and subjects come from MyFunScience. Prices and availability are illustrative, and all demo state resets on refresh. No payments are collected or emails sent.
+Database integration tests use disposable schemas and simulated payment/email providers. Browser tests regenerate their screenshots and build files under `node_modules/.cache/`; those are not source files or backups.
 
-Run the TypeScript tests with `npm test` and the Gleam parity tests with `npm run test:parity`.
+## Application code
 
-## Project structure
+| Location | Responsibility |
+|---|---|
+| `src/pages/`, `src/layouts/`, `src/components/` | Astro routes, shared page layouts and website components. |
+| `planner/src/christian_tutors_planner.gleam` | Family planner initialization and update. |
+| `planner/src/planner/` | Planner model, allocation, scheduling, checkout, view and browser boundary. |
+| `planner/src/christian_tutors_admin.gleam` | Admin initialization and update. |
+| `planner/src/admin/` | Admin model, screens, reports and Operations view. |
+| `planner/src/*ffi.mjs`, `src/lib/session-time.ts` | Browser/network adapters and calendar/time-zone conversion. |
+| `src/server/`, `src/actions/`, `src/pages/api/` | Authoritative server validation, database writes, payments, contact forms and email delivery. |
+| `db/` | Ordered database migrations. Keep earlier migrations: they are needed to build a database from scratch. |
+| `tests/` | Unit, integration, browser and Gleam parity tests. |
 
-- `src/pages/` contains Astro routes. `src/layouts/SiteLayout.astro` holds the document shell and `src/components/` holds the page components.
-- `planner/src/christian_tutors_planner.gleam` owns the Lustre application and state transitions. `planner/src/planner/` contains the model, views, and browser bindings.
-- `planner/src/planner/scheduling.gleam` and `checkout.gleam` own scheduling, order validation, and pricing.
-- `planner/src/planner_ffi.mjs` connects browser APIs, demo data, and calendar and time-zone conversion.
-- `npm run build` compiles the island before Astro generates `dist/`. On Linux x64 or ARM64 without Gleam on PATH, the build downloads and verifies the pinned compiler release.
+Families share 5-, 10- or 20-hour packages across the supported number of students, assign subjects and select weekly one-hour sessions. Before checkout they can skip a week and add a replacement at the end. The server temporarily reserves dated tutor times and confirms the order after Stripe verifies payment. Bookings persist in the database; they do not disappear when the page refreshes.
+
+The private `/admin` app manages tutors, subjects, schedules, bookings and reports. Cancelling a booking releases its times while retaining order history. Recording a refund documents a refund already issued elsewhere; it does not move money.
+
+## Deployment and current launch controls
+
+Pushing `astro-lustre` deploys the site to Vercel. Apply required database migrations before publishing code that depends on them. The public domain is https://www.mychristiantutors.com.
+
+The site currently uses Stripe sandbox payments. Public availability and search indexing remain disabled; tutor email remains paused. Customer/admin email delivery is connected to Resend. The private Operations screen monitors app-side email retries; Resend provides final delivery details. GitHub retries are accepted for the low-volume soft launch, with scheduling to be reviewed before paid promotion.
+
+Plausible runs on public pages of the main domain, excluding admin, checkout confirmations, email previews, localhost and alternate Vercel URLs. Google Analytics is not installed. Keep the Google Search Console verification file in `public/`.
+
+Use the [launch checklist](temp-reference/launch-readiness.md) for launch approval and outstanding work, and the [operations notes](temp-reference/operations.md) for delivery and recovery procedures. The indexing-preparation script previews changes by default; do not enable indexing merely to verify Search Console ownership.
 
 ## Reference material
 
-[The reference folder](temp-reference/) contains the design notes, the Elm domain lab, and the earlier TypeScript booking rules. The TypeScript rules still run in the test suite and serve as a parity reference for Gleam.
+`temp-reference/` holds planning documents and historical experiments. It is not application runtime code.
 
-Run the Elm scenarios with `node temp-reference/domain-lab/run.mjs`.
-
-## Admin application
-
-`/admin` uses the existing server-side sign-in and database. Navigation, schedule drafts, removal/undo, and report calculations now live in Lustre; switching screens and saving do not refresh the page.
-
-Start reading here:
-
-- `planner/src/admin/model.gleam`: loaded records, screen states, and messages.
-- `planner/src/christian_tutors_admin.gleam`: application initialization and update.
-- `planner/src/admin/view.gleam`: Tailwind UI and derived display values.
-- `planner/src/admin/reports.gleam`: inclusive date filters and payment totals. Unknown payments are distinct from zero.
-- `planner/src/admin/browser.gleam` and `planner/src/admin_ffi.mjs`: HTTP, JSON conversion, and browser confirmations/animation.
-- `src/pages/admin.astro`: authenticated HTML shell and JSON/form endpoint; `src/server/admin-bookings.ts` retains authoritative booking checks and writes.
-
-The local admin still uses the existing `BOOKING_DEV_ADMIN_EMAIL` and `BOOKING_DEV_ADMIN_PASSWORD`. Public demo mode remains explicitly enabled by its existing environment settings. The migration adds no credentials or database schema changes.
-
-Admin model tests run with `npm run test:parity`, alongside the family planner parity tests.
+- `temp-reference/typescript/` contains earlier booking rules **still used by unit and parity tests**. Keep these until those comparisons are deliberately replaced.
+- `temp-reference/domain-lab/` is an older, standalone Elm experiment. The website and normal test suite do not depend on it.
+- `temp-reference/docs/` contains early architecture and vocabulary notes; treat the current source and launch/operations documents as authoritative.
