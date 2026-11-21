@@ -220,6 +220,15 @@ try {
   assert.equal((await post(earlyPlan)).code, 'checkout_expired')
   assert.equal(await sessionCount(early.id), 0)
   console.log('PASS — expired Stripe event safely releases once; live event rejected')
+
+  await testDb.query('UPDATE booking_reservations SET cancelled_at=now() WHERE id=$1', [paid.id])
+  await testDb.query('DELETE FROM booking_sessions WHERE reservation_id=$1', [paid.id])
+  const messagesBeforeReplay = (await testDb.query('SELECT count(*)::int AS count FROM outgoing_emails')).rows[0].count
+  assert.equal(await confirmSandboxCheckout(paidSession), paid.id)
+  assert.ok((await row(paid.id)).cancelled_at)
+  assert.equal(await sessionCount(paid.id), 0)
+  assert.equal((await testDb.query('SELECT count(*)::int AS count FROM outgoing_emails')).rows[0].count, messagesBeforeReplay)
+  console.log('PASS — replayed Stripe confirmation cannot restore cancelled sessions or create new order emails')
 } finally {
   globalThis.fetch = originalFetch
   await pool?.end()

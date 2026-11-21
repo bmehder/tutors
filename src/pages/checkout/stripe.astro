@@ -1,6 +1,6 @@
 ---
 import SiteLayout from '../../layouts/SiteLayout.astro'
-import { confirmSandboxCheckout, sandboxBookingDetails, stripe } from '../../server/stripe-sandbox'
+import { confirmSandboxCheckout, sandboxBookingDetails, sandboxBookingCancelled, stripe } from '../../server/stripe-sandbox'
 
 import { tutors, money } from '../../lib/tutoring-data'
 import { adminEmail } from '../../server/email-delivery'
@@ -13,11 +13,15 @@ Astro.response.headers.set('Referrer-Policy', 'no-referrer')
 const sessionId = Astro.url.searchParams.get('session_id') ?? ''
 const cancelled = Astro.url.searchParams.get('cancelled') === '1'
 let booking: string | null = null
+let bookingCancelled = false
 let sessions: Awaited<ReturnType<typeof sandboxBookingDetails>> = []
 if (stripe && /^cs_test_[A-Za-z0-9]+$/.test(sessionId)) {
   try {
     booking = await confirmSandboxCheckout(await stripe.checkout.sessions.retrieve(sessionId))
-    if (booking) sessions = await sandboxBookingDetails(booking)
+    if (booking) {
+      bookingCancelled = await sandboxBookingCancelled(booking)
+      if (!bookingCancelled) sessions = await sandboxBookingDetails(booking)
+    }
   } catch {
     Astro.response.status = 503
   }
@@ -42,11 +46,11 @@ const emails = booking && summary?.contact_email && summary.contact_phone ? orde
   })),
 }, adminEmail) : []
 ---
-<SiteLayout title="Booking confirmation">
+<SiteLayout title="Booking confirmation" indexable={false}>
   <main class="mx-auto max-w-3xl px-6 py-16 print:max-w-none print:p-0">
-    <h1 class="text-4xl font-semibold">{booking ? 'Booking confirmed' : cancelled ? 'Checkout canceled' : 'Booking confirmation unavailable'}</h1>
+    <h1 class="text-4xl font-semibold">{bookingCancelled ? 'Booking cancelled' : booking ? 'Booking confirmed' : cancelled ? 'Checkout canceled' : 'Booking confirmation unavailable'}</h1>
     <p class="mt-5 leading-7">
-      {booking
+      {bookingCancelled ? 'This booking has been cancelled and its times released. Contact support if you have questions about the order.' : booking
         ? `Your order was recorded. Reference: ${booking.slice(0, 8).toUpperCase()}. No charge was made.`
         : cancelled
           ? 'No payment was recorded. Your selected times will be released when the checkout hold expires.'
@@ -85,7 +89,7 @@ const emails = booking && summary?.contact_email && summary.contact_phone ? orde
         ))}
       </section>
     )}
-    {booking && !summary && <p class="mt-4">Session details are temporarily unavailable. Refresh to try again.</p>}
+    {booking && !summary && !bookingCancelled && <p class="mt-4">Session details are temporarily unavailable. Refresh to try again.</p>}
     {summary && <p class="mt-6 text-sm leading-7 print:hidden">To change a session, agree a new time with your tutor, who will notify admin to update the booking. Read our <a href="/booking-policy" class="underline underline-offset-4">Booking & refund policy</a>.</p>}
     <div class="mt-6 flex flex-wrap gap-3 print:hidden">
       {summary && <button type="button" class="btn" data-print-booking>Print details</button>}

@@ -157,6 +157,7 @@ pub fn render(model: Model) -> Element(Msg) {
                               list.length(
                                 list.filter(model.data.bookings, fn(booking) {
                                   booking.payment_status == model.PendingPayment
+                                  && booking.status == model.ActiveBooking
                                 }),
                               ),
                             )
@@ -455,7 +456,9 @@ fn subject_editor(model: Model, subject: String) {
 
 fn tutor_bookings(model: Model, tutor: Tutor) {
   let sessions =
-    list.flat_map(model.data.bookings, fn(booking) {
+    model.data.bookings
+    |> list.filter(fn(booking) { booking.status == model.ActiveBooking })
+    |> list.flat_map(fn(booking) {
       booking.sessions
       |> list.filter(fn(session) { session.tutor == tutor.id })
       |> list.map(fn(session) {
@@ -852,6 +855,11 @@ fn session_view(model: Model, name: String, session: Session) {
     ]),
     form("session-" <> session.id, "move-session", "", [
       hidden("session", session.id),
+      h.p([a.class("text-sm text-slate-600")], [
+        h.text(
+          "For the current tutor, enter the time agreed with the family. A different tutor must teach this subject and offer the selected time.",
+        ),
+      ]),
       select(
         fields,
         "Tutor",
@@ -920,7 +928,13 @@ fn booking_view(model: Model, booking: Booking) {
         ),
       ],
       [
-        h.text(booking.name),
+        h.text(
+          booking.name
+          <> case booking.status {
+            model.CancelledBooking -> " · Cancelled"
+            model.ActiveBooking -> ""
+          },
+        ),
         h.span([a.class("mt-1 block text-xs font-normal text-slate-600")], [
           h.text(
             "Order #"
@@ -943,12 +957,15 @@ fn booking_view(model: Model, booking: Booking) {
           ],
           [
             h.text(
-              case booking.payment_status {
-                model.PendingPayment ->
+              case booking.payment_status, booking.status {
+                model.PendingPayment, model.CancelledBooking ->
+                  "Cancelled unpaid order · Original total "
+                  <> format_money(report.order_total(booking))
+                model.PendingPayment, model.ActiveBooking ->
                   "Awaiting payment · Due "
                   <> format_money(report.order_total(booking))
-                model.PaymentComplete ->
-                  "Paid " <> format_money(report.amount_paid(booking))
+                model.PaymentComplete, _ ->
+                  "Paid " <> format_money(report.order_total(booking))
               }
               <> " · Discount "
               <> format_money(booking.discount),
@@ -958,6 +975,15 @@ fn booking_view(model: Model, booking: Booking) {
       ],
     ),
     h.div([a.class("mt-4 space-y-3 border-t border-slate-200 pt-4")], [
+      case booking.refund {
+        model.NoRefund -> element.none()
+        model.RecordedRefund(cents, reference) ->
+          h.p([a.class("text-sm text-slate-700")], [
+            h.text(
+              "Refund recorded: " <> browser.money(cents) <> " · " <> reference,
+            ),
+          ])
+      },
       case booking.contact_details {
         model.ContactNotRecorded ->
           h.p([a.class("text-sm text-slate-600")], [
@@ -968,8 +994,8 @@ fn booking_view(model: Model, booking: Booking) {
             h.text(email <> " · " <> phone),
           ])
       },
-      case booking.payment_status {
-        model.PendingPayment ->
+      case booking.payment_status, booking.status {
+        model.PendingPayment, model.ActiveBooking ->
           h.details(
             [a.class("rounded-lg border border-amber-200 bg-amber-50 p-3")],
             [
@@ -986,13 +1012,33 @@ fn booking_view(model: Model, booking: Booking) {
               ]),
             ],
           )
-        model.PaymentComplete -> element.none()
+        _, _ -> element.none()
       },
       h.h3([a.class("font-semibold")], [h.text("Sessions")]),
       keyed.div(
         [a.class("space-y-2")],
         list.map(booking.sessions, fn(session) {
-          #(session.id, session_view(model, booking.name, session))
+          #(session.id, case booking.status {
+            model.ActiveBooking -> session_view(model, booking.name, session)
+            model.CancelledBooking ->
+              h.div(
+                [
+                  a.class(
+                    "rounded-lg border border-slate-200 p-3 text-sm text-slate-600",
+                  ),
+                ],
+                [
+                  h.text(
+                    session.label
+                    <> " · "
+                    <> tutor_name(model, session.tutor)
+                    <> " · "
+                    <> session.subject
+                    <> " · Cancelled",
+                  ),
+                ],
+              )
+          })
         }),
       ),
       h.details([a.class("rounded-lg border border-slate-200 p-3")], [
@@ -1034,14 +1080,65 @@ fn booking_view(model: Model, booking: Booking) {
           form_error(model, "booking-" <> booking.id),
         ]),
       ]),
-      h.details([], [
-        h.summary([], [h.text("Delete booking")]),
-        form("delete-" <> booking.id, "delete-booking", "", [
-          hidden("booking", booking.id),
-          h.p([], [h.text("This releases every session in this booking.")]),
-          submit("Confirm deletion"),
-        ]),
-      ]),
+      case booking.payment_status {
+        model.PendingPayment -> element.none()
+        model.PaymentComplete ->
+          h.details([a.class("rounded-lg border border-slate-200 p-3")], [
+            h.summary([], [h.text("Record a refund already issued")]),
+            form("refund-" <> booking.id, "record-refund", "", [
+              hidden("booking", booking.id),
+              h.p([a.class("text-sm text-slate-600")], [
+                h.text(
+                  "Issue any approved refund through the payment provider first. This only records it; no money is sent. Enter the cumulative total refunded, not an additional amount.",
+                ),
+              ]),
+              input(
+                form_fields(model, "refund-" <> booking.id),
+                "Total refunded in cents",
+                "refund",
+                case booking.refund {
+                  model.NoRefund -> ""
+                  model.RecordedRefund(cents, _) -> int.to_string(cents)
+                },
+                "number",
+              ),
+              input(
+                form_fields(model, "refund-" <> booking.id),
+                "Refund reference",
+                "refund-reference",
+                case booking.refund {
+                  model.NoRefund -> ""
+                  model.RecordedRefund(_, reference) -> reference
+                },
+                "text",
+              ),
+              submit("Record refund"),
+              form_error(model, "refund-" <> booking.id),
+            ]),
+          ])
+      },
+      case booking.status {
+        model.CancelledBooking ->
+          h.p([a.class("text-sm text-slate-600")], [
+            h.text(
+              "This booking is cancelled. Its times were released; the order and payment history are retained. Cancellation does not issue a refund.",
+            ),
+          ])
+        model.ActiveBooking ->
+          h.details([], [
+            h.summary([], [h.text("Cancel booking")]),
+            form("cancel-" <> booking.id, "cancel-booking", "", [
+              hidden("booking", booking.id),
+              h.p([], [
+                h.text(
+                  "This releases every reserved session and keeps the order and payment history. It does not issue a refund or send a cancellation email. Agree the cancellation with the family first.",
+                ),
+              ]),
+              submit("Confirm cancellation"),
+              form_error(model, "cancel-" <> booking.id),
+            ]),
+          ])
+      },
     ]),
   ])
 }
@@ -1070,6 +1167,16 @@ fn manual_booking(model: Model) {
         "",
       ),
       booking_zone_select(fields),
+      select(
+        fields,
+        "Subject",
+        "booking-subject",
+        [
+          #("", "Choose a subject"),
+          ..list.map(model.data.subjects, fn(subject) { #(subject, subject) })
+        ],
+        "",
+      ),
       input(fields, "Date", "date", "", "date"),
       session_time_select(fields, "Start time", ""),
       input(fields, "Subtotal in cents", "subtotal", "", "number"),
@@ -1105,7 +1212,11 @@ fn reports(model: Model) {
         },
       ),
     ]),
-    h.p([], [h.text("Payments by confirmation date, Eastern time.")]),
+    h.p([], [
+      h.text(
+        "Payments less recorded refunds, grouped by order confirmation date in Eastern time. Cancelled orders retain their payment history.",
+      ),
+    ]),
     h.div([a.class("flex flex-wrap gap-3")], [
       h.label([a.class("block")], [
         h.text("From"),

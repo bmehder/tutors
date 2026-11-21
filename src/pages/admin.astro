@@ -159,6 +159,8 @@ if (Astro.request.method === 'POST') {
 				'mark-booking-paid',
 				'edit-booking',
 				'delete-booking',
+				'cancel-booking',
+				'record-refund',
 				'move-session',
 				'save-session-subject',
 			].includes(String(action))
@@ -251,15 +253,18 @@ const bookings = signedIn
 				payment_pending: boolean
 				contact_email: string | null
 				contact_phone: string | null
+				cancelled_at: Date | null
+				refund_cents: number
+				refund_reference: string | null
 				sessions: {
 					id: string
 					tutor: string
 					subject: string | null
 					start: string
 				}[]
-			}>(`SELECT b.id, b.confirmed_at, b.package_hours, b.label, b.subtotal_cents, b.discount_cents, b.payment_pending, b.contact_email, b.contact_phone,
-  COALESCE(json_agg(json_build_object('id', s.id::text, 'tutor', s.tutor_id, 'subject', s.subject, 'start', lower(s.slot))
-  ORDER BY lower(s.slot)) FILTER (WHERE s.id IS NOT NULL), '[]') AS sessions
+			}>(`SELECT b.id, b.confirmed_at, b.package_hours, b.label, b.subtotal_cents, b.discount_cents, b.payment_pending, b.contact_email, b.contact_phone,b.cancelled_at,b.refund_cents,b.refund_reference,
+  CASE WHEN b.cancelled_at IS NOT NULL THEN b.cancelled_sessions ELSE COALESCE(jsonb_agg(jsonb_build_object('id', s.id::text, 'tutor', s.tutor_id, 'subject', s.subject, 'start', lower(s.slot))
+  ORDER BY lower(s.slot)) FILTER (WHERE s.id IS NOT NULL), '[]'::jsonb) END AS sessions
   FROM booking_reservations b LEFT JOIN booking_sessions s ON s.reservation_id=b.id
   WHERE confirmed_at IS NOT NULL GROUP BY b.id ORDER BY confirmed_at DESC`)
 		).rows
@@ -303,6 +308,9 @@ const data = {
 		paymentPending: booking.payment_pending,
 		contactEmail: booking.contact_email,
 		contactPhone: booking.contact_phone,
+		cancelled: Boolean(booking.cancelled_at),
+		refund: booking.refund_cents,
+		refundReference: booking.refund_reference,
 		sessions: booking.sessions.map(session => ({
 			...session,
 			subject: session.subject ?? '',

@@ -1,9 +1,10 @@
 ---
 import "../index.css";
 import { canonicalUrl, structuredDataJson } from '../lib/seo';
+import { robotsDirective } from '../lib/search-indexing';
 
 const siteName = "MyChristianTutors";
-const { title, description = 'One-on-one Christian online tutoring for homeschool families. Choose subjects and tutors, share package hours across your family, and plan weekly sessions.', structuredData = [] } = Astro.props;
+const { title, description = 'One-on-one Christian online tutoring for homeschool families. Choose subjects and tutors, share package hours across your family, and plan weekly sessions.', structuredData = [], indexable = true } = Astro.props;
 const siteTitle = title ? `${title} | ${siteName}` : `Christian Online Tutoring for Homeschool Families | ${siteName}`;
 const canonical = canonicalUrl(Astro.url.pathname);
 ---
@@ -14,7 +15,7 @@ const canonical = canonicalUrl(Astro.url.pathname);
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>{siteTitle}</title>
-    <meta name="robots" content="noindex, nofollow, noarchive" />
+    <meta name="robots" content={robotsDirective(indexable)} />
     <meta name="description" content={description} />
     {structuredData.length > 0 && <script type="application/ld+json" set:html={structuredDataJson({ '@context': 'https://schema.org', '@graph': structuredData })} />}
     <link rel="canonical" href={canonical} />

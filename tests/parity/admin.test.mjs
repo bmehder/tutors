@@ -59,7 +59,7 @@ test('schedule selection loads the chosen tutor, unknown selections do nothing',
   assert.deepEqual(opened.screen.blocks, tutor.blocks)
 })
 
-const booking = (id, date, subtotal, discount) => model.Booking$Booking(id, 'Test family', date, 5, subtotal, discount, empty, model.PaymentStatus$PaymentComplete(), model.ContactDetails$ContactNotRecorded())
+const booking = (id, date, subtotal, discount) => model.Booking$Booking(id, 'Test family', date, 5, subtotal, discount, empty, model.PaymentStatus$PaymentComplete(), model.ContactDetails$ContactNotRecorded(), model.BookingStatus$ActiveBooking(), model.Refund$NoRefund())
 const recorded = model.Money$Recorded
 const unknown = model.Money$Unrecorded
 const bookings = toList([
@@ -80,6 +80,18 @@ test('reports distinguish unknown from zero and do not invent missing payments',
   assert.equal(discounts(bookings), 6000)
   assert.ok(model.Money$isRecorded(amount_paid(toArray(bookings)[1])))
   assert.ok(model.Money$isUnrecorded(amount_paid(toArray(bookings)[2])))
+})
+
+test('cancelled orders retain revenue while recorded refunds reduce net receipts', () => {
+  const original = booking('cancelled', '2026-11-21', recorded(6000), recorded(500))
+  const cancelled = { ...original, status: model.BookingStatus$CancelledBooking(), refund: model.Refund$RecordedRefund(500, 'external-refund') }
+  assert.equal(revenue(toList([cancelled])), 5000)
+  assert.equal(discounts(toList([cancelled])), 500)
+  const decoded = toArray(decodeData({ tutors: [], subjects: [], bookings: [{ id: 'cancelled', name: 'Family', date: '2026-11-21', hours: 5,
+    subtotal: 6000, discount: 500, sessions: [], cancelled: true, refund: 500, refundReference: 'external-refund' }] }).bookings)[0]
+  assert.ok(model.BookingStatus$isCancelledBooking(decoded.status))
+  assert.equal(decoded.refund.cents, 500)
+  assert.equal(decoded.refund.reference, 'external-refund')
 })
 
 test('JSON boundary preserves zero, unknown amounts, tutor blocks and empty lists', () => {
@@ -117,7 +129,7 @@ test('failed saves retain form drafts; successful saves clear only the submitted
 
 
 test('pending invoices are excluded from received revenue and paid discounts', () => {
-  const pending = model.Booking$Booking('pending', 'Test family', '2026-11-14', 0, recorded(10000), recorded(1000), empty, model.PaymentStatus$PendingPayment(), model.ContactDetails$ContactNotRecorded())
+  const pending = model.Booking$Booking('pending', 'Test family', '2026-11-14', 0, recorded(10000), recorded(1000), empty, model.PaymentStatus$PendingPayment(), model.ContactDetails$ContactNotRecorded(), model.BookingStatus$ActiveBooking(), model.Refund$NoRefund())
   assert.equal(revenue(toList([pending])), 0)
   assert.equal(discounts(toList([pending])), 0)
 })

@@ -66,19 +66,21 @@ export async function confirmSandboxCheckout(session: Stripe.Checkout.Session) {
 
   const db = await pool.connect()
   let bookingId: string | null = null
+  let cancelled = false
   try {
   await db.query('BEGIN')
-  const result = await db.query<{ id: string }>(
+  const result = await db.query<{ id: string; cancelled_at: Date | null }>(
     `UPDATE booking_reservations
      SET confirmed_at = COALESCE(confirmed_at, now())
      WHERE id::text = $1 AND stripe_checkout_required AND stripe_checkout_id = $2
        AND checkout_released_at IS NULL
        AND subtotal_cents - discount_cents = $3
-     RETURNING id`,
+     RETURNING id,cancelled_at`,
     [session.client_reference_id, session.id, session.amount_total],
   )
   bookingId = result.rows[0]?.id ?? null
-  if (bookingId) await queueOrderEmails(db, bookingId, {
+  cancelled = Boolean(result.rows[0]?.cancelled_at)
+  if (bookingId && !cancelled) await queueOrderEmails(db, bookingId, {
     paymentMode: 'sandbox',
     deliveryAllowed: getSecret('SANDBOX_ORDER_EMAIL_DELIVERY_ENABLED') === '1',
   })
@@ -88,8 +90,13 @@ export async function confirmSandboxCheckout(session: Stripe.Checkout.Session) {
     throw error
   } finally { db.release() }
   // Email failures leave the confirmed order intact and queued for retry.
-  if (bookingId) await deliverQueuedEmails().catch(() => {})
+  if (bookingId && !cancelled) await deliverQueuedEmails().catch(() => {})
   return bookingId
+}
+
+export async function sandboxBookingCancelled(id: string) {
+  if (!pool) return false
+  return Boolean((await pool.query('SELECT cancelled_at FROM booking_reservations WHERE id=$1', [id])).rows[0]?.cancelled_at)
 }
 
 export async function sandboxBookingDetails(id: string) {

@@ -22,7 +22,12 @@ pub fn order_total(booking: Booking) -> Money {
 
 pub fn amount_paid(booking: Booking) -> Money {
   case booking.payment_status {
-    PaymentComplete -> order_total(booking)
+    PaymentComplete ->
+      case order_total(booking), booking.refund {
+        Recorded(total), model.RecordedRefund(cents, _) ->
+          Recorded(total - cents)
+        total, _ -> total
+      }
     _ -> Recorded(0)
   }
 }

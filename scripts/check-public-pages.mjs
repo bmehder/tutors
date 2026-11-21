@@ -1,6 +1,7 @@
 // Read-only check of the running site's public sitemap, pages and links.
 import assert from 'node:assert/strict'
 import { siteUrl } from '../src/lib/seo.ts'
+import { robotsDirective } from '../src/lib/search-indexing.ts'
 
 const base = new URL(process.argv[2] || 'http://127.0.0.1:5200')
 const sitemapResponse = await fetch(new URL('/sitemap.xml', base))
@@ -23,7 +24,7 @@ async function checkPages() {
     assert.match(html, /<title>[^<]+<\/title>/, canonical.pathname + ' title')
     assert.equal((html.match(/<h1(?:\s|>)/g) || []).length, 1, canonical.pathname + ' main heading')
     assert.ok(html.includes(`href="${location}"`), canonical.pathname + ' canonical')
-    assert.match(html, /name="robots" content="noindex, nofollow, noarchive"/, canonical.pathname + ' prelaunch indexing protection')
+    assert.ok(html.includes(`name="robots" content="${robotsDirective()}"`), canonical.pathname + ' indexing setting')
     const data = [...html.matchAll(/<script type="application\/ld\+json">([\s\S]*?)<\/script>/g)]
     assert.ok(data.length, canonical.pathname + ' structured data')
     data.forEach(match => JSON.parse(match[1]))

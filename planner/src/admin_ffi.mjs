@@ -54,6 +54,8 @@ export function decodeData(data) {
 					booking.contactEmail && booking.contactPhone
 						? model.ContactDetails$ContactRecorded(booking.contactEmail, booking.contactPhone)
 						: model.ContactDetails$ContactNotRecorded(),
+					booking.cancelled ? model.BookingStatus$CancelledBooking() : model.BookingStatus$ActiveBooking(),
+					booking.refund > 0 ? model.Refund$RecordedRefund(booking.refund, booking.refundReference ?? '') : model.Refund$NoRefund(),
 				),
 			),
 		),

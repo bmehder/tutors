@@ -78,6 +78,16 @@ pub type ContactDetails {
   ContactRecorded(email: String, phone: String)
 }
 
+pub type BookingStatus {
+  ActiveBooking
+  CancelledBooking
+}
+
+pub type Refund {
+  NoRefund
+  RecordedRefund(cents: Int, reference: String)
+}
+
 pub type Booking {
   Booking(
     id: BookingId,
@@ -89,6 +99,8 @@ pub type Booking {
     sessions: List(Session),
     payment_status: PaymentStatus,
     contact_details: ContactDetails,
+    status: BookingStatus,
+    refund: Refund,
   )
 }
 
