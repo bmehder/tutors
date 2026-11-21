@@ -46,7 +46,7 @@ Implementation is complete for this prelaunch pass. Anna’s operational checks 
 - [x] Document private admin-access recovery; current production sign-in was verified without rotating working credentials.
 - [x] Brad accepted the six-hour restore window and confirmed platform-account recovery access is covered for Brad/Shawn (November 21, 2026). Longer retention/independent backups are not a launch requirement.
 - [x] Prepare a private, read-only Operations screen and worker heartbeat, with explicit unsent/retry/held/manual-review states and links to Resend. Development tests complete; deployment follows below.
-- [ ] Deploy migration 016 and Operations/worker changes; update the workflow on default branch main and verify a recorded hosted heartbeat.
+- [x] Deploy migration 016 and Operations/worker changes; update the workflow on default branch main and verify a recorded hosted heartbeat. Published app `9f0ba03`, workflow `0251cd9`; hosted check succeeded November 21, 2026 at 11:48 AM Eastern (GitHub run `44926539139`). Queue empty, no emails sent, tutor delivery disabled. Private Operations sign-in/refresh and phone layout verified; all 22 public pages passed.
 - [ ] Resolve the email scheduler’s multi-hour gaps before launch; GitHub cron is best-effort, not a guaranteed five-minute service.
 - [x] Verify production source gates the time-travel inspector/debug links to development; retain local diagnostics.
 - [ ] At live-payment cutover, remove/restrict test card instructions and sandbox email previews; retain private Operations monitoring.

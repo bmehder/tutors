@@ -1,6 +1,6 @@
 # Email and operations
 
-Updated November 21, 2026. Migration 016 is applied to development and the hosted database; the Operations screen and updated default-branch workflow are being published. Tutor email remains disabled.
+Updated November 21, 2026. Migration 016 is applied to development and the hosted database. The Operations screen is published in app release `9f0ba03`; the default-branch workflow is updated in `0251cd9`. A hosted worker check succeeded November 21 at 11:48 AM Eastern (GitHub run `44926539139`): no pending or failed messages, no emails sent. Private production sign-in, Operations refresh, phone layout and all 22 public pages passed verification. Tutor email remains disabled.
 
 ## People and accounts
 
@@ -31,7 +31,7 @@ Migration 016 adds the heartbeat table. Missing heartbeat storage does not stop 
 
 The GitHub workflow is active and enabled, but its last two scheduled successes were November 21 at 01:31 and 08:41 UTC. These gaps are much longer than its nominal five-minute schedule. A successful historical run is not evidence of a timely background service.
 
-The local workflow change moves runs away from minute zero, uses the real www domain and fails the job when messages need review or have send errors, rather than reporting success merely because the HTTP request returned 200. Only counts are printed. **The workflow also needs updating on the repository's default `main` branch**; changing only `astro-lustre` will not update the running schedule.
+The deployed workflow moves runs away from minute zero, uses the real www domain and fails the job when messages need review or have send errors, rather than reporting success merely because the HTTP request returned 200. Only counts are printed. It is updated on the repository's default `main` branch in `0251cd9`; changing only `astro-lustre` would not update the running schedule. The controlled manual run succeeded; it does not resolve the separate scheduler-timing concern.
 
 GitHub explicitly allows scheduled jobs to be delayed or dropped under load. This timing is a launch concern for a promise that booking mail arrives shortly. Before launch, Brad and Shawn should choose a suitably reliable background schedule, or verify acceptable delivery/retry timing with an alternative. An odd-minute cron alone is not a delivery guarantee.
 
