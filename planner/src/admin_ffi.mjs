@@ -1,6 +1,8 @@
 // Browser boundary: JSON decoding, HTTP, native confirmations and animation.
 // Navigation, schedule drafts, undo, and report calculations live in Gleam.
 import * as model from './admin/model.mjs'
+import * as operations from './admin/operations.mjs'
+import { Option$None, Option$Some } from '../gleam_stdlib/gleam/option.mjs'
 import { toList, toArray } from './gleam_lists.mjs'
 
 const decodeMoney = cents =>
@@ -56,7 +58,44 @@ export function decodeData(data) {
 			),
 		),
 		toList(data.subjects),
+		decodeOperations(data.operations),
 	)
+}
+
+export function decodeOperations(status) {
+  if (status?.state !== 'available') return operations.Status$Unavailable()
+  const worker = status.worker
+  const workerStates = {
+    unavailable: () => operations.WorkerStatus$StatusUnavailable(),
+    never: () => operations.WorkerStatus$NotRun(),
+    running: () => operations.WorkerStatus$Running(),
+    healthy: () => operations.WorkerStatus$Healthy(worker.checkedAt),
+    overdue: () => operations.WorkerStatus$Overdue(worker.checkedAt),
+    stalled: () => operations.WorkerStatus$Stalled(worker.checkedAt),
+    failed: () => operations.WorkerStatus$Failed(worker.checkedAt),
+  }
+  return operations.Status$Available(
+    status.deliveryEnabled ? operations.DeliverySetting$Enabled() : operations.DeliverySetting$Paused(),
+    status.tutorDeliveryEnabled ? operations.DeliverySetting$Enabled() : operations.DeliverySetting$Paused(),
+    operations.EmailCounts$EmailCounts(status.accepted, status.waiting, status.retrying, status.needsReview, status.held, status.drafts),
+    status.oldestWaiting,
+    (workerStates[worker?.state] ?? workerStates.unavailable)(),
+    toList(status.issues.map(issue => operations.EmailIssue$EmailIssue(
+      issue.recipient, issue.subject, issue.attempts,
+      issue.state === 'review' ? operations.IssueStatus$NeedsReview() : operations.IssueStatus$RetryPending(),
+      issue.createdAt, issue.providerId ? Option$Some(issue.providerId) : Option$None(),
+    ))),
+  )
+}
+
+export function refresh(dispatch, success, failure) {
+  fetch('/admin', { headers: { Accept: 'application/json' } })
+    .then(async response => {
+      if (!response.ok) throw new Error(response.status === 401 ? 'Your session expired. Reload and sign in again.' : 'Status could not be refreshed. Please try again.')
+      return response.json()
+    })
+    .then(data => dispatch(success(decodeData(data))))
+    .catch(error => dispatch(failure(error.message)))
 }
 
 export function initialData() {

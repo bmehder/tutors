@@ -1,8 +1,9 @@
 import admin/browser
 import admin/model.{
   type Booking, type Model, type Msg, type Session, type Tutor, AddTutor,
-  Bookings, Reports, Saving, Schedule, Subjects, Tutors,
+  Bookings, Operations, Reports, Saving, Schedule, Subjects, Tutors,
 }
+import admin/operations
 import admin/reports as report
 import gleam/dynamic/decode
 import gleam/int
@@ -75,7 +76,7 @@ pub fn render(model: Model) -> Element(Msg) {
             [
               a.attribute("aria-label", "Admin navigation"),
               a.class(
-                "flex self-start gap-1 rounded-xl border border-slate-200 bg-white p-1.5 shadow-xs lg:sticky lg:top-6 lg:flex-col",
+                "grid grid-cols-3 self-start gap-1 rounded-xl border border-slate-200 bg-white p-1.5 shadow-xs lg:sticky sm:grid-cols-5 lg:top-6 lg:grid-cols-1",
               ),
             ],
             list.map(
@@ -83,6 +84,7 @@ pub fn render(model: Model) -> Element(Msg) {
                 #("Bookings", Bookings),
                 #("Tutors", Tutors),
                 #("Subjects", Subjects),
+                #("Operations", Operations),
                 #("Reports", Reports),
               ],
               fn(item) {
@@ -119,6 +121,7 @@ pub fn render(model: Model) -> Element(Msg) {
               [
                 h.text(case model.request {
                   Saving(_) -> "Saving…"
+                  model.Refreshing -> "Checking status…"
                   _ -> model.message
                 }),
               ],
@@ -179,6 +182,28 @@ pub fn render(model: Model) -> Element(Msg) {
                           model.data.bookings == [],
                           "No confirmed bookings yet.",
                         ),
+                      ])
+                    Operations ->
+                      h.div([a.class("space-y-4")], [
+                        h.div(
+                          [
+                            a.class(
+                              "flex flex-wrap items-center justify-between gap-3",
+                            ),
+                          ],
+                          [
+                            heading("Operations"),
+                            h.button(
+                              [
+                                a.type_("button"),
+                                a.class(button),
+                                e.on_click(model.UserClickedRefreshOperations),
+                              ],
+                              [h.text("Refresh status")],
+                            ),
+                          ],
+                        ),
+                        operations.view(model.data.operations),
                       ])
                     Reports -> reports(model)
                     Subjects -> subject_catalog(model)
@@ -497,7 +522,14 @@ fn tutor_form(model: Model, tutor: Tutor) {
   form("tutor-" <> tutor.id, "save-tutor", "", [
     hidden("tutor-id", tutor.id),
     input(fields, "Name", "name", tutor.name, "text"),
-    form_input(fields, "Tutor email", "contact-email", tutor.email, "email", False),
+    form_input(
+      fields,
+      "Tutor email",
+      "contact-email",
+      tutor.email,
+      "email",
+      False,
+    ),
     h.label([a.class("block")], [
       h.text("Meeting instructions"),
       h.textarea(
@@ -1171,6 +1203,7 @@ fn screen_key(screen: model.Screen) {
     Bookings -> "bookings"
     Reports -> "reports"
     Subjects -> "subjects"
+    Operations -> "operations"
   }
 }
 

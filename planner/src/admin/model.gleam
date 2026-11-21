@@ -1,3 +1,4 @@
+import admin/operations
 import gleam/option.{type Option}
 
 // Identifiers and units shared by the admin screens.
@@ -92,7 +93,12 @@ pub type Booking {
 }
 
 pub type Data {
-  Data(tutors: List(Tutor), bookings: List(Booking), subjects: List(String))
+  Data(
+    tutors: List(Tutor),
+    bookings: List(Booking),
+    subjects: List(String),
+    operations: operations.Status,
+  )
 }
 
 // Navigation and editing state. A schedule carries its draft and undo stack.
@@ -103,11 +109,13 @@ pub type Screen {
   Schedule(tutor: Tutor, blocks: List(Block), removed: List(Block))
   Bookings
   Reports
+  Operations
 }
 
 pub type RequestState {
   Ready
   Saving(form_id: String)
+  Refreshing
   ConfirmingRemoval(Block)
   Removing(Block)
   ConfirmingNavigation(Screen)
@@ -131,6 +139,7 @@ pub type Model {
 pub type Msg {
   UserClickedScreen(Screen)
   UserSelectedSubjectFilter(String)
+  UserClickedRefreshOperations
   UserChangedReportFrom(String)
   UserChangedReportTo(String)
   UserClickedSchedule(Tutor)

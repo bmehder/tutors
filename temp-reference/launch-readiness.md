@@ -18,9 +18,11 @@ Implementation is complete for this prelaunch pass. The remaining content tasks 
 - [x] Hide the newsletter signup for now, retaining its component for later restoration.
 - [x] Automate technical SEO checks across all 22 public pages: canonicals, structured data, headings, sitemap, links/anchors, missing-page responses, key assets, initial package information and noindex. Desktop and emulated-phone review is recorded in step 4.
 - [x] Review and prepare the tested content and SEO release for commit/push and automatic deployment, retaining noindex.
-- [ ] Confirm the deployed release after the push.
+- [x] Confirm deployed release `ceda5ca`: all 22 public pages passed hosted checks; policies, noindex, hidden newsletter, private admin login and cleared availability were verified.
 
 ## 2. Booking and admin readiness — Codex + Anna
+
+Implementation is complete for this prelaunch pass. Anna’s operational checks and the final availability decision remain open.
 
 - [x] Enforce package student limits and required/consistent student names on the server as well as in the planner. Included in the prelaunch release.
 - [x] Gate test discounts using an explicit server setting, disabled by default. Live checkout cannot honor the test flag; the real promotion policy remains separate. Implementation and tests complete; included in the prelaunch release.
@@ -39,10 +41,16 @@ Implementation is complete for this prelaunch pass. The remaining content tasks 
 - [x] Enable and test production customer/admin delivery and the authenticated retry job.
 - [x] Add clearly labeled, optional sandbox receipts. Old drafts stay blocked; sandbox tutor notifications never send.
 - [ ] Decide and approve the launch tutor-notification workflow. Tutor email remains disabled until Brad explicitly approves enabling it.
-- [ ] Confirm which inbox/person monitors inquiries, failed email retries, Stripe issues, and Vercel errors.
-- [ ] Confirm database recovery/backups and an admin-access recovery process.
-- [ ] Disable testing/debugging controls for the live customer experience while retaining useful private diagnostics.
-- [ ] Confirm the live domain, HTTPS, and alternate-domain behavior. HTTP/apex-to-www HTTPS behavior was verified on November 20; recheck at launch.
+- [x] Confirm owners: Anna monitors admin@mychristiantutors.com and has Resend access; Brad and Shawn together monitor failed email retries, Stripe issues and Vercel errors.
+- [x] Verify the actual hosted database branch and 6-hour history window; complete a point-in-time recovery drill in a temporary branch without resetting production. Correct the ignored local CLI context to the actual development branch. See [operations](operations.md).
+- [x] Document private admin-access recovery; current production sign-in was verified without rotating working credentials.
+- [x] Brad accepted the six-hour restore window and confirmed platform-account recovery access is covered for Brad/Shawn (November 21, 2026). Longer retention/independent backups are not a launch requirement.
+- [x] Prepare a private, read-only Operations screen and worker heartbeat, with explicit unsent/retry/held/manual-review states and links to Resend. Development tests complete; deployment follows below.
+- [ ] Deploy migration 016 and Operations/worker changes; update the workflow on default branch main and verify a recorded hosted heartbeat.
+- [ ] Resolve the email scheduler’s multi-hour gaps before launch; GitHub cron is best-effort, not a guaranteed five-minute service.
+- [x] Verify production source gates the time-travel inspector/debug links to development; retain local diagnostics.
+- [ ] At live-payment cutover, remove/restrict test card instructions and sandbox email previews; retain private Operations monitoring.
+- [x] Recheck the live domain, HTTPS and alternate URL on November 21: HTTP/apex redirect permanently to www over HTTPS; the Vercel URL serves the same site, canonicals point to www and noindex remains active. Recheck at launch.
 
 ## 4. Finish testing and discovery setup before Stripe
 
@@ -76,4 +84,4 @@ Do not block the preceding work on the account setup. Prepare one handoff for Sh
 
 ## Current verification
 
-The local production build, 69 unit tests and 24 Gleam parity/integration checks passed. Checkout, request-limit and email integration checks passed in isolated schemas with simulated providers; no payments or emails were sent by these tests. Migrations 014 and 015 are applied to development and production; existing reservations and tutor records were retained. Request-limit activation is configured for the production release. The sandbox webhook includes checkout expiry. Code publication is through the automatic `astro-lustre` deployment; verify the hosted release after pushing. The read-only site audit checks all 22 public URLs, including the booking and privacy policies. Email delivery and its retry job were tested on production through commit `7f11b97`. The production-build browser walkthrough passed on desktop and an emulated phone, including screenshot review, print output, email previews and admin rescheduling feedback. It also fixed the skipped-first-week review date. Real deployed Stripe/receipt delivery, physical-phone testing and the final live-payment check remain separate checkpoints.
+The local production build, 70 unit tests and 26 Gleam parity/integration checks passed. Checkout, request-limit and email integration checks passed in isolated schemas with simulated providers; no payments or emails were sent by these tests. Migrations 014 and 015 are applied to development and production; existing reservations and tutor records were retained. Request-limit activation is configured for the production release. The sandbox webhook includes checkout expiry. Code publication is through the automatic `astro-lustre` deployment; verify the hosted release after pushing. The read-only site audit checks all 22 public URLs, including the booking and privacy policies. Email delivery and its retry job were tested on production through commit `7f11b97`. The production-build browser walkthrough passed on desktop and an emulated phone, including screenshot review, print output, email previews and admin rescheduling feedback. It also fixed the skipped-first-week review date. Real deployed Stripe/receipt delivery, physical-phone testing and the final live-payment check remain separate checkpoints.

@@ -19,7 +19,8 @@
     "test:limits": "node --env-file=.env.local --experimental-strip-types tests/request-limits.integration.mjs",
     "test:site": "node --experimental-strip-types scripts/check-public-pages.mjs",
     "test:checkout": "node --env-file=.env.local --experimental-strip-types tests/checkout.integration.mjs",
-    "test:browser": "npm run build:planner && node --env-file=.env.local --experimental-strip-types tests/browser/walkthrough.mjs"
+    "test:browser": "npm run build:planner && node --env-file=.env.local --experimental-strip-types tests/browser/walkthrough.mjs",
+    "test:operations": "node --env-file=.env.local --experimental-strip-types tests/email-operations.integration.mjs"
   },
   "dependencies": {
     "@astrojs/vercel": "^10.0.8",

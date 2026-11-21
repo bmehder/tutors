@@ -67,6 +67,8 @@ try {
   const tables = ['tutor_profiles', 'tutor_profile_slugs', 'tutor_weekly_hours', 'tutoring_subjects',
     'booking_reservations', 'booking_sessions', 'outgoing_emails']
   for (const table of tables) await db.query(`CREATE TABLE ${schema}.${table} (LIKE public.${table} INCLUDING ALL)`)
+  const workerTable = await db.query("SELECT to_regclass('public.email_worker_status') AS table_name")
+  if (workerTable.rows[0].table_name) await db.query(`CREATE TABLE ${schema}.email_worker_status (LIKE public.email_worker_status INCLUDING ALL)`)
   for (const table of tables.slice(0, 4)) await db.query(`INSERT INTO ${schema}.${table} SELECT * FROM public.${table}`)
   // Synthetic availability exists only in this test schema.
   const starts = Array.from({ length: 7 }, () => Array.from({ length: 41 }, (_, i) => 540 + i * 15))

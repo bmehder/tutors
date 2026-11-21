@@ -43,3 +43,10 @@ pub fn reference_week() -> String
 
 @external(javascript, "../admin_time_ffi.mjs", "weeklyTimeLabel")
 pub fn weekly_time_label(zone: String, day: Int, minute: Int) -> String
+
+@external(javascript, "../admin_ffi.mjs", "refresh")
+pub fn refresh(
+  dispatch: fn(Msg) -> Nil,
+  success: fn(Data) -> Msg,
+  failure: fn(String) -> Msg,
+) -> Nil

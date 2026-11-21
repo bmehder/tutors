@@ -24,8 +24,13 @@ The Resend API key and worker secret are saved in Vercel Production. All three D
 
 Production email was activated on November 20, 2026: EMAIL_DELIVERY_ENABLED=1, SANDBOX_ORDER_EMAIL_DELIVERY_ENABLED=1 for checkout tests, and TUTOR_EMAIL_DELIVERY_ENABLED=0. The tested sending key is stored privately in Vercel. The retry credential is synchronized privately between Vercel and GitHub. A five-minute GitHub Actions workflow lives on the repository default branch, main, because GitHub only schedules workflows from that branch. It does not check out or deploy the application. EMAIL_RETRIES_ENABLED is true. GitHub schedules can be delayed, so they provide best-effort retries.
 
-Keep the newsletter signup as a preview; it does not save subscribers or send an offer. Before accepting real payments, configure live Stripe and its webhook, confirm business policies, and explicitly decide when tutor delivery should begin. A sending-only Resend key cannot read domain status or delivery logs; use the Resend dashboard for delivery, bounce, and complaint monitoring. No additional key permissions are required for sending.
+The newsletter signup is hidden; its retained component does not save subscribers or send an offer. Before accepting real payments, configure live Stripe and its webhook, confirm business policies, and explicitly decide when tutor delivery should begin. A sending-only Resend key cannot read domain status or delivery logs; use the Resend dashboard for delivery, bounce, and complaint monitoring. No additional key permissions are required for sending.
 
 The active tutor roster has 14 names. Tutor email addresses are stored privately in the database, with Elisabeth Rainey and Marjorie McIlvaine retaining the stable IDs of their earlier names. Tutors outside the supplied roster are archived to preserve historical bookings. Haley Hill is assigned Biology until her subjects are confirmed.
 
 Run npm run test:email for the repeatable email integration checks. They use a temporary database schema, remove it afterward, replace the Resend transport, and verify routing, draft creation, concurrent workers, and failure recovery without sending email.
+
+
+## Operations follow-up (November 21)
+
+Anna has access to Resend; Brad supplied evidence that the controlled test messages were delivered. Brad and Shawn are the technical owners. A read-only private Operations screen, optional worker heartbeat (migration 016), manual-review visibility and scheduler failure reporting are prepared locally. See [operations](operations.md) for ownership, deployment steps, observed scheduler gaps and recovery procedures. The old `delivered` field in the worker response means provider acceptance, not proof of delivery; the admin view labels it “Sent to Resend”.

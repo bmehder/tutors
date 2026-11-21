@@ -62,7 +62,10 @@ pub fn update(model: Model, msg: Msg) {
           screen:,
           form_drafts: drafts,
           request: Ready,
-          message: "Saved.",
+          message: case model.request {
+            model.Refreshing -> "Status updated."
+            _ -> "Saved."
+          },
           subject_filter: case model.screen {
             model.AddTutor -> ""
             _ -> model.subject_filter
@@ -77,6 +80,10 @@ pub fn update(model: Model, msg: Msg) {
         Saving(form_id) -> #(
           Model(..model, request: Ready, message:, failed_form: Some(form_id)),
           effect.from(fn(_) { browser.reveal_form_error(form_id) }),
+        )
+        model.Refreshing -> #(
+          Model(..model, request: Ready, message:, failed_form: None),
+          effect.none(),
         )
         _ -> #(model, effect.none())
       }
@@ -146,6 +153,17 @@ pub fn update(model: Model, msg: Msg) {
         Error(_) -> #(model, effect.none())
       }
     }
+
+    model.UserClickedRefreshOperations ->
+      case model.screen {
+        model.Operations -> #(
+          Model(..model, request: model.Refreshing, message: "", failed_form: None),
+          effect.from(fn(dispatch) {
+            browser.refresh(dispatch, model.ServerSaved, model.ServerRejected)
+          }),
+        )
+        _ -> #(model, effect.none())
+      }
 
     model.UserSelectedSubjectFilter(value) -> #(
       Model(..model, subject_filter: value),

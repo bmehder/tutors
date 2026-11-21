@@ -11,22 +11,32 @@ export const emailDeliveryEnabled = getSecret('EMAIL_DELIVERY_ENABLED') === '1' 
 export const tutorEmailDeliveryEnabled = () => getSecret('TUTOR_EMAIL_DELIVERY_ENABLED') === '1'
 const from = `MyChristianTutors <${adminEmail}>`
 
-export async function emailQueueStatus() {
-  if (!pool) throw new Error('Email storage is unavailable.')
-  const result = await pool.query<{
+// Shared by delivery and its private operational view. SQL parameters are the
+// tutor-delivery switch and admin address; the fragment never contains user input.
+export const tutorRecipientAllowedSql = `($1::boolean OR (message_key NOT LIKE 'order-confirmation/%/tutor/%'
+  AND NOT EXISTS (SELECT 1 FROM tutor_profiles p
+    WHERE lower(p.contact_email)=lower(e.recipient) AND lower(e.recipient)<>lower($2))))`
+
+export async function emailQueueStatus(executor: pg.Pool | pg.PoolClient | undefined = pool) {
+  if (!executor) throw new Error('Email storage is unavailable.')
+  const result = await executor.query<{
     delivered: number; pending: number; failed: number; held: number; drafts: number;
+    needsReview: number; retrying: number; oldestWaiting: Date | null;
   }>(`WITH queue AS (
-      SELECT sent_at,last_error,delivery_allowed,
-        ($1::boolean OR (message_key NOT LIKE 'order-confirmation/%/tutor/%'
-          AND NOT EXISTS (SELECT 1 FROM tutor_profiles p
-            WHERE lower(p.contact_email)=lower(e.recipient) AND lower(e.recipient)<>lower($2)))) AS recipient_allowed
+      SELECT sent_at,last_error,delivery_allowed,first_attempt_at,created_at,
+        ${tutorRecipientAllowedSql} AS recipient_allowed
       FROM outgoing_emails e
     ) SELECT
       count(*) FILTER (WHERE sent_at IS NOT NULL)::int AS delivered,
       count(*) FILTER (WHERE sent_at IS NULL AND delivery_allowed AND recipient_allowed)::int AS pending,
       count(*) FILTER (WHERE sent_at IS NULL AND delivery_allowed AND recipient_allowed AND last_error IS NOT NULL)::int AS failed,
       count(*) FILTER (WHERE sent_at IS NULL AND delivery_allowed AND NOT recipient_allowed)::int AS held,
-      count(*) FILTER (WHERE sent_at IS NULL AND NOT delivery_allowed)::int AS drafts
+      count(*) FILTER (WHERE sent_at IS NULL AND NOT delivery_allowed)::int AS drafts,
+      count(*) FILTER (WHERE sent_at IS NULL AND delivery_allowed AND recipient_allowed
+        AND first_attempt_at<=now()-interval '23 hours')::int AS "needsReview",
+      count(*) FILTER (WHERE sent_at IS NULL AND delivery_allowed AND recipient_allowed AND last_error IS NOT NULL
+        AND (first_attempt_at IS NULL OR first_attempt_at>now()-interval '23 hours'))::int AS retrying,
+      min(created_at) FILTER (WHERE sent_at IS NULL AND delivery_allowed AND recipient_allowed) AS "oldestWaiting"
     FROM queue`, [tutorEmailDeliveryEnabled(), adminEmail])
   return result.rows[0]
 }
@@ -111,10 +121,7 @@ export async function deliverQueuedEmails(limit = 3) {
       const result = await db.query<{
         id: string; message_key: string; recipient: string; reply_to: string; subject: string; body: string;
       }>(`SELECT * FROM outgoing_emails e WHERE sent_at IS NULL AND delivery_allowed
-         AND ($1::boolean OR (message_key NOT LIKE 'order-confirmation/%/tutor/%'
-           AND NOT EXISTS (SELECT 1 FROM tutor_profiles p
-             WHERE lower(p.contact_email)=lower(e.recipient)
-             AND lower(e.recipient)<>lower($2))))
+         AND ${tutorRecipientAllowedSql}
          AND (attempted_at IS NULL OR attempted_at < now()-interval '5 minutes')
          AND (first_attempt_at IS NULL OR first_attempt_at > now()-interval '23 hours')
          ORDER BY created_at FOR UPDATE SKIP LOCKED LIMIT 1`, [tutorEmailDeliveryEnabled(), adminEmail])

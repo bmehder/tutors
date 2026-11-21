@@ -208,6 +208,24 @@ export async function run({ page, desktop, browser, origin, directory, db, schem
   await visible(admin.getByRole('heading', { name: 'Reports', exact: true }))
   await capture(admin, 'admin-reports')
   console.log('PASS — authenticated admin lists both paid orders with correct package totals and exposes reports')
+  await admin.getByRole('navigation', { name: 'Admin navigation' }).getByRole('button', { name: 'Operations', exact: true }).click()
+  await visible(admin.getByRole('heading', { name: 'Operations', exact: true }))
+  await visible(admin.getByText('Customer and admin email: paused', { exact: true }))
+  await visible(admin.getByText('Tutor email: paused — tutor inquiries go to admin', { exact: true }))
+  await noOverflow(admin, 'Desktop operations')
+  await capture(admin, 'admin-operations')
+  const workerRequests = []
+  admin.on('request', request => { if (request.url().includes('/api/deliver-emails')) workerRequests.push(request.method()) })
+  const refreshed = admin.waitForResponse(response => response.url().endsWith('/admin') && response.request().method() === 'GET')
+  await admin.getByRole('button', { name: 'Refresh status', exact: true }).click()
+  await refreshed
+  await visible(admin.getByText('Status updated.', { exact: true }))
+  assert.deepEqual(workerRequests, [], 'Viewing/refreshing operations must not invoke the sending worker')
+  await admin.setViewportSize({ width: 390, height: 844 })
+  await noOverflow(admin, 'Phone operations')
+  await capture(admin, 'admin-operations-mobile')
+  console.log('PASS — private operations view and refresh work on desktop/phone without invoking email delivery')
+
   for (const [path, heading] of [['/booking-policy', 'Booking, cancellations & refunds'], ['/privacy', 'Privacy policy']]) {
     await phone.goto(origin + path)
     await visible(phone.getByRole('heading', { level: 1, name: heading, exact: true }))

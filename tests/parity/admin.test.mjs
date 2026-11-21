@@ -1,16 +1,17 @@
 import { Option$None, Option$Some$0 } from '../../planner/build/dev/javascript/gleam_stdlib/gleam/option.mjs'
 import assert from 'node:assert/strict'
 import test from 'node:test'
+import * as operations from '../../planner/build/dev/javascript/christian_tutors_planner/admin/operations.mjs'
 import * as model from '../../planner/build/dev/javascript/christian_tutors_planner/admin/model.mjs'
 import { update } from '../../planner/build/dev/javascript/christian_tutors_planner/christian_tutors_admin.mjs'
 import { amount_paid, in_period, revenue, discounts } from '../../planner/build/dev/javascript/christian_tutors_planner/admin/reports.mjs'
-import { decodeData } from '../../planner/build/dev/javascript/christian_tutors_planner/admin_ffi.mjs'
+import { decodeData, decodeOperations, refresh } from '../../planner/build/dev/javascript/christian_tutors_planner/admin_ffi.mjs'
 import { toList, toArray } from '../../planner/build/dev/javascript/christian_tutors_planner/gleam_lists.mjs'
 
 const empty = toList([])
 const block = model.Block$Block(0, 0, 900, 1080)
 const tutor = model.Tutor$Tutor('tutor-1', 'Test tutor', toList(['Biology']), false, toList([block]), '', '')
-const data = model.Data$Data(toList([tutor]), empty, toList(['Biology']))
+const data = model.Data$Data(toList([tutor]), empty, toList(['Biology']), operations.Status$Unavailable())
 const state = () => model.Model$Model(data, empty, model.Screen$Schedule(tutor, tutor.blocks, empty), model.RequestState$Ready(), '', '', '', '', Option$None())
 const next = (state, message) => update(state, message)[0]
 
@@ -119,4 +120,39 @@ test('pending invoices are excluded from received revenue and paid discounts', (
   const pending = model.Booking$Booking('pending', 'Test family', '2026-11-14', 0, recorded(10000), recorded(1000), empty, model.PaymentStatus$PendingPayment(), model.ContactDetails$ContactNotRecorded())
   assert.equal(revenue(toList([pending])), 0)
   assert.equal(discounts(toList([pending])), 0)
+})
+
+
+test('operations refresh is read-only, preserves drafts, and recovers after failures', async () => {
+  const opened = next(state(), model.Msg$UserClickedScreen(model.Screen$Operations()))
+  const refreshing = next(opened, model.Msg$UserClickedRefreshOperations())
+  assert.ok(model.RequestState$isRefreshing(refreshing.request))
+  assert.equal(next(refreshing, model.Msg$UserClickedScreen(model.Screen$Tutors())), refreshing)
+  const failed = next(refreshing, model.Msg$ServerRejected('Status unavailable.'))
+  assert.ok(model.RequestState$isReady(failed.request))
+  assert.equal(failed.message, 'Status unavailable.')
+  const complete = next(refreshing, model.Msg$ServerSaved(data))
+  assert.equal(complete.message, 'Status updated.')
+  assert.ok(model.Screen$isOperations(complete.screen))
+  assert.deepEqual(next(state(), model.Msg$UserClickedRefreshOperations()).screen, state().screen)
+  const original = globalThis.fetch
+  try {
+    globalThis.fetch = async (url, options) => {
+      assert.equal(url, '/admin')
+      assert.ok(!options.method || options.method === 'GET')
+      return Response.json({ tutors: [], bookings: [], subjects: [] })
+    }
+    await new Promise((resolve, reject) => refresh(resolve, result => result, message => reject(new Error(message))))
+  } finally { globalThis.fetch = original }
+})
+
+test('operations decoding keeps unknown status and blocked tutor sending explicit', () => {
+  assert.ok(operations.Status$isUnavailable(decodeOperations(undefined)))
+  const result = decodeOperations({ state: 'available', deliveryEnabled: true, tutorDeliveryEnabled: false,
+    accepted: 2, waiting: 1, retrying: 0, needsReview: 1, held: 3, drafts: 4,
+    oldestWaiting: 'Nov 21 Eastern', worker: { state: 'overdue', checkedAt: 'Nov 20 Eastern' }, issues: [] })
+  assert.ok(operations.Status$isAvailable(result))
+  assert.ok(operations.DeliverySetting$isPaused(result.tutor_delivery))
+  assert.ok(operations.WorkerStatus$isOverdue(result.worker))
+  assert.equal(result.counts.needs_review, 1)
 })
