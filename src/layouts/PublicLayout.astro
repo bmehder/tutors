@@ -3,6 +3,7 @@ import SiteLayout from './SiteLayout.astro'
 import SiteHeader from '../components/SiteHeader.astro'
 import SiteFooter from '../components/SiteFooter.astro'
 import { organization } from '../lib/seo'
+import PlausibleAnalytics from '../components/PlausibleAnalytics.astro'
 
 interface Props {
   title?: string
@@ -14,6 +15,7 @@ const { title, description, structuredData = [] } = Astro.props
 ---
 
 <SiteLayout title={title} description={description} structuredData={[organization, ...structuredData]}>
+  <PlausibleAnalytics slot="head" />
   <SiteHeader />
   <slot />
   <SiteFooter />

@@ -17,6 +17,7 @@ const canonical = canonicalUrl(Astro.url.pathname);
     <title>{siteTitle}</title>
     <meta name="robots" content={robotsDirective(indexable)} />
     <meta name="description" content={description} />
+    <slot name="head" />
     {structuredData.length > 0 && <script type="application/ld+json" set:html={structuredDataJson({ '@context': 'https://schema.org', '@graph': structuredData })} />}
     <link rel="canonical" href={canonical} />
     <meta name="theme-color" content="#143f3c" />

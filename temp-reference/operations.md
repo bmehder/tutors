@@ -27,13 +27,13 @@ Worker health records start/completion in one database row, without recipient de
 
 Migration 016 adds the heartbeat table. Missing heartbeat storage does not stop delivery or break the rest of admin; it is explicitly shown as unconfigured. It is applied to development and production. It passed on an isolated copy of the hosted database before being applied; no booking records changed.
 
-## Scheduled retries: remaining launch concern
+## Scheduled retries: accepted for soft launch
 
 The GitHub workflow is active and enabled, but its last two scheduled successes were November 21 at 01:31 and 08:41 UTC. These gaps are much longer than its nominal five-minute schedule. A successful historical run is not evidence of a timely background service.
 
 The deployed workflow moves runs away from minute zero, uses the real www domain and fails the job when messages need review or have send errors, rather than reporting success merely because the HTTP request returned 200. Only counts are printed. It is updated on the repository's default `main` branch in `0251cd9`; changing only `astro-lustre` would not update the running schedule. The controlled manual run succeeded; it does not resolve the separate scheduler-timing concern.
 
-GitHub explicitly allows scheduled jobs to be delayed or dropped under load. This timing is a launch concern for a promise that booking mail arrives shortly. Before launch, Brad and Shawn should choose a suitably reliable background schedule, or verify acceptable delivery/retry timing with an alternative. An odd-minute cron alone is not a delivery guarantee.
+GitHub explicitly allows scheduled jobs to be delayed or dropped under load. Brad approved retaining it for the low-volume soft launch, accepting potential retry delays after an initial send failure. Keep Operations monitoring and daily Bookings/Operations checks during that period. Revisit scheduling before paid promotion, or sooner if delays cause problems. An odd-minute cron alone is not a delivery guarantee; no paid upgrade or additional scheduler account has been authorized.
 
 Reference: [GitHub scheduled workflow behavior](https://docs.github.com/en/actions/reference/workflows-and-actions/events-that-trigger-workflows#schedule).
 

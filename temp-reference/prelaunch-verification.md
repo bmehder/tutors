@@ -2,7 +2,7 @@
 
 ## Scheduling decision
 
-Brad chose to leave the email scheduler replacement for later. The existing GitHub retry job and private Operations health checks remain active. Vercel is on Hobby; its native scheduled jobs cannot provide a five-minute interval. Do not upgrade the plan or create an Upstash account without a further decision. The scheduler remains a prelaunch item, not a completed reliability guarantee.
+Brad approved keeping GitHub retries for the low-volume soft launch, accepting possible delays when an initial email attempt fails. Initial sends still happen immediately; the scheduled job is recovery for messages not successfully handed to Resend. Keep the current retry job and Operations monitoring, and check Bookings/Operations daily during the soft launch. This is no longer a soft-launch blocker. Revisit scheduling before paid promotion, or sooner if delayed retries cause problems. Vercel is on Hobby; do not upgrade the plan or create an Upstash account without a further decision. GitHub scheduling remains best-effort, not a reliability guarantee.
 
 ## Deployed Stripe sandbox check: passed
 
@@ -57,6 +57,6 @@ Brad confirmed Search Console ownership is verified. Keep `public/google85cdbb6f
 
 The public setting remains **false**. No crawler-training policy has been changed. Bing/AI crawler choices remain separate launch decisions.
 
-Recommendation: use Brad's Plausible account plus Search Console; Google Analytics is not needed for the current measurement needs. Plausible supports conversion goals and a Search Console integration. No Google Analytics or Plausible tracking script was added during this work; this repository currently has no Plausible installation, and its site-specific snippet is still needed to configure it.
+Brad chose Plausible plus Search Console. The supplied Plausible script is installed through the shared public layout and loads only on mychristiantutors.com/www.mychristiantutors.com in production builds. Admin, checkout confirmations, email previews, localhost and alternate Vercel URLs do not load it. The privacy notice includes the analytics use. Google Analytics is not installed. Before paid advertising, agree the required Google Ads conversion tracking with the campaign manager; GA is not required for direct Google Ads conversion tracking.
 
 References: [Plausible Search Console integration](https://plausible.io/docs/google-search-console-integration), [Plausible conversion goals](https://plausible.io/docs/goal-conversions), [Vercel cron limits](https://vercel.com/docs/schedules/cron-jobs/usage-and-pricing).
